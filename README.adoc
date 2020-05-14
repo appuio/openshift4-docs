@@ -1,2 +1,26 @@
 = APPUiO OpenShift 4 documentation
 
+This repository contains all the documents of the APPUiO OpenShift 4 documentation hosted on https://openshift.docs.vshn.ch[openshift.docs.vshn.ch].
+
+== Contributing
+
+To preview your changes locally, follow these steps:
+
+. Make sure you have Docker installed.
+. Clone this repository.
+. Make your changes in a separate branch.
+. Commit your changes.
+. Type the `make` command to build the documentation site in your system.
+. The `index.html` page will open automatically when the build process has finished.
+
+When you're satisfied with the result, please open a PR against the master branch.
+
+[TIP]
+====
+* Writing AsciiDoc is best done using Visual Studio Code with https://github.com/asciidoctor/asciidoctor-vscode[the AsciiDoc addon]
+* For a reference what you can do with AsciiDoc, have a look at https://asciidoctor.org/docs/asciidoc-writers-guide/[AsciiDoc Writer’s Guide]
+====
+
+== Documentation structure
+
+This documentation follows the proposal of https://documentation.divio.com/[Divio "The documentation system"].

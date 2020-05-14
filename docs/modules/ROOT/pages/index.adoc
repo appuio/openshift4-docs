@@ -1,0 +1,7 @@
+= APPUiO OpenShift 4
+
+image::appuio_logo.png[APPUiO,256,link=https://www.appuio.ch]
+
+Welcome to the OpenShift 4 documentation of https://www.appuio.ch[APPUiO]. This is the place where all the technical details about how we run OpenShift 4 is documented.
+
+This documentation is a joint effort of the APPUiO team at https://www.puzzle.ch[Puzzle] and https://www.vshn.ch[VSHN].

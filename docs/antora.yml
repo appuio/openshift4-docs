@@ -1,0 +1,6 @@
+name: oc4
+title: APPUiO OpenShift 4
+version: master # --> versionless
+start_page: ROOT:index.adoc
+nav:
+- modules/ROOT/nav.adoc

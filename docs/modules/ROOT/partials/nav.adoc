@@ -1,5 +1,6 @@
 * xref:index.adoc[Home]
 * Tutorials
 * How-to guides
+** ** xref:install_gcp.adoc[Install on GCP]
 * Technical reference
 * Explanation

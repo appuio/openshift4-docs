@@ -206,7 +206,7 @@ Make changes where required.
 6. Make a copy of the installer config
 +
 Once the installer gets executed, the config will be consumed and deleted.
-If the installer fails and another attempt must be made, having a copy of the config is a good thing to have.
+If the installer fails and another attempt must be made, a copy of the config is a good thing to have.
 +
 [source,bash]
 ----

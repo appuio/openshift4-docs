@@ -91,7 +91,8 @@ NOTE: Plan ahead as this can take up to two days. It usually takes only seconds 
 +
 [source,bash]
 ----
-gcloud iam service-accounts create openshift4-installer-<cluster name> --display-name="OpenShift 4 Installer of cluster `<cluster name>`" <1>
+gcloud iam service-accounts create openshift4-installer-<cluster name> \ <1>
+  --display-name="OpenShift 4 Installer of cluster `<cluster name>`" <1>
 ----
 <1> Use cluster name from the inputs.
 +
@@ -131,7 +132,8 @@ The worker nodes did not come up.
 +
 [source,bash]
 ----
-gcloud iam service-accounts keys create key.json --iam-account openshift4-installer-<cluster name>@<project name>.iam.gserviceaccount.com <1>
+gcloud iam service-accounts keys create key.json \
+  --iam-account openshift4-installer-<cluster name>@<project name>.iam.gserviceaccount.com <1>
 ----
 <1> The cluster name from the inputs. The service account email must match the one previously created.
 
@@ -179,6 +181,7 @@ openshift-install create install-config --dir=<cluster name>-config <1>
 ----
 <1> The cluster name from the inputs.
 +
+--
 .Answers
 SSH Public Key:: `~/.ssh/<cluster namme>`
 Platform:: gcp
@@ -187,6 +190,7 @@ Region:: <region>
 Base Domain:: <base domain>
 Cluster Name:: <cluster name>
 Pull Secret:: Grab from https://cloud.redhat.com/openshift/install/pull-secret.
+--
 +
 .Credentials for Pull Secret
 ****
@@ -232,7 +236,7 @@ Also upload `<cluster name>/auth/kubeconfig` as an attachment.
 +  
 .Password manager
 ****
-VSHN:: Use password.vshn.net
+VSHN:: Use https://password.vshn.net
 ****
 
 9. Gain access to the OpenShift/Kubernetes API

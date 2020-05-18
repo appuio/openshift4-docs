@@ -4,3 +4,4 @@
 ** ** xref:install_gcp.adoc[Install on GCP]
 * Technical reference
 * Explanation
+** xref:gcp_namelength.adoc[Name length on GCP]

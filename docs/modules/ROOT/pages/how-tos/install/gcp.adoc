@@ -195,7 +195,10 @@ Pull Secret:: Grab from https://cloud.redhat.com/openshift/install/pull-secret.
 .Credentials for Pull Secret
 ****
 If the customer brings his own licences, the customer should obtain the Pull Secret using his RedHat account and produce us the Pull Secret.
-For all the other cases, use https://password.vshn.net/cred/detail/2420/.
+
+For all the other cases:
+
+VSHN:: https://password.vshn.net/cred/detail/2420/
 ****
 
 5. Review and tweak installer config

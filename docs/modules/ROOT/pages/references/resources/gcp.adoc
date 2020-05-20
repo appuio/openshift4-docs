@@ -1,0 +1,100 @@
+= Resources of a cluster on Google Cloud Platform
+
+This page contains a list of resources created by the installer when using IPI.
+It also list resources created by the cluster during runtime through its cloud integration.
+
+[NOTE]
+====
+This page assumes IPI with a stock installer configuration.
+Customization of the installer configuration and or the use of UPI will create more, less or a different set of resources.
+====
+
+== Compute Engine
+
+https://console.cloud.google.com/compute/instances[VM instances]::
+  * Three master VMs
+  * Three worker VMs
+  * VMs will show up or go away as you create new `MachineSets` and or are scaling them.
+
+https://console.cloud.google.com/compute/instanceGroups/list[Instance groups]::
+    One instance group per master and zone.
+
+https://console.cloud.google.com/compute/disks[Disks]::
+  One disk per create VM.
+  Also volumes created by the provisioner for `PersistentVolumeClaims` will show up here.
+
+https://console.cloud.google.com/compute/images[Images]::
+  One image per cluster within a project.
+  The image will be named `<cluster id>-rhcos-image`.
+
+https://console.cloud.google.com/compute/healthChecks[Health checks]::
+  One for each of the created load balancers.
+  See <<lb,Load balancing>>.
+
+== Storage
+
+https://console.cloud.google.com/storage/browser[Browser]::
+  One bucket for the image registry.
+
+== VPC Network
+
+[[networks]]
+https://console.cloud.google.com/networking/networks/list[VPC networks]::
+  A distinct VPC for the cluster with a subnet for the masters and one for the workers.
+
+https://console.cloud.google.com/networking/addresses/list[External IP addresses]::
+  * One static IP for the <<lb,API load balancer>>.
+  * One static IP for the egress traffic.
+  * One dynamic IP for the <<lb,router load balancer>>.
+
+https://console.cloud.google.com/networking/firewalls/list[Firewall rules]::
+  * Allow HTTP and HTTPS traffic to the <<lb,router>> from everywhere.
+  * Allow health check access to the <<lb,applications>>.
+  * Allow <<lb,API>> access from everywhere.
+  * Allow access to the control plane from the master and worker machines.
+  * Allow health check access to the <<lb,API>>.
+  * Allow ranges of TCP and UDP ports between master and worker machines for in cluster communication.
+  * Allow SSH from within the VPC network.
+
+https://console.cloud.google.com/networking/routes/list[Routes]::
+  One route for each subnet plus a default route to the internet.
+
+== Network Services
+
+[[lb]]
+https://console.cloud.google.com/net-services/loadbalancing/list[Load balancing]::
+  * Created by the installer
+  ** API load balancer balancing traffic from the internet to the API.
+  ** Internal API load balancer balancing traffic from within the cluster to the API.
+  * Created by the cluster
++
+Each service of type `LoadBalancer`, will get its own load balancer instance.
+After installation, this will be one load balancer for the default router.
+
+https://console.cloud.google.com/net-services/dns[Cloud DNS]::
+  * DNS records in main zone.
+    This is the zone created before cluster installation.
+  ** `*.app` pointing to the <<lb,application load balancer>>
+  ** `api` pointing to the <<lb,external API load balancer>>
+  * Private DNS zone.
+    Zone created by the installer resolving only withing the clusters network.
+  ** `*.app` pointing to the <<lb,application load balancer>>
+  ** `api` pointing to the <<lb,internal API load balancer>>
+  ** `api-int` pointing to the <<lb,internal API load balancer>>
+
+== Cloud NAT
+
+https://console.cloud.google.com/net-services/nat/list[NAT gateways]::
+  One for each of the <<networks,subnetworks>> configured on the <<router,router>>.
+
+== Hybrid Connectivity
+
+[[router]]
+https://console.cloud.google.com/hybrid/routers/list[Cloud Routers]::
+  A router for the created <<networks,network>>.
+  No special interconnection is configured.
+
+== Network intelligence
+
+https://console.cloud.google.com/net-intelligence/topology[Network Topology]::
+  This gives a graphical overview to the clusters network.

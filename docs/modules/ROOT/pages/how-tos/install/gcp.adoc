@@ -28,7 +28,7 @@
 `<base domain>`:: The base domain used to make the cluster accessible.
 `<cluster name>`::
 The name of the cluster.
-This name will be used as or as part of identifiers.
+This name will be used as identifier or as part of identifiers.
 It also will become a subdomain to the base domain.
 `<project name>`:: The name of the GCP project.
 
@@ -152,7 +152,7 @@ Prerequisites:
 `<base domain>`:: The base domain used to make the cluster available.
 `<cluster name>`::
 The name of the cluster.
-This name will be used as or as part of identifiers.
+This name will be used as identifier or as part of identifiers.
 It also will become a subdomain to the base domain.
 `<service account key>`:: See <<service-account-key>> 
 `<region>`:: The GCP region to place the cluster. Default to `europe-west6`
@@ -164,7 +164,7 @@ It also will become a subdomain to the base domain.
 
 2. Copy `<service account key>` to `~/.gcp/osServiceAccount.json`
 
-3. Crate an SSH key for that cluster
+3. Create an SSH key for that cluster
 +
 [source,bash]
 ----
@@ -194,7 +194,7 @@ Pull Secret:: Grab from https://cloud.redhat.com/openshift/install/pull-secret.
 +
 .Credentials for Pull Secret
 ****
-If the customer brings his own licences, the customer should obtain the Pull Secret using his RedHat account and produce us the Pull Secret.
+If the customer brings his own subscriptions, the customer should obtain the Pull Secret using his Red Hat account and produce us the Pull Secret.
 
 For all the other cases:
 

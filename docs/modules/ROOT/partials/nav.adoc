@@ -1,5 +1,9 @@
 * xref:index.adoc[Home]
 * Tutorials
 * How-to guides
+** Installation
+*** xref:how-tos/install/gcp.adoc[Google Compute Platform]
 * Technical reference
 * Explanation
+** Google Compute Platform
+*** xref:explanations/gcp/name_lengths.adoc[Name lengths]

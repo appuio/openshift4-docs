@@ -1,7 +1,7 @@
 = Resources of a cluster on Google Cloud Platform
 
 This page contains a list of resources created by the installer when using IPI.
-It also list resources created by the cluster during runtime through its cloud integration.
+It also lists resources created by the cluster during runtime through its cloud integration.
 
 [NOTE]
 ====
@@ -14,14 +14,14 @@ Customization of the installer configuration and or the use of UPI will create m
 https://console.cloud.google.com/compute/instances[VM instances]::
   * Three master VMs
   * Three worker VMs
-  * VMs will show up or go away as you create new `MachineSets` and or are scaling them.
+  * VMs will show up or go away as you create new `MachineSets` and or are scale them.
 
 https://console.cloud.google.com/compute/instanceGroups/list[Instance groups]::
     One instance group per master and zone.
 
 https://console.cloud.google.com/compute/disks[Disks]::
-  One disk per create VM.
-  Also volumes created by the provisioner for `PersistentVolumeClaims` will show up here.
+  One disk per created VM.
+  Volumes created by the provisioner for `PersistentVolumeClaims` will also show up here.
 
 https://console.cloud.google.com/compute/images[Images]::
   One image per cluster within a project.
@@ -77,7 +77,7 @@ https://console.cloud.google.com/net-services/dns[Cloud DNS]::
   ** `*.app` pointing to the <<lb,application load balancer>>
   ** `api` pointing to the <<lb,external API load balancer>>
   * Private DNS zone.
-    Zone created by the installer resolving only withing the clusters network.
+    Zone created by the installer resolving only within the cluster's network.
   ** `*.app` pointing to the <<lb,application load balancer>>
   ** `api` pointing to the <<lb,internal API load balancer>>
   ** `api-int` pointing to the <<lb,internal API load balancer>>
@@ -87,7 +87,7 @@ https://console.cloud.google.com/net-services/dns[Cloud DNS]::
 https://console.cloud.google.com/net-services/nat/list[NAT gateways]::
   One for each of the <<networks,subnetworks>> configured on the <<router,router>>.
 
-== Hybrid Connectivity
+== Hybrid connectivity
 
 [[router]]
 https://console.cloud.google.com/hybrid/routers/list[Cloud Routers]::

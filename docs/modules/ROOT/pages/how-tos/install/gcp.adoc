@@ -148,6 +148,8 @@ Prerequisites:
 * GCP project setup according to above documentation
 * Service Account Key (key.json)
 
+TIP: https://github.com/projectsyn/purser[Purser] can be used to check if the preconditons are met.
+
 .Required input
 `<base domain>`:: The base domain used to make the cluster available.
 `<cluster name>`::

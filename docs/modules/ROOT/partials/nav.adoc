@@ -2,9 +2,10 @@
 * Tutorials
 * How-to guides
 ** Installation
-*** xref:how-tos/install/gcp.adoc[Google Compute Platform]
+*** xref:how-tos/install/gcp.adoc[Google Cloud Platform]
+*** xref:how-tos/install/hive.adoc[Hive]
 * Technical reference
 ** xref:references/resources/gcp.adoc[Cluster resources on GCP]
 * Explanation
-** Google Compute Platform
+** Google Cloud Platform
 *** xref:explanations/gcp/name_lengths.adoc[Name lengths]

@@ -110,11 +110,11 @@ roles/storage.admin
 roles/dns.admin
 EOF
 
-for role in $roles; do
+while IFS= read -r role; do
   gcloud projects add-iam-policy-binding <project name> \ <1>
     --member serviceAccount:openshift4-installer-<cluster name>@<project name>.iam.gserviceaccount.com \ <2>
     --role="${role}"
-done
+done <<< ${roles}
 ----
 <1> The project name from the inputs.
 <2> The cluster name from the inputs. The service account email must match the one previously created.

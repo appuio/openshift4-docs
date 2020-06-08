@@ -86,6 +86,14 @@ This might not be the case when using an account already containing resources.
 Raising quotas can be done at https://console.cloud.google.com/iam-admin/quotas.
 +  
 NOTE: Plan ahead as this can take up to two days. It usually takes only seconds though.
++
+[TIP]
+====
+Use the https://access.redhat.com/labs/ocplimitscalculator/[OpenShift Limits Calculator] to calculate your needs.
+This is specialy handy when it is planned to setup several clusters within one project.
+It does not take regions into consideration and some regions have different defaults.
+Take the column "Service Limit increase necessary?" with a grain of salt and double check.
+====
 
 5. Create a GCP service account
 +

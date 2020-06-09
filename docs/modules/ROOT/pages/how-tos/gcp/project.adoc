@@ -34,6 +34,15 @@ The following organization IDs shall be used when nothing else is provided.
 VSHN:: $$102882870725$$
 ****
 
+. Configure Billing
++
+There seems to be no way to do this using `gcloud` and thus has to be done in the Web Console. Visit \https://console.cloud.google.com/billing?project=<project name>
++
+[NOTE]
+====
+One might want to use free tier without setting up billing. This is possible but only when the default quotas are sufficient.
+====
+
 . Enable services
 +
 [source,bash]

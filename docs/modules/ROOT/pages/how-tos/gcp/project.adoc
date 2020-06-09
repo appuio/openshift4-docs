@@ -38,7 +38,7 @@ VSHN:: $$102882870725$$
 +
 [source,bash]
 ----
-gcloud services enable \
+gcloud --project <project name> services enable \
   compute.googleapis.com \
   cloudapis.googleapis.com \
   cloudresourcemanager.googleapis.com \
@@ -55,9 +55,9 @@ gcloud services enable \
 +
 [source,bash]
 ----
-gcloud dns managed-zones create <zone name> \ <1>
+gcloud --project <project name> dns managed-zones create <zone name> \ <1>
   --dns-name=<base domain> \ <2>
-  --description="<zone description>"` <3>
+  --description="<zone description>" <3>
 ----
 <1> Name used within GCP to identify/address the zone.
 <2> The base domain from the inputs above.
@@ -67,7 +67,7 @@ gcloud dns managed-zones create <zone name> \ <1>
 +
 [source,bash]
 ----
-gcloud dns managed-zones describe <zone name> --format json | jq -r '.nameServers[]' <1>
+gcloud --project <project name> dns managed-zones describe <zone name> --format json | jq -r '.nameServers[]' <1>
 ----
 <1> Zone name used when creating the zone
 
@@ -95,7 +95,7 @@ Take the column "Service Limit increase necessary?" with a grain of salt and dou
 +
 [source,bash]
 ----
-gcloud iam service-accounts create openshift4-installer-<cluster name> \ <1>
+gcloud --project <project name> iam service-accounts create openshift4-installer-<cluster name> \ <1>
   --display-name="OpenShift 4 Installer of cluster `<cluster name>`" <1>
 ----
 <1> Use cluster name from the inputs.

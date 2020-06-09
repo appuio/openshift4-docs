@@ -24,6 +24,8 @@
 * GCP project setup according to xref:how-tos/gcp/project.adoc[GCP Project Setup]
 * Service Account Key (key.json)
 
+include::../../explanations/gcp/name_length_warning.adoc[]
+
 TIP: https://github.com/projectsyn/purser[Purser] can be used to check if the preconditons are met.
 
 .Required input

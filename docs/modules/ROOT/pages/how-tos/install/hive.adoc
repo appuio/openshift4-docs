@@ -1,0 +1,280 @@
+= Installation on GCP with Hive
+
+How to provision an OpenShift 4 cluster on GCP with the https://github.com/openshift/hive[Hive operator].
+
+
+== Requirements
+
+* Access to a Kubernetes cluster. You can also use a local cluster, f.e. https://k3d.io/[k3d] or https://www.okd.io/minishift/[Minishift]
+
+* `kubectl` installed
+
+[WARNING]
+====
+If you're not using an OpenShift cluster, the admission webhooks won't work due to missing serving certs.
+Delete the webhooks with the following command:
+
+[source,console]
+----
+kubectl get ValidatingWebhookConfiguration -oname | grep hive\.openshift\.io | xargs kubectl delete
+----
+====
+
+== Install Hive
+
+. Clone Hive Git repo
++
+[source,console]
+----
+git clone git@github.com:openshift/hive.git
+
+cd hive
+----
+
+. Login to your cluster
+
+. Install the Hive operator
++
+[source,console]
+----
+make deploy
+----
+
+. Create OpenShift image pull secret (from https://cloud.redhat.com/openshift/install/pull-secret)
++
+[source,console]
+----
+kubectl create secret generic global-pull-secret \
+  --namespace hive \
+  --type=kubernetes.io/dockerconfigjson \
+  --from-file=.dockerconfigjson=/path/to/pull-secret.txt
+----
+
+. Configure the operator
++
+[source,console]
+----
+kubectl apply \
+  --namespace hive \
+  -f - <<EOF
+apiVersion: hive.openshift.io/v1
+kind: HiveConfig
+metadata:
+  name: hive
+spec:
+  globalPullSecretRef:
+    name: global-pull-secret
+  logLevel: debug
+  targetNamespace: hive
+EOF
+----
+
+. Create `ClusterImageSet`
++
+[source,console]
+----
+kubectl -n hive create -f - <<EOF
+apiVersion: hive.openshift.io/v1
+kind: ClusterImageSet
+metadata:
+  name: openshift-v4.4.3
+spec:
+  releaseImage: quay.io/openshift-release-dev/ocp-release:4.4.3-x86_64
+EOF
+----
+
+
+== Provision Cluster
+
+. xref:how-tos/install/gcp.adoc[Configure the GCP Project]
+
+. Configure required parameters
++
+[source,console]
+----
+CLUSTER_NAME=<cluster-name>
+PROJECT_NAME=<project-name>
+BASE_DOMAIN=<base-domain>
+GCP_REGION=europe-west6
+----
+
+. Create cloud credentials secret
++
+[source,console]
+----
+gcloud iam service-accounts keys create key.json \
+  --iam-account openshift4-installer-$CLUSTER_NAME@$PROJECT_NAME.iam.gserviceaccount.com
+
+kubectl create secret generic "${CLUSTER_NAME}-gcp-creds" \
+  --namespace hive \
+  --from-file osServiceAccount.json=key.json
+----
+
+. Prepare SSH keypair
++
+[source,console]
+----
+ssh-keygen -t ed25519 -m PEM -f ssh-key -N ""
+
+kubectl create secret generic "${CLUSTER_NAME}-ssh-key" \
+  --namespace hive \
+  --from-file ssh-privatekey=ssh-key \
+  --from-file ssh-publickey=ssh-key.pub
+----
+
+. Create cluster-config
++
+[source,console]
+----
+cat <<EOF |
+apiVersion: v1
+metadata:
+  name: "${CLUSTER_NAME}"
+baseDomain: "${BASE_DOMAIN}"
+compute:
+- name: worker
+  platform:
+    gcp:
+      type: n1-standard-4
+  replicas: 3
+controlPlane:
+  name: master
+  platform:
+    gcp:
+      type: n1-standard-4
+  replicas: 3
+networking:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  machineNetwork:
+  - cidr: 10.0.0.0/16
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+platform:
+  gcp:
+    projectID: "${PROJECT_NAME}"
+    region: "${GCP_REGION}"
+sshKey: "$(cat ssh-key.pub)"
+EOF
+kubectl create secret generic "${CLUSTER_NAME}-install-config" \
+  --namespace hive \
+  --from-file install-config.yaml=/dev/stdin
+----
+
+. Create cluster
++
+[source,console]
+----
+kubectl create \
+  --namespace hive \
+  -f - <<EOF
+apiVersion: hive.openshift.io/v1
+kind: ClusterDeployment
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  baseDomain: "${BASE_DOMAIN}"
+  clusterName: "${CLUSTER_NAME}"
+  platform:
+    gcp:
+      credentialsSecretRef:
+        name: "${CLUSTER_NAME}-gcp-creds"
+      region: "${GCP_REGION}"
+  provisioning:
+    imageSetRef:
+      name: openshift-v4.4.3
+    installConfigSecretRef:
+      name: "${CLUSTER_NAME}-install-config"
+    SSHPrivateKeySecretRef:
+      name: "${CLUSTER_NAME}-ssh-key"
+EOF
+----
+
+. Observe logs
++
+[source,console]
+----
+kubectl -n hive logs -c hive -l hive.openshift.io/cluster-deployment-name="${CLUSTER_NAME}" -f
+----
+
+
+== Day 2 Operations
+
+=== Cluster Scaling
+
+. Create machine pool
++
+[source,console]
+----
+kubectl create -n hive -f - <<EOF
+apiVersion: hive.openshift.io/v1
+kind: MachinePool
+metadata:
+  name: "${CLUSTER_NAME}-worker"
+spec:
+  clusterDeploymentRef:
+    name: "${CLUSTER_NAME}"
+  name: worker
+  platform:
+    gcp:
+      type: n1-standard-4
+  replicas: 3
+EOF
+----
+
+. Scale cluster
++
+[source,console]
+----
+kubectl -n hive scale machinepool "${CLUSTER_NAME}-worker" \
+  --replicas 3
+----
+
+
+== Access Cluster
+
+=== Kubectl
+
+Once the cluster is provisioned, the admin kubeconfig will be stored in a secret. You can use it with:
+
+[source,console]
+----
+./hack/get-kubeconfig.sh ${CLUSTER_NAME} > ${CLUSTER_NAME}.kubeconfig
+
+kubectl --kubeconfig=${CLUSTER_NAME}.kubeconfig get nodes
+----
+
+=== Web Console
+
+. Get web console URL
++
+[source,console]
+----
+kubectl -n hive get cd ${CLUSTER_NAME} -o jsonpath='{ .status.webConsoleURL }'
+----
+
+. Retrieve the password for the `kubeadmin` user
++
+[source,console]
+----
+kubectl -n hive get secret $(kubectl -n hive get cd ${CLUSTER_NAME} -o jsonpath='{.spec.clusterMetadata.adminPasswordSecretRef.name}') \
+  --output go-template='{{ .data.password | base64decode }}'
+----
+
+== Deprovision Cluster
+
+. Delete cluster
++
+[source,console]
+----
+kubectl -n hive delete clusterdeployment ${CLUSTER_NAME} --wait=false
+----
+
+. Observe logs
++
+[source,console]
+----
+kubectl -n hive logs -c hive -l hive.openshift.io/cluster-deployment-name="${CLUSTER_NAME}" -f
+----

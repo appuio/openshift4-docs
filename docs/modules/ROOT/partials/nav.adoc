@@ -3,9 +3,10 @@
 * How-to guides
 ** xref:how-tos/gcp/project.adoc[Google Cloud Platform Project Setup]
 ** Installation
-*** xref:how-tos/install/gcp.adoc[Google Compute Platform]
+*** xref:how-tos/install/gcp.adoc[Google Cloud Platform]
+*** xref:how-tos/install/hive.adoc[Hive]
 * Technical reference
 ** xref:references/resources/gcp.adoc[Cluster resources on GCP]
 * Explanation
-** Google Compute Platform
+** Google Cloud Platform
 *** xref:explanations/gcp/name_lengths.adoc[Name lengths]

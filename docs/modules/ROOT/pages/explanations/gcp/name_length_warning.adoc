@@ -1,0 +1,5 @@
+[CAUTION]
+====
+If the project and region names are too long, node provisioning will not work.
+See xref:explanations/gcp/name_lengths.adoc[Name length on GCP].
+====

@@ -1,6 +1,7 @@
 * xref:index.adoc[Home]
 * Tutorials
 * How-to guides
+** xref:how-tos/gcp/project.adoc[Google Cloud Platform Project Setup]
 ** Installation
 *** xref:how-tos/install/gcp.adoc[Google Compute Platform]
 * Technical reference

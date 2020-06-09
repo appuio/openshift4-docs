@@ -14,6 +14,26 @@ It also will become a subdomain to the base domain.
 
 include::../../explanations/gcp/name_length_warning.adoc[]
 
+. Create Project
++
+[source,bash]
+----
+gcloud projects create <project name> \ <1>
+  --organization <organization ID> <2>
+----
+<1> The project name from the input.
+<2> Optional: The numerical ID of an Organization.
++
+Projects on Google Cloud can be attached to an organization or stand on its own.
+Whether or not to do this needs to be negotiated with the owner of the Google Account used to create the project.
++
+.Organization ID
+****
+The following organization IDs shall be used when nothing else is provided.
+
+VSHN:: $$102882870725$$
+****
+
 . Enable services
 +
 [source,bash]

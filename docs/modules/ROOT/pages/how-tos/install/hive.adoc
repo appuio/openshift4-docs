@@ -8,17 +8,8 @@ How to provision an OpenShift 4 cluster on GCP with the https://github.com/opens
 * Access to a Kubernetes cluster. You can also use a local cluster, f.e. https://k3d.io/[k3d] or https://www.okd.io/minishift/[Minishift]
 
 * `kubectl` installed
+* `cfssl` https://github.com/cloudflare/cfssl[installed] (if running on plain K8s)
 
-[WARNING]
-====
-If you're not using an OpenShift cluster, the admission webhooks won't work due to missing serving certs.
-Delete the webhooks with the following command:
-
-[source,console]
-----
-kubectl get ValidatingWebhookConfiguration -oname | grep hive\.openshift\.io | xargs kubectl delete
-----
-====
 
 == Install Hive
 
@@ -32,6 +23,13 @@ cd hive
 ----
 
 . Login to your cluster
+
+. If you're not using an OpenShift cluster (i.e. plain Kubernetes), generate the serving certs
++
+[source,console]
+----
+hack/hiveadmission-dev-cert.sh
+----
 
 . Install the Hive operator
 +
@@ -86,7 +84,7 @@ EOF
 
 == Provision Cluster
 
-. xref:how-tos/install/gcp.adoc[Configure the GCP Project]
+. xref:how-tos/gcp/project.adoc[Google Cloud Platform Project Setup]
 
 . Configure required parameters
 +

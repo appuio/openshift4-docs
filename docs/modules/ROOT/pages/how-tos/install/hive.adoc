@@ -198,39 +198,6 @@ kubectl -n hive logs -c hive -l hive.openshift.io/cluster-deployment-name="${CLU
 ----
 
 
-== Day 2 Operations
-
-=== Cluster Scaling
-
-. Create machine pool
-+
-[source,console]
-----
-kubectl create -n hive -f - <<EOF
-apiVersion: hive.openshift.io/v1
-kind: MachinePool
-metadata:
-  name: "${CLUSTER_NAME}-worker"
-spec:
-  clusterDeploymentRef:
-    name: "${CLUSTER_NAME}"
-  name: worker
-  platform:
-    gcp:
-      type: n1-standard-4
-  replicas: 3
-EOF
-----
-
-. Scale cluster
-+
-[source,console]
-----
-kubectl -n hive scale machinepool "${CLUSTER_NAME}-worker" \
-  --replicas 3
-----
-
-
 == Access Cluster
 
 === Kubectl
@@ -275,4 +242,79 @@ kubectl -n hive delete clusterdeployment ${CLUSTER_NAME} --wait=false
 [source,console]
 ----
 kubectl -n hive logs -c hive -l hive.openshift.io/cluster-deployment-name="${CLUSTER_NAME}" -f
+----
+
+
+== Day 2 Operations
+
+=== Cluster Scaling
+
+. Create machine pool
++
+[source,console]
+----
+kubectl create -n hive -f - <<EOF
+apiVersion: hive.openshift.io/v1
+kind: MachinePool
+metadata:
+  name: "${CLUSTER_NAME}-worker"
+spec:
+  clusterDeploymentRef:
+    name: "${CLUSTER_NAME}"
+  name: worker
+  platform:
+    gcp:
+      type: n1-standard-4
+  replicas: 3
+EOF
+----
+
+. Scale cluster
++
+[source,console]
+----
+kubectl -n hive scale machinepool "${CLUSTER_NAME}-worker" \
+  --replicas 3
+----
+
+=== SyncSet
+
+A `SyncSet` can be used to create arbitrary objects on a provisioned cluster.
+
+[source,console]
+----
+kubectl create -n hive -f - <<EOF
+apiVersion: hive.openshift.io/v1
+kind: SyncSet
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  clusterDeploymentRefs:
+  - name: "${CLUSTER_NAME}"
+  resources:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: sync-test
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: test-server
+      namespace: sync-test
+      labels:
+        app: test-server
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: test-server
+      template:
+        metadata:
+          labels:
+            app: test-server
+        spec:
+          containers:
+          - image: docker.io/openshift/hello-openshift
+            name: server
+EOF
 ----

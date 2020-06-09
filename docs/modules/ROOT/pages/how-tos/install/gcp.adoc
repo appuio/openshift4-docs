@@ -2,13 +2,13 @@
 
 :toc:
 
-
-== General Procedure
-
+[abstract]
+.General Procedure
+--
 . Setup GCP project
 
   * DNS zone
-  * Service Account
+  * Service Account and permissions
 
 . Cluster setup
 
@@ -18,142 +18,10 @@
 . Synfection
 
 . Post install configuration
+--
 
-== Configure the GCP Project
-
-//https://docs.openshift.com/container-platform/4.4/installing/installing_gcp/installing-gcp-account.html
-
-
-.Required input
-`<base domain>`:: The base domain used to make the cluster accessible.
-`<cluster name>`::
-The name of the cluster.
-This name will be used as identifier or as part of identifiers.
-It also will become a subdomain to the base domain.
-`<project name>`:: The name of the GCP project.
-
-[CAUTION]
-====
-If the project and region names are too long, node provisioning will not work.
-See xref:explanations/gcp/name_lengths.adoc[Name length on GCP].
-====
-
-. Enable services
-+
-[source,bash]
-----
-gcloud services enable \
-  compute.googleapis.com \
-  cloudapis.googleapis.com \
-  cloudresourcemanager.googleapis.com \
-  dns.googleapis.com \
-  iamcredentials.googleapis.com \
-  iam.googleapis.com \
-  servicemanagement.googleapis.com \
-  serviceusage.googleapis.com \
-  storage-api.googleapis.com \
-  storage-component.googleapis.com
-----
-
-. Create DNS zone
-+
-[source,bash]
-----
-gcloud dns managed-zones create <zone name> \ <1>
-  --dns-name=<base domain> \ <2>
-  --description="<zone description>"` <3>
-----
-<1> Name used within GCP to identify/address the zone.
-<2> The base domain from the inputs above.
-<3> Short description to give humans more context about the zone.
-
-. Extract name servers and ensure domain gets properly delegated at the registrar or the parent zone
-+
-[source,bash]
-----
-gcloud dns managed-zones describe <zone name> --format json | jq -r '.nameServers[]' <1>
-----
-<1> Zone name used when creating the zone
-
-. Check GCP account limits
-+
-For region `europe-west6` (Zürich), CPU quota might be too low.
-Other regions are also affected (see https://docs.openshift.com/container-platform/4.4/installing/installing_gcp/installing-gcp-account.html#installation-gcp-limits_installing-gcp-account)
-+  
-For the other regions, the default account quotas are sufficient for an OpenShift cluster.
-This might not be the case when using an account already containing resources.
-+
-Raising quotas can be done at https://console.cloud.google.com/iam-admin/quotas.
-+  
-NOTE: Plan ahead as this can take up to two days. It usually takes only seconds though.
-+
-[TIP]
-====
-Use the https://access.redhat.com/labs/ocplimitscalculator/[OpenShift Limits Calculator] to calculate your needs.
-This is especially handy when it is planned to setup several clusters within one project.
-It does not take regions into consideration and some regions have different defaults.
-Take the column "Service Limit increase necessary?" with a grain of salt and double check.
-====
-
-. Create a GCP service account
-+
-[source,bash]
-----
-gcloud iam service-accounts create openshift4-installer-<cluster name> \ <1>
-  --display-name="OpenShift 4 Installer of cluster `<cluster name>`" <1>
-----
-<1> Use cluster name from the inputs.
-+
-And give it the required permissions:
-+
-[source,bash]
-----
-read -d '' roles <<EOF
-roles/compute.admin
-roles/iam.securityAdmin
-roles/iam.serviceAccountAdmin
-roles/iam.serviceAccountKeyAdmin
-roles/iam.serviceAccountUser
-roles/storage.admin
-roles/dns.admin
-EOF
-
-while IFS= read -r role; do
-  gcloud projects add-iam-policy-binding <project name> \ <1>
-    --member serviceAccount:openshift4-installer-<cluster name>@<project name>.iam.gserviceaccount.com \ <2>
-    --role="${role}"
-done <<< ${roles}
-----
-<1> The project name from the inputs.
-<2> The cluster name from the inputs. The service account email must match the one previously created.
-+
-[NOTE]
-====
-The documentation suggests to give the Service Account the `roles/owner` role.
-It also gives advice which roles to use if one does want to work with less privileges.
-The given list might not be complete or is ambiguous (name vs description).
-The first attempt with the above role set failed.
-The worker nodes did not come up.
-====
-
-. Create Service Account Key [[service-account-key]]
-+
-[source,bash]
-----
-gcloud iam service-accounts keys create key.json \
-  --iam-account openshift4-installer-<cluster name>@<project name>.iam.gserviceaccount.com <1>
-----
-<1> The cluster name from the inputs. The service account email must match the one previously created.
-
-. Ensure firewall settings
-+
-By default, no firewall is configured within a project.
-When using a project created by a third party, we need to check if the firewall settings meet the requirements from https://docs.openshift.com/container-platform/4.4/installing/install_config/configuring-firewall.html#configuring-firewall.
-
-== Create installer configuration
-
-Prerequisites:
-* GCP project setup according to above documentation
+.Prerequisites
+* GCP project setup according to xref:how-tos/gcp/project.adoc[GCP Project Setup]
 * Service Account Key (key.json)
 
 TIP: https://github.com/projectsyn/purser[Purser] can be used to check if the preconditons are met.
@@ -164,7 +32,7 @@ TIP: https://github.com/projectsyn/purser[Purser] can be used to check if the pr
 The name of the cluster.
 This name will be used as identifier or as part of identifiers.
 It also will become a subdomain to the base domain.
-`<service account key>`:: See <<service-account-key>> 
+`<service account key>`:: See <<how-tos/gcp/project.adoc#service-account-key, Service Account Key>>
 `<region>`:: The GCP region to place the cluster. Default to `europe-west6`
 
 . Obtain the installer and pull secret

@@ -133,7 +133,7 @@ vault kv list -format=json kv/${TENANT_ID}/${CLUSTER_ID}/ | jq -r '.[]' | xargs 
 
 [CAUTION]
 ====
-Vault might contain encryption keys for backups or other type of that still existing.
+Vault might contain encryption keys for backups or other type of data that's still existing.
 Do not delete those keys unless you are sure they are absolutely no longer needed.
 ====
 
@@ -144,7 +144,7 @@ Look out for things that are no longer required and get rid of them.
 
 .VSHN
 ****
-In case of VSHN, this are the places to look out:
+In case of VSHN, these are the places to look out:
 
 * Service at https://control.vshn.net/vshn/services
 * IP whitelisting for LDAP

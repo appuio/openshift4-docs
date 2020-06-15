@@ -6,8 +6,6 @@
 *** xref:how-tos/install/gcp.adoc[Cluster Setup]
 *** xref:how-tos/destroy/gcp.adoc[Cluster Decommissioning]
 ** xref:how-tos/install/hive.adoc[Hive]
-** VMware vSphere
-*** xref:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
 * Technical reference
 ** xref:references/resources/gcp.adoc[Cluster resources on GCP]
 * Explanation

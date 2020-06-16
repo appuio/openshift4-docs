@@ -1,4 +1,5 @@
 = Pre-Installation Checklist for OpenShift 4 on VMware vSphere
+:icons: font
 :toc:
 
 
@@ -111,11 +112,15 @@ Certificates for the following hostnames need to be created:
 * `*.apps.ocp4-vs.appuio.ch` (wildcard certificate)
 
 [WARNING]
+.Subject Alternative Name
 ====
 For the certificates to be valid in modern web browser, make sure the _Subject Alternative Name (SAN)_ contains the hostname of the certificate.
+====
 
-[[additional-ca]]
-If the certificates are issued from your own private PKI, the RootCA certificate of your PKI needs to be added to the `install-config.yaml` as described in the https://docs.openshift.com/container-platform/4.4/networking/configuring-a-custom-pki.html#installation-configure-proxy_configuring-a-custom-pki[documentation]:
+[WARNING]
+.Private PKI
+====
+If the certificates are issued from your own private PKI, the RootCA certificate of your PKI needs to be added to the `install-config.yaml` as described in the https://docs.openshift.com/container-platform/4.4/networking/configuring-a-custom-pki.html#installation-configure-proxy_configuring-a-custom-pki[Configuring a custom PKI]:
 [source,bash]
 ----
 …
@@ -170,6 +175,6 @@ Possible further surrounding systems:
 
 The following URLs need to be whitelisted on the outgoing proxy, as described at https://docs.openshift.com/container-platform/4.4/installing/install_config/configuring-firewall.html[Configuring your firewall].
 
-If the connection to the proxy is done via HTTPS, the CA certificate, which was used to sign the certificate of the proxy server, needs to be added to the `install-config.yaml`, as described <<additional-ca,above>>.
+If the connection to the proxy is done via HTTPS, the CA certificate, which was used to sign the certificate of the proxy server, needs to be added to the `install-config.yaml`, as described <<private-pki,above>>.
 
 See https://docs.openshift.com/container-platform/4.4/installing/installing_vsphere/installing-vsphere.html#installation-configure-proxy_installing-vsphere[Configuring the cluster-wide proxy during installation] for details.

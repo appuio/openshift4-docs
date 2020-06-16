@@ -1,12 +1,10 @@
 = Pre-Installation Checklist for OpenShift 4 on VMware vSphere
-:icons: font
-:toc:
-
 
 [abstract]
 This checklist should help in getting everything ready for a smooth installation of OpenShift 4 on VMware vSphere.
 
 == Checklist
+
 [options="interactive"]
 * [ ] <<VMware vSphere,VM template>> ready?
 * [ ] <<Virtual Machines,VMs>> created?

@@ -21,7 +21,7 @@ This checklist should help in getting everything ready for a smooth installation
 * For the OpenShift vSphere integration to work, vSphere must be at version 6.5, 6.7 U2 or later.
 * A VM "template" based on the https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.4/latest/[Red Hat CoreOS image] is required, which is explained in https://blog.openshift.com/openshift-4-2-vsphere-install-quickstart/[this blog post].
 * The vSphere folder name, which contains all VMs of an OpenShift cluster, must match the cluster name that you specified in the `install-config.yaml` file.
-* The account used to connect to the vCenter must at least have the roles and permissions described https://vmware.github.io/vsphere-storage-for-kubernetes/documentation/vcp-roles.html#dynamic-provisioning[here].
+* The account used to connect to the vCenter must at least have the roles and permissions described at https://vmware.github.io/vsphere-storage-for-kubernetes/documentation/vcp-roles.html#dynamic-provisioning[vSphere Storage for Kubernetes - Permissions].
 
 == Virtual Machines
 

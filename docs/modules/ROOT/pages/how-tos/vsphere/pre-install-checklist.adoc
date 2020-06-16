@@ -126,7 +126,7 @@ additionalTrustBundle: |
     -----BEGIN CERTIFICATE-----
     <MY_TRUSTED_CA_CERT_2>
     -----END CERTIFICATE-----
-...
+…
 ----
 Multiple CA certificates can be added.
 ====

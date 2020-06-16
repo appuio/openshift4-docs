@@ -118,7 +118,7 @@ For the certificates to be valid in modern web browser, make sure the _Subject A
 If the certificates are issued from your own private PKI, the RootCA certificate of your PKI needs to be added to the `install-config.yaml` as described in the https://docs.openshift.com/container-platform/4.4/networking/configuring-a-custom-pki.html#installation-configure-proxy_configuring-a-custom-pki[documentation]:
 [source,bash]
 ----
-...
+…
 additionalTrustBundle: | 
     -----BEGIN CERTIFICATE-----
     <MY_TRUSTED_CA_CERT_1>

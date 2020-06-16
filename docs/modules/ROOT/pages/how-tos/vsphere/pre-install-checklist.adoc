@@ -9,7 +9,7 @@ This checklist should help in getting everything ready for a smooth installation
 [options="interactive"]
 * [ ] <<VMware vSphere,VM template>> ready?
 * [ ] <<Virtual Machines,VMs>> created?
-* [ ] Webserver for ignition files ready (see https://www.openshift.com/blog/openshift-4-2-vsphere-install-quickstart[here] for example)?
+* [ ] Webserver for ignition files ready (check the https://www.openshift.com/blog/openshift-4-2-vsphere-install-quickstart[OpenShift Documentation] for an example)?
 * [ ] <<Address and DHCP,DHCP>> scope with reservations configured?
 * [ ] <<DNS records>> created?
 * [ ] <<Certificates>> created?

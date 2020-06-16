@@ -168,7 +168,7 @@ Possible further surrounding systems:
 
 === Outgoing proxy
 
-The following URLs need to be whitelisted on the outgoing proxy, as described in the https://docs.openshift.com/container-platform/4.4/installing/install_config/configuring-firewall.html[documentation].
+The following URLs need to be whitelisted on the outgoing proxy, as described at https://docs.openshift.com/container-platform/4.4/installing/install_config/configuring-firewall.html[Configuring your firewall].
 
 If the connection to the proxy is done via HTTPS, the CA certificate, which was used to sign the certificate of the proxy server, needs to be added to the `install-config.yaml`, as described <<additional-ca,above>>.
 

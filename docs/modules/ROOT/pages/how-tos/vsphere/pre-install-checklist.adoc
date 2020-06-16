@@ -93,7 +93,7 @@ With the defined variables, the following DNS records are required:
 
 |`etcd-2.ocp4-vs.appuio.ch` |A |Master 3
 
-|`_etcd-server-ssl._tcp.ocp4-vs.appuio.ch` |SRV |See https://docs.openshift.com/container-platform/4.4/installing/installing_vsphere/installing-vsphere-network-customizations.html#installation-dns-user-infra_installing-vsphere-network-customizations[documentation] for details.
+|`_etcd-server-ssl._tcp.ocp4-vs.appuio.ch` |SRV |See https://docs.openshift.com/container-platform/4.4/installing/installing_vsphere/installing-vsphere-network-customizations.html#installation-dns-user-infra_installing-vsphere-network-customizations[User-provisioned DNS requirements] for details.
 |===
 
 [WARNING]

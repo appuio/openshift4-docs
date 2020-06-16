@@ -65,7 +65,8 @@ The https://docs.openshift.com/container-platform/4.4/installing/installing_vsph
 
 To illustrate, the following variables are set:
 
-* `<base_domain>`: `appuio.ch`
+[horizontal]
+`<base_domain>:`:: `appuio.ch`
 * `<cluster_name>`: `ocp4-vs`
 
 [CAUTION]

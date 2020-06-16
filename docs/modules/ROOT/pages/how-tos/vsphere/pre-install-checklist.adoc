@@ -1,7 +1,6 @@
 = Pre-Installation Checklist for OpenShift 4 on VMware vSphere
 :toc:
 
-'''
 
 [abstract]
 This checklist should help in getting everything ready for a smooth installation of OpenShift 4 on VMware vSphere.

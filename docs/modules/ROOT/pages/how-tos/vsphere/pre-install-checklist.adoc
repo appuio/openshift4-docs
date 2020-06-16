@@ -111,14 +111,15 @@ Certificates for the following hostnames need to be created:
 * `console.ocp4-vs.appuio.ch`
 * `*.apps.ocp4-vs.appuio.ch` (wildcard certificate)
 
-[WARNING]
+[IMPORTANT]
 .Subject Alternative Name
 ====
 For the certificates to be valid in modern web browser, make sure the _Subject Alternative Name (SAN)_ contains the hostname of the certificate.
 ====
 
-[WARNING]
+[IMPORTANT]
 .Private PKI
+[[private-pki]]
 ====
 If the certificates are issued from your own private PKI, the RootCA certificate of your PKI needs to be added to the `install-config.yaml` as described in the https://docs.openshift.com/container-platform/4.4/networking/configuring-a-custom-pki.html#installation-configure-proxy_configuring-a-custom-pki[Configuring a custom PKI]:
 [source,bash]
@@ -157,7 +158,7 @@ The following communication has to be guaranteed:
 |===
 |Source |Destination |Ports |Comment
 
-|OpenShift |Console load balancer |6443/tcp, 22623/tcp |All nodes
+|OpenShift |API load balancer |6443/tcp, 22623/tcp |All nodes
 
 |OpenShift |App load balancer |80/tcp, 443/tcp |All nodes
 

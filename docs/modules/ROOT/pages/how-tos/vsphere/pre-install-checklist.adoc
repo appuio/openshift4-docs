@@ -115,6 +115,7 @@ Certificates for the following hostnames need to be created:
 .Subject Alternative Name
 ====
 For the certificates to be valid in modern web browser, make sure the _Subject Alternative Name (SAN)_ contains the hostname of the certificate.
+See https://www.switch.ch/pki/manage/request/csr-openssl/[How to create a CSR with OpenSSL] for an example on how to do so.
 ====
 
 [IMPORTANT]

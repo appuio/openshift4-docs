@@ -67,7 +67,7 @@ To illustrate, the following variables are set:
 
 [horizontal]
 `<base_domain>:`:: `appuio.ch`
-* `<cluster_name>`: `ocp4-vs`
+`<cluster_name>:`:: `ocp4-vs`
 
 [CAUTION]
 ====

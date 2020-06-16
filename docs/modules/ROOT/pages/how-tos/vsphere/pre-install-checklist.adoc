@@ -80,7 +80,7 @@ With the defined variables, the following DNS records are required:
 |===
 |Record |Type |Target 
 
-|`api.ocp4-vs.appuio.ch` |A/CNAME |Console Load Balancer
+|`api.ocp4-vs.appuio.ch` |A/CNAME |API Load Balancer
 
 |`api-int.ocp4-vs.appuio.ch` |A/CNAME |Console Load Balancer
 

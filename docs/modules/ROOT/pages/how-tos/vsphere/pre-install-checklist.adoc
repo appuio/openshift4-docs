@@ -135,7 +135,7 @@ Multiple CA certificates can be added.
 
 For accessing API and applications, the following load balancers are required:
 
-* Console load balancer
+* API load balancer
   ** Targets: all 3 masters as well as the bootstrap node at the beginning of the installation
   ** Ports: 6443/tcp, 22623/tcp
   ** TLS passthrough (no TLS termination on the load balancer

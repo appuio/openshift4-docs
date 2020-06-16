@@ -1,0 +1,180 @@
+= Pre-Installation Checklist for OpenShift 4 on VMware vSphere
+
+[abstract]
+This checklist should help in getting everything ready for a smooth installation of OpenShift 4 on VMware vSphere.
+
+== Checklist
+
+[options="interactive"]
+* [ ] <<VMware vSphere,VM template>> ready?
+* [ ] <<Virtual Machines,VMs>> created?
+* [ ] Webserver for ignition files ready (check the https://www.openshift.com/blog/openshift-4-2-vsphere-install-quickstart[OpenShift Documentation] for an example)?
+* [ ] <<Address and DHCP,DHCP>> scope with reservations configured?
+* [ ] <<DNS records>> created?
+* [ ] <<Certificates>> created?
+* [ ] <<Load balancers>> ready?
+* [ ] <<Communication,Firewall>> and <<Outgoing proxy,proxy>> rules created?
+
+== VMware vSphere
+
+* For the OpenShift vSphere integration to work, vSphere must be at version 6.5, 6.7 U2 or later.
+* A VM "template" based on the https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.4/latest/[Red Hat CoreOS image] is required, which is explained in https://blog.openshift.com/openshift-4-2-vsphere-install-quickstart/[this blog post].
+* The vSphere folder name, which contains all VMs of an OpenShift cluster, must match the cluster name that you specified in the `install-config.yaml` file.
+* The account used to connect to the vCenter must at least have the roles and permissions described at https://vmware.github.io/vsphere-storage-for-kubernetes/documentation/vcp-roles.html#dynamic-provisioning[vSphere Storage for Kubernetes - Permissions].
+
+== Virtual Machines
+
+The following VMs are required to create an OpenShift 4 cluster:
+
+|===
+|Machine |Number |vCPU |RAM |Storage |OS
+
+|Bastion Host<<fn1,^1^>> |1 |1 |4 GB |20 GB |RHEL or similar
+
+|Webserver<<fn1,^1^>> |1 |1 |4 GB |20 GB |irrelevant
+
+|Bootstrap Node<<fn2,^2^>> |1 |4 |16 GB |120 GB |RHCOS<<fn4,^4^>>
+
+|Masters |3 |4 |16 GB |120 GB |RHCOS<<fn4,^4^>>
+
+|Infra Nodes |3 |8 |32 GB |120 GB |RHCOS<<fn4,^4^>>
+
+|Worker Nodes<<fn3,^3^>> |2+ |2+ |8+ GB |120 GB |RHCOS<<fn4,^4^>>
+|===
+
+[[fn1]]^1^: The bastion host can also be used as a web server. Red Hat does not define any resource requirements for bastion host and web server. The values above are based on our recommendations and can be adapted to your needs.
+
+[[fn2]]^2^: The bootstrap node is a temporary machine that can be deleted after the installation.
+
+[[fn3]]^3^: Number and dimensioning of the worker nodes is dependent on your workload.
+
+[[fn4]]^4^: RHCOS = Red Hat CoreOS
+
+== Network
+
+=== Address and DHCP
+
+The OpenShift VMs should get their IP address via DHCP. Create DHCP reservations with the specified MAC address of the VM.
+
+=== DNS records
+
+Several DNS records are required for OpenShift to work correctly.
+
+The https://docs.openshift.com/container-platform/4.4/installing/installing_vsphere/installing-vsphere-network-customizations.html#installation-dns-user-infra_installing-vsphere-network-customizations[OpenShift documentation] lists the required records in detail.
+
+To illustrate, the following variables are set:
+
+[horizontal]
+`<base_domain>:`:: `appuio.ch`
+`<cluster_name>:`:: `ocp4-vs`
+
+[CAUTION]
+====
+`<cluster_name>` must match the folder name in vSphere, in which all OpenShift VMs reside, for vSphere storage integration to work correctly.
+====
+
+With the defined variables, the following DNS records are required:
+
+|===
+|Record |Type |Target 
+
+|`api.ocp4-vs.appuio.ch` |A/CNAME |API Load Balancer
+
+|`api-int.ocp4-vs.appuio.ch` |A/CNAME |API Load Balancer
+
+|`*.apps.ocp4-vs.appuio.ch` |A/CNAME |Apps Load Balancer
+
+|`console.ocp4-vs.appuio.ch` |CNAME |Apps Load Balancer
+
+|`etcd-0.ocp4-vs.appuio.ch` |A |Master 1
+
+|`etcd-1.ocp4-vs.appuio.ch` |A |Master 2
+
+|`etcd-2.ocp4-vs.appuio.ch` |A |Master 3
+
+|`_etcd-server-ssl._tcp.ocp4-vs.appuio.ch` |SRV |See https://docs.openshift.com/container-platform/4.4/installing/installing_vsphere/installing-vsphere-network-customizations.html#installation-dns-user-infra_installing-vsphere-network-customizations[User-provisioned DNS requirements] for details.
+|===
+
+[WARNING]
+====
+By default, Windows DNS servers create a SRV record for every A record.
+For the A records of `etcd`, make sure that the SRV records are not created (or delete them, if they were), so the hostnames can be enumerated correctly.
+====
+
+=== Certificates
+
+Certificates for the following hostnames need to be created:
+
+* `api.ocp4-vs.appuio.ch`
+* `console.ocp4-vs.appuio.ch`
+* `*.apps.ocp4-vs.appuio.ch` (wildcard certificate)
+
+[IMPORTANT]
+.Subject Alternative Name
+====
+For the certificates to be valid in modern web browser, make sure the _Subject Alternative Name (SAN)_ contains the hostname of the certificate.
+See https://www.switch.ch/pki/manage/request/csr-openssl/[How to create a CSR with OpenSSL] for an example on how to do so.
+====
+
+[IMPORTANT]
+.Private PKI
+[[private-pki]]
+====
+If the certificates are issued from your own private PKI, the RootCA certificate of your PKI needs to be added to the `install-config.yaml` as described in the https://docs.openshift.com/container-platform/4.4/networking/configuring-a-custom-pki.html#installation-configure-proxy_configuring-a-custom-pki[Configuring a custom PKI]:
+[source,bash]
+----
+…
+additionalTrustBundle: | 
+    -----BEGIN CERTIFICATE-----
+    <MY_TRUSTED_CA_CERT_1>
+    -----END CERTIFICATE-----
+    -----BEGIN CERTIFICATE-----
+    <MY_TRUSTED_CA_CERT_2>
+    -----END CERTIFICATE-----
+…
+----
+Multiple CA certificates can be added.
+====
+
+=== Load balancers
+
+For accessing API and applications, the following load balancers are required:
+
+* API load balancer
+  ** Targets: all 3 masters as well as the bootstrap node at the beginning of the installation
+  ** Ports: 6443/tcp, 22623/tcp
+  ** TLS passthrough (no TLS termination on the load balancer
+  ** WebSockets allowed
+* Apps load balancer
+  ** Targets: all 3 Infra Nodes
+  ** Ports: 80/tcp, 443/tcp
+  ** TLS passthrough (optimally no TLS termination on the load balancer)
+
+=== Communication
+
+The following communication has to be guaranteed:
+
+|===
+|Source |Destination |Ports |Comment
+
+|OpenShift |API load balancer |6443/tcp, 22623/tcp |All nodes
+
+|OpenShift |App load balancer |80/tcp, 443/tcp |All nodes
+
+|OpenShift |Outgoing proxy |depending on proxy |All nodes
+
+|OpenShift masters |Configured IdP |depending on IdP |Authentication is handled by components running on masters
+|===
+
+Possible further surrounding systems:
+
+* Access to Git repositories from all worker nodes
+* Access to databases and other applications from all worker nodes
+
+=== Outgoing proxy
+
+The following URLs need to be whitelisted on the outgoing proxy, as described at https://docs.openshift.com/container-platform/4.4/installing/install_config/configuring-firewall.html[Configuring your firewall].
+
+If the connection to the proxy is done via HTTPS, the CA certificate, which was used to sign the certificate of the proxy server, needs to be added to the `install-config.yaml`, as described <<private-pki,above>>.
+
+See https://docs.openshift.com/container-platform/4.4/installing/installing_vsphere/installing-vsphere.html#installation-configure-proxy_installing-vsphere[Configuring the cluster-wide proxy during installation] for details.

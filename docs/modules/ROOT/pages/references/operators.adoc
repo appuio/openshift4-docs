@@ -1,0 +1,122 @@
+= Operators
+
+An OpenShift 4 cluster comes with many operators and controllers preinstalled.
+This page gives an overview of all installed operators on a new cluster and their purpose.
+
+Most of the operators are described to some extent in the https://docs.openshift.com/container-platform/4.4/operators/operator-reference.html[official documentation].
+
+[cols="2,2a,2a,1", stripes=hover]
+|===
+|Description |CRDs |Namespaces |Commodore
+
+4+|https://docs.openshift.com/container-platform/4.4/authentication/understanding-authentication.html[**Authentication**]
+
+|The https://docs.openshift.com/container-platform/4.4/operators/operator-reference.html#cluster-authentication-operator_red-hat-operators[Cluster Authentication Operator] installs and maintains the Authentication Custom Resource in a cluster.
+|* `Authentication` - specifies cluster-wide settings for authentication (like OAuth and webhook token authenticators)
+* `OAuth` - holds cluster-wide information about OAuth
+|* `openshift-authentication-operator` - Where the operator is running
+* `openshift-authentication` - OAuth server which was deployed by the operator
+|https://github.com/appuio/component-openshift4-authentication[openshift4-authentication]
+
+
+4+|https://docs.openshift.com/container-platform/4.4/architecture/control-plane.html[**Control Plane**]
+
+|The https://docs.openshift.com/container-platform/4.4/operators/operator-reference.html#openshift-apiserver-operator_red-hat-operators[OpenShift API Server Operator] installs and maintains the OpenShift API server on a cluster.
+|* `APIServer` - holds configuration shared by all API servers in the system, among them especially kube-apiserver and openshift-apiserver
+* `OpenShiftAPIServer` - provides information to configure an operator to manage openshift-apiserver
+|* `openshift-apiserver-operator` - Where the operator is running
+* `openshift-apiserver` - API server deployed by the operator
+|
+
+|The https://docs.openshift.com/container-platform/4.4/operators/operator-reference.html#cluster-openshift-controller-manager-operator_red-hat-operators[OpenShift Controller Manager Operator] manages and updates the Kubernetes API server.
+|* `OpenShiftControllerManager` - provides information to configure an operator to manage openshift-controller-manager
+|* `openshift-controller-manager-operator`
+* `openshift-controller-manager`
+|
+
+|The https://github.com/openshift/cluster-etcd-operator[cluster etcd operator] handles the scaling of etcd during cluster bootstrap and regular operation.
+|* `Etcd` - provides information to configure an operator to manage etcd
+|* `openshift-etcd-operator`
+* `openshift-etcd`
+|
+
+|The https://docs.openshift.com/container-platform/4.4/operators/operator-reference.html#kube-apiserver-operator_red-hat-operators[Kubernetes API Server Operator] manages and updates the Kubernetes API server on a cluster.
+|* `KubeAPIServer` - provides information to configure an operator to manage kube-apiserver
+|* `openshift-kube-apiserver-operator`
+* `openshift-kube-apiserver`
+|
+
+|The https://docs.openshift.com/container-platform/4.4/operators/operator-reference.html#kube-controller-manager-operator_red-hat-operators[Kubernetes Controller Manager Operator] manages and updates the Kubernetes Controller Manager on a cluster.
+|* `KubeControllerManager` - provides information to configure an operator to manage kube-controller-manager
+|* `openshift-kube-controller-manager-operator`
+* `openshift-kube-controller-manager`
+|
+
+|The https://docs.openshift.com/container-platform/4.4/operators/operator-reference.html#cluster-kube-scheduler-operator_red-hat-operators[Kubernetes Scheduler Operator] manages and updates the Kubernetes Scheduler on a cluster.
+|* `KubeScheduler` - provides information to configure an operator to manage the scheduler
+* `Scheduler` - holds cluster-wide config information to run the Kubernetes scheduler
+|* `openshift-kube-scheduler-operator`
+* `openshift-kube-scheduler`
+|
+
+|The https://github.com/openshift/cluster-kube-storage-version-migrator-operator[Kubernetes Storage Version Migrator Operator] migrates stored data in etcd to the latest storage version.
+|* `StorageVersionMigration` - represents a migration of stored data to the latest storage version
+* `StorageState` - state of the storage of a specific resource
+|* `openshift-kube-storage-version-migrator-operator`
+* `openshift-kube-storage-version-migrator`
+|
+
+|===
+
+
+== Authentication
+
+The https://docs.openshift.com/container-platform/4.4/operators/operator-reference.html#cluster-authentication-operator_red-hat-operators[Cluster Authentication Operator] installs and maintains the Authentication Custom Resource in a cluster.
+
+You can find more information about Authentication on OpenShift in the https://docs.openshift.com/container-platform/4.4/authentication/understanding-authentication.html[official documentation].
+
+Configured by Commodore component https://github.com/appuio/component-openshift4-authentication[openshift4-authentication]
+
+=== Namespaces
+
+* `openshift-authentication-operator` - Where the operator is running
+* `openshift-authentication` - OAuth server which was deployed by the operator
+
+=== CRDs
+
+* `Authentication` - specifies cluster-wide settings for authentication (like OAuth and webhook token authenticators)
+* `OAuth` - holds cluster-wide information about OAuth
+
+
+== Infrastructure
+openshift-cluster-machine-approver
+openshift-cluster-node-tuning-operator
+openshift-cluster-storage-operator
+openshift-machine-api
+openshift-machine-config-operator
+
+
+== Addons
+openshift-console and openshift-console-operator
+openshift-image-registry
+openshift-cluster-samples-operator
+openshift-ingress and openshift-ingress-operator
+openshift-insights
+openshift-monitoring
+openshift-service-catalog-apiserver-operator and openshift-service-catalog-controller-manager-operator
+
+
+== Operator Management
+openshift-operator-lifecycle-manager
+openshift-marketplace
+
+
+== Network
+openshift-network-operator, openshift-sdn and openshift-multus
+
+
+== Cluster
+openshift-dns and openshift-dns-operator
+openshift-cluster-version
+openshift-service-ca and openshift-service-ca-operator
+openshift-cloud-credential-operator

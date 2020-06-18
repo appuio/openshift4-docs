@@ -42,7 +42,7 @@ The following VMs are required to create an OpenShift 4 cluster:
 |Worker Nodes<<fn3,^3^>> |2+ |2+ |8+ GB |120 GB |RHCOS<<fn4,^4^>>
 |===
 
-[[fn1]]^1^: The bastion host can also be used as a web server. Red Hat does not define any resource requirements for bastion host and web server. The values above are based on our recommendations and can be adapted to your needs.
+[[fn1]]^1^: The bastion host can also be used as a web server. Red Hat doesn't define any resource requirements for bastion host and web server. The values above are based on our recommendations and can be adapted to your needs.
 
 [[fn2]]^2^: The bootstrap node is a temporary machine that can be deleted after the installation.
 
@@ -98,7 +98,7 @@ With the defined variables, the following DNS records are required:
 [WARNING]
 ====
 By default, Windows DNS servers create a SRV record for every A record.
-For the A records of `etcd`, make sure that the SRV records are not created (or delete them, if they were), so the hostnames can be enumerated correctly.
+For the A records of `etcd`, make sure that the SRV records aren't created (or delete them, if they were), so the hostnames can be enumerated correctly.
 ====
 
 === Certificates
@@ -141,7 +141,7 @@ Multiple CA certificates can be added.
 For accessing API and applications, the following load balancers are required:
 
 * API load balancer
-  ** Targets: all 3 masters as well as the bootstrap node at the beginning of the installation
+  ** Targets: all 3 masters and the bootstrap node at the beginning of the installation
   ** Ports: 6443/tcp, 22623/tcp
   ** TLS passthrough (no TLS termination on the load balancer
   ** WebSockets allowed

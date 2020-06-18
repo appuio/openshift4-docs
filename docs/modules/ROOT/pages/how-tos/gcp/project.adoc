@@ -95,8 +95,8 @@ NOTE: Plan ahead as this can take up to two days. It usually takes only seconds 
 [TIP]
 ====
 Use the https://access.redhat.com/labs/ocplimitscalculator/[OpenShift Limits Calculator] to calculate your needs.
-This is especially handy when it is planned to setup several clusters within one project.
-It does not take regions into consideration and some regions have different defaults.
+This is especially handy when it's planned to setup several clusters within one project.
+It doesn't take regions into consideration and some regions have different defaults.
 Take the column "Service Limit increase necessary?" with a grain of salt and double check.
 ====
 
@@ -138,7 +138,7 @@ The documentation suggests to give the Service Account the `roles/owner` role.
 It also gives advice which roles to use if one does want to work with less privileges.
 The given list might not be complete or is ambiguous (name vs description).
 The first attempt with the above role set failed.
-The worker nodes did not come up.
+The worker nodes didn't come up.
 ====
 
 . [[service-account-key,Service Account Key]] Create Service Account Key

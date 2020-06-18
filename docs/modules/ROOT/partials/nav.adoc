@@ -9,6 +9,7 @@
 ** VMware vSphere
 *** xref:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
 * Technical reference
+** xref:references/operators.adoc[Operators]
 ** xref:references/resources/gcp.adoc[Cluster resources on GCP]
 * Explanation
 ** Google Cloud Platform

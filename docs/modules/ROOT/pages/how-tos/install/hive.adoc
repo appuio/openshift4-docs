@@ -24,7 +24,7 @@ cd hive
 
 . Login to your cluster
 
-. If you're not using an OpenShift cluster (i.e. plain Kubernetes), generate the serving certs
+. If you're not using an OpenShift cluster (plain Kubernetes), generate the serving certs
 +
 [source,console]
 ----

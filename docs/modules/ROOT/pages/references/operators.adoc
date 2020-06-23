@@ -222,7 +222,7 @@ Most of the operators are described to some extent in the official documentation
 
 [cols="2,2a,2a"]
 |===
-|Description |CRDs |Namespaces |Commodore
+|Description |CRDs |Namespaces
 
 |The https://github.com/operator-framework/operator-lifecycle-manager[Operator Lifecycle Manager] (OLM) provides a declarative way to install, manage, and upgrade Operators and their dependencies on a cluster.
 |* `CatalogSourceConfig` - is used to enable an operator present in the OperatorSource to your cluster

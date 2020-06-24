@@ -29,6 +29,29 @@ The Google documentation of https://cloud.google.com/compute/docs/disks/#introdu
 This isn't enforced but it directly has impact on the https://developers.google.com/compute/docs/disks#performance[performace] of that disk.
 ====
 
+== Read write many file storage
+
+TIP: Use of https://cloud.google.com/storage[Cloud Storage] is preferred. It's the more reliable and cost effective solution.
+
+NOTE: The following is only available on request.
+
+https://cloud.google.com/filestore[Filestore] is the Google Cloud service for a file storage.
+Files stored in Filestore can be read and written from several sources at the same time.
+
+Filestore can by used by OpenShift in two ways: a single instance which is shared across all PersistentVolumes of a StorageClass or an instance for each PersistentVolume.
+
+.Shared Instance
+A single Filestore instance will be created.
+Since Filestore makes files accessible by NFSv3, the https://github.com/kubernetes-incubator/external-storage/tree/master/nfs-client[NFS Client Provisioner] can then be leveraged.
+The provisioner will create a subdirectory for each PersistentVolume.
+
+.Dedicated Instance
+The https://github.com/kubernetes-sigs/gcp-filestore-csi-driver[GCP Filestore CSI Driver] allows to have a Filestore instance provisioned for each requested PersistentVolume.
+
+Check the https://cloud.google.com/filestore/pricing[Cloud Filestore Pricing] for the attached price tag.
+
+WARNING: The minimal size of a Filestore instance is 1TB for HDD and 2.5TB for SSD.
+
 == Related documentation
 
 * https://v1-17.docs.kubernetes.io/docs/concepts/storage/storage-classes/#gce-pd[StorageClass options for the Google Compute Enginge Persistent Disk driver]

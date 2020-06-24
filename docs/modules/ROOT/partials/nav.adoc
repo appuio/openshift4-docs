@@ -11,6 +11,7 @@
 * Technical reference
 ** xref:references/operators.adoc[Operators]
 ** xref:references/resources/gcp.adoc[Cluster resources on GCP]
+** xref:references/storage/gcp.adoc[Storage options on GCP]
 * Explanation
 ** Google Cloud Platform
 *** xref:explanations/gcp/name_lengths.adoc[Name lengths]

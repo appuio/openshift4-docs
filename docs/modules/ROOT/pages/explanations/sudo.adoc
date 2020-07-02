@@ -1,0 +1,11 @@
+= Sudo
+
+A https://www.sudo.ws[sudo] like process to elevate privileges for cluster admins is implemented using the Kubernetes https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation[user impersonation] feature.
+
+Cluster admins only have the `view` ClusterRole and the permission to impersonate a `cluster-admin` user by default.
+During normal operations, these permissions should suffice for most of the tasks.
+If a possibly destructive command needs to be run (`create`, `update`, `delete`), privileges need to be explicitly elevated first.
+This helps to make an explicit decision to use elevated permissions for a certain task or command.
+At the very least it should help prevent acidentially running destructive commands in a wrong context (wrong cluster, wrong namespace, etc.).
+
+See xref:how-tos/authentication/sudo.adoc[the how-to] for usage details.

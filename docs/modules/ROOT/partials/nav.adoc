@@ -1,6 +1,8 @@
 * xref:index.adoc[Home]
 * Tutorials
 * How-to guides
+** Authentication
+*** xref:how-tos/authentication/sudo.adoc[Sudo]
 ** Google Cloud Platform
 *** xref:how-tos/gcp/project.adoc[Project Setup]
 *** xref:how-tos/install/gcp.adoc[Cluster Setup]
@@ -15,3 +17,4 @@
 * Explanation
 ** Google Cloud Platform
 *** xref:explanations/gcp/name_lengths.adoc[Name lengths]
+** xref:explanations/sudo.adoc[Sudo]

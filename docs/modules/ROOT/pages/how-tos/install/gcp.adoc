@@ -107,7 +107,7 @@ openshift-install create cluster --log-level=debug --dir=<cluster name>
 ====
 Takes roughly 45 minutes to complete.
 The installer might timeout.
-This does not necessarily indicate a failed setup.
+This doesn't necessarily indicate a failed setup.
 Waiting some more time might be enough.
 ====
    

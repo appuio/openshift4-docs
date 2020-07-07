@@ -1,0 +1,242 @@
+= Operators and Controllers
+
+[abstract]
+An OpenShift 4 cluster comes with many operators and controllers preinstalled.
+This page gives an overview of all installed operators on a new cluster and their purpose.
+Most of the operators are described to some extent in the official documentation under https://docs.openshift.com/container-platform/latest/operators/operator-reference.html[Red Hat Operators] and https://docs.openshift.com/container-platform/latest/installing/install_config/customizations.html[available cluster customizations].
+
+== Cluster
+
+[cols="2,2a,2a"]
+|===
+|Description |CRDs |Namespaces
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-version-operator_red-hat-operators[Cluster Version Operator] handles updates for a cluster.
+|* `ClusterVersion` - is the configuration for automatic updates of the cluster
+|* `openshift-cluster-version`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#dns-operator_red-hat-operators[DNS Operator] deploys and manages CoreDNS on a cluster.
+|* `DNS.config.openshift.io/v1` - holds cluster-wide information about DNS
+* `DNS.operator.openshift.io/v1` - manages the CoreDNS component
+|* `openshift-dns-operator`
+* `openshift-dns`
+
+|The https://github.com/openshift/service-ca-operator[Service CA Operator] manages the serving cert signer, ConfigMap CA bundle injector and generic CA bundle injector.
+|* `ServiceCA` - provides information to configure an operator to manage the service cert controllers
+|* `openshift-service-ca-operator`
+* `openshift-service-ca`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cloud-credential-operator_red-hat-operators[Cloud Credential Operator] manages cloud provider credentials on a cluster.
+|* `CredentialsRequest` - request cloud credentials
+|* `openshift-cloud-credential-operator`
+
+|===
+
+
+== https://docs.openshift.com/container-platform/latest/architecture/control-plane.html[Control Plane]
+
+[cols="2,2a,2a"]
+|===
+|Description |CRDs |Namespaces
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#openshift-apiserver-operator_red-hat-operators[OpenShift API Server Operator] installs and maintains the OpenShift API server on a cluster.
+|* `APIServer` - holds configuration shared by all API servers in the system, among them especially kube-apiserver and openshift-apiserver
+* `OpenShiftAPIServer` - provides information to configure an operator to manage openshift-apiserver
+|* `openshift-apiserver-operator`
+* `openshift-apiserver`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-openshift-controller-manager-operator_red-hat-operators[OpenShift Controller Manager Operator] manages and updates the Kubernetes API server.
+|* `OpenShiftControllerManager` - provides information to configure an operator to manage openshift-controller-manager
+|* `openshift-controller-manager-operator`
+* `openshift-controller-manager`
+
+|The https://github.com/openshift/cluster-etcd-operator[cluster etcd operator] handles the scaling of etcd during cluster bootstrap and regular operation.
+|* `Etcd` - provides information to configure an operator to manage etcd
+|* `openshift-etcd-operator`
+* `openshift-etcd`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#kube-apiserver-operator_red-hat-operators[Kubernetes API Server Operator] manages and updates the Kubernetes API server on a cluster.
+|* `KubeAPIServer` - provides information to configure an operator to manage kube-apiserver
+|* `openshift-kube-apiserver-operator`
+* `openshift-kube-apiserver`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#kube-controller-manager-operator_red-hat-operators[Kubernetes Controller Manager Operator] manages and updates the Kubernetes Controller Manager on a cluster.
+|* `KubeControllerManager` - provides information to configure an operator to manage kube-controller-manager
+|* `openshift-kube-controller-manager-operator`
+* `openshift-kube-controller-manager`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-kube-scheduler-operator_red-hat-operators[Kubernetes Scheduler Operator] manages and updates the Kubernetes Scheduler on a cluster.
+|* `KubeScheduler` - provides information to configure an operator to manage the scheduler
+* `Scheduler` - holds cluster-wide config information to run the Kubernetes scheduler
+|* `openshift-kube-scheduler-operator`
+* `openshift-kube-scheduler`
+
+|The https://github.com/openshift/cluster-kube-storage-version-migrator-operator[Kubernetes Storage Version Migrator Operator] migrates stored data in etcd to the latest storage version.
+|* `StorageVersionMigration` - represents a migration of stored data to the latest storage version
+* `StorageState` - state of the storage of a specific resource
+|* `openshift-kube-storage-version-migrator-operator`
+* `openshift-kube-storage-version-migrator`
+
+|===
+
+
+== Nodes
+
+[cols="2,2a,2a"]
+|===
+|Description |CRDs |Namespaces
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#machine-api-operator_red-hat-operators[Machine API Operator] manages the lifecycle of machines in a cluster.
+|* `MachineSet` - ensures that a specified number of machines replicas are running at any given time
+* `Machine` - is the Schema for the machines API
+* `MachineHealthCheck` - is the Schema for the machinehealthchecks API
+|* `openshift-machine-api`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-autoscaler-operator_red-hat-operators[Cluster Autoscaler Operator] manages deployments of the OpenShift Cluster Autoscaler using the cluster-api provider.
+|* `ClusterAutoscaler` - controls the configuration of the cluster’s autoscaler instance
+* `MachineAutoscaler` - targets a node group and manages the annotations to enable and configure autoscaling for that group
+|* `openshift-machine-api`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#machine-config-operator_red-hat-operators[Machine Config Operator] manages and applies configuration and updates of the base operating system and container runtime, including everything between the kernel and kubelet.
+|* `MachineConfigPool` - track updates to a group of nodes
+* `MachineConfig` - contains Ignition configuration for a specific node
+* `ControllerConfig` - configuration for MachineConfigController
+* `ContainerRuntimeConfig` - describes a customized Container Runtime configuration
+* `KubeletConfig` - describes a customized Kubelet configuration
+|* `openshift-machine-config-operator`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#about-node-tuning-operator_red-hat-operators[Node Tuning Operator] helps you manage node-level tuning by orchestrating the tuned daemon.
+|* `Tuned` - collection of rules that allows cluster-wide deployment of node-level sysctls
+* `Profile` - specification for a tuned Profile
+|* `openshift-cluster-node-tuning-operator`
+
+|The https://github.com/openshift/cluster-machine-approver[Cluster Machine Approver] validates and approves CSRs for nodes attempting to join the cluster.
+|
+|* `openshift-cluster-machine-approver`
+
+|===
+
+
+== https://docs.openshift.com/container-platform/latest/authentication/understanding-authentication.html[Authentication]
+
+[cols="2,2a,2a,1"]
+|===
+|Description |CRDs |Namespaces |Commodore
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-authentication-operator_red-hat-operators[Cluster Authentication Operator] installs and maintains the Authentication Custom Resource in a cluster.
+|* `Authentication` - specifies cluster-wide settings for authentication (like OAuth and webhook token authenticators)
+* `OAuth` - holds cluster-wide information about OAuth
+|* `openshift-authentication-operator`
+* `openshift-authentication`
+|https://github.com/appuio/component-openshift4-authentication[openshift4-authentication]
+|
+
+|===
+
+
+== Addons
+
+[cols="2,2a,2a"]
+|===
+|Description |CRDs |Namespaces
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#console-operator_red-hat-operators[Console Operator] installs and maintains the OpenShift Container Platform web console on a cluster.
+|* `Console.operator.openshift.io/v1` - provides a means to configure an operator to manage the console
+* `Console.config.openshift.io/v1` - cluster-wide configuration for the web console
+* `ConsoleCLIDownload` - extension for configuring openshift web console command line interface (CLI) do`wnloads`
+* `ConsoleExternalLogLink` - customizing OpenShift web console log links
+* `ConsoleLink` - customizing OpenShift web console links
+* `ConsoleNotification` - configuring openshift web console notifications
+* `ConsoleYAMLSample` - customizing OpenShift web console YAML samples
+|* `openshift-console-operator`
+* `openshift-console`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-storage-operator_red-hat-operators[Cluster Storage Operator] sets OpenShift Container Platform cluster-wide storage defaults.
+|* `CSISnapshotController` - provides information to configure an operator to manage the CSI snapshot controller
+|* `openshift-cluster-storage-operator`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-image-registry-operator_red-hat-operators[Cluster Image Registry Operator] manages a singleton instance of the OpenShift Container Platform registry on a cluster.
+|* `Config.imageregistry.operator.openshift.io/v1` - configuration object for a registry instance managed by the registry operator
+* `ImagePruner` - configuration object for an image registry pruner managed by the registry operator
+* `ImageContentSourcePolicy` - holds cluster-wide information about how to handle registry mirror rules
+|* `openshift-image-registry`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-samples-operator_red-hat-operators[Cluster Samples Operator] manages the sample imagestreams and templates stored in the `openshift` namespace.
+|* `Config.samples.operator.openshift.io/v1` - configuration and detailed condition status for the Samples Operator
+|* `openshift-cluster-samples-operator`
+
+|The https://github.com/openshift/insights-operator[Insights Operator] gathers anonymized system configuration and reports it to Red Hat Insights.
+|
+|* `openshift-insights`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-monitoring-operator_red-hat-operators[Cluster Monitoring Operator] manages and updates the Prometheus-based cluster monitoring stack on a cluster.
+| * `Alertmanager` - describes an Alertmanager cluster
+* `Prometheus` - defines a Prometheus deployment
+* `PrometheusRule` - defines alerting rules for a Prometheus instance
+* `PodMonitor` - defines monitoring for a set of pods
+* `ServiceMonitor` - defines monitoring for a set of services
+|* `openshift-monitoring`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-svcat-apiserver-operator_red-hat-operators[Cluster SVCAT API Server Operator] installs and maintains a singleton instance of the OpenShift Service Catalog API Server on a cluster.
+|* `ServiceCatalogAPIServer` - provides information to configure an operator to manage Service Catalog API Server
+|* `openshift-service-catalog-apiserver-operator`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-svcat-controller-manager-operator_red-hat-operators[Cluster SVCAT Controller Manager Operator] installs and maintains a singleton instance of the OpenShift Service Catalog Controller Manager on a cluster.
+|* `ServiceCatalogControllerManager` - provides information to configure an operator to manage Service Catalog Controller Manager
+|* `openshift-service-catalog-controller-manager-operator`
+
+|===
+
+
+== https://docs.openshift.com/container-platform/latest/networking/understanding-networking.html[Network]
+
+[cols="2,2a,2a"]
+|===
+|Description |CRDs |Namespaces
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#ingress-operator_red-hat-operators[Ingress Operator] configures and manages the OpenShift Container Platform router.
+|* `IngressController` - manages ingress controller for the cluster
+* `Ingress.config.openshift.io/v1` - holds cluster-wide information about ingress, including the default ingress domain used for routes
+* `DNSRecord` - is a DNS record managed in the zones defined by `dns.config.openshift.io/cluster` `.spec.publicZone` and `.spec.privateZone`
+|* `openshift-ingress-operator`
+* `openshift-ingress`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#cluster-network-operator_red-hat-operators[Cluster Network Operator] installs and upgrades the networking components on a cluster.
+|* `Network.operator.openshift.io/v1` - describes the cluster's desired network configuration
+* `Network.config.openshift.io/v1` - holds cluster-wide information about Network
+* `ClusterNetwork` - describes the cluster network
+* `OperatorPKI` - simple certificate authority, internal to the network operator
+* `EgressNetworkPolicy` - describes the current egress network policy for a namespace
+* `HostSubnet` - describes the container subnet network on a node
+* `NetNamespace` - describes a single isolated network
+* `NetworkAttachmentDefinition` - used to setup the network attachment for https://docs.openshift.com/container-platform/latest/networking/multiple_networks/understanding-multiple-networks.html[Multus]
+* `IPPool` - schema for https://github.com/openshift/whereabouts-cni[Whereabouts] IP address allocation
+|* `openshift-network-operator`
+* `openshift-sdn`
+* `openshift-multus`
+
+|===
+
+
+== https://docs.openshift.com/container-platform/latest/operators/olm-what-operators-are.html[Operator Management]
+
+[cols="2,2a,2a"]
+|===
+|Description |CRDs |Namespaces
+
+|The https://github.com/operator-framework/operator-lifecycle-manager[Operator Lifecycle Manager] (OLM) provides a declarative way to install, manage, and upgrade Operators and their dependencies on a cluster.
+|* `CatalogSourceConfig` - is used to enable an operator present in the OperatorSource to your cluster
+* `CatalogSource` - is a repository of CSVs, CRDs, and operator packages
+* `ClusterServiceVersion` - tells OLM how to install an operator that can manage apps for a given version
+* `InstallPlan` - defines the installation of a set of operators
+* `OperatorGroup` - is the unit of multitenancy for OLM managed operators
+* `OperatorSource` - is used to define the external datastore we're using to store operator bundles
+* `Subscription` - keeps operators up to date by tracking changes to Catalogs
+|* `openshift-operator-lifecycle-manager`
+
+|The https://docs.openshift.com/container-platform/latest/operators/operator-reference.html#marketplace-operator_red-hat-operators[Marketplace Operator] is a conduit to bring off-cluster Operators to your cluster.
+|* `PackageManifest` - holds information about a package, which is a reference to one (or more) channels under a single package
+* `OperatorHub` - can be used to change the state of the default hub sources for OperatorHub
+|* `openshift-marketplace`
+
+|===

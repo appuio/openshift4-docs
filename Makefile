@@ -26,8 +26,9 @@ ifeq ($(UNAME), Darwin)
 endif
 
 .PHONY: all
-all: html open
+all: docs open
 
+# This will clean the Antora Artifacts, not the npm artifacts
 .PHONY: clean
 clean:
 	rm -rf $(out_dir) $(web_dir) .cache
@@ -36,8 +37,8 @@ clean:
 open: $(web_dir)/index.html
 	-$(OPEN) $<
 
-.PHONY: html
-html:    $(web_dir)/index.html
+.PHONY: docs
+docs:    $(web_dir)/index.html
 
 $(web_dir)/index.html: playbook.yml $(pages)
 	$(antora_cmd) $(antora_opts) $<

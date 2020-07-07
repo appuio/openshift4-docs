@@ -1,0 +1,32 @@
+= Sudo
+
+See the xref:explanations/sudo.adoc[sudo explanation] for further details.
+
+
+== CLI Usage
+
+To elevate privileges to `cluster-admin` using the `oc` or `kubectl` CLI, specify the https://kubernetes.io/docs/reference/kubectl/kubectl[`--as cluster-admin`] flag:
+
+[source,console]
+----
+oc --as cluster-admin get nodes
+----
+
+This will impersonate the stated user for this command.
+
+
+== OpenShift Console
+
+To elevate privileges to `cluster-admin` using the OpenShift web console, use the https://www.openshift.com/blog/openshift-4-3-spoofing-a-user[user impersonation] feature:
+
+. Login to the web console with your regular user
+. Navigate to "User Management" -> "Role Binding" in the sidebar
+. Search for `impersonate-cluster-admin` in the rop right search box
+. From the menu, choose "Impersonate User cluster-admin"
+. You should now see a blue bar saying "Impersonating User" and the top right user info "cluster-admin"
+
+[WARNING]
+====
+This holds for the current session only.
+Once your session is finished (page reload, re-login), the permissions are gone.
+====

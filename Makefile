@@ -4,7 +4,7 @@ web_dir := ./_public
 
 ifeq ($(engine), podman)
 	engine_cmd  ?= podman
-	engine_opts ?= --rm --tty --user 2001
+	engine_opts ?= --rm --tty --userns=keep-id
 endif
 
 engine_cmd  ?= docker

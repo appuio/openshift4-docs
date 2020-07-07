@@ -2,13 +2,18 @@ pages   := $(shell find . -type f -name '*.adoc')
 out_dir := ./_archive
 web_dir := ./_public
 
-docker_cmd  ?= docker
-docker_opts ?= --rm --tty --user "$$(id -u)"
+ifeq ($(engine), podman)
+	engine_cmd  ?= podman
+	engine_opts ?= --rm --tty --user 2001
+endif
 
-antora_cmd  ?= $(docker_cmd) run $(docker_opts) --volume "$${PWD}":/antora vshn/antora:2.3.0
+engine_cmd  ?= docker
+engine_opts ?= --rm --tty --user "$$(id -u)"
+
+antora_cmd  ?= $(engine_cmd) run $(engine_opts) --volume "$${PWD}":/antora:Z vshn/antora:2.3.0
 antora_opts ?= --cache-dir=.cache/antora
 
-vale_cmd ?= $(docker_cmd) run $(docker_opts) --volume "$${PWD}"/docs/modules:/pages vshn/vale:2.1.1 --minAlertLevel=error /pages
+vale_cmd ?= $(engine_cmd) run $(engine_opts) --volume "$${PWD}"/docs/modules:/pages:Z vshn/vale:2.1.1 --minAlertLevel=error /pages
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)

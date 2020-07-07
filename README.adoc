@@ -6,11 +6,13 @@ This repository contains all the documents of the APPUiO OpenShift 4 documentati
 
 To preview your changes locally, follow these steps:
 
-. Make sure you have Docker installed.
+. Make sure you have Docker or Podman installed.
 . Clone this repository.
 . Make your changes in a separate branch.
 . Commit your changes.
-. Type the `make` command to build the documentation site in your system.
+. Build the documentation site in your system:
+.. Type `make` to build the documentation site with Docker.
+.. Type `make engine=podman` to build the documentation site with Podman.
 . The `index.html` page will open automatically when the build process has finished.
 
 When you're satisfied with the result, please open a PR against the master branch.

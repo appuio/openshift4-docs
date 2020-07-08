@@ -2,13 +2,16 @@ pages   := $(shell find . -type f -name '*.adoc')
 out_dir := ./_archive
 web_dir := ./_public
 
-ifeq ($(engine), podman)
+ifeq (, $(shell command -v podman &> /dev/null))
 	engine_cmd  ?= podman
 	engine_opts ?= --rm --tty --userns=keep-id
+else ifeq (, $(shell command -v docker &> /dev/null))
+	engine_cmd  ?= docker
+	engine_opts ?= --rm --tty --user "$$(id -u)"
+else
+	$(error "No usable container engine (podman/docker) found")
 endif
 
-engine_cmd  ?= docker
-engine_opts ?= --rm --tty --user "$$(id -u)"
 
 antora_cmd  ?= $(engine_cmd) run $(engine_opts) --volume "$${PWD}":/antora:Z vshn/antora:2.3.0
 antora_opts ?= --cache-dir=.cache/antora

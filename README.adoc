@@ -10,9 +10,7 @@ To preview your changes locally, follow these steps:
 . Clone this repository.
 . Make your changes in a separate branch.
 . Commit your changes.
-. Build the documentation site in your system:
-.. Type `make` to build the documentation site with Docker.
-.. Type `make engine=podman` to build the documentation site with Podman.
+. Type the make command to build the documentation site in your system.
 . The `index.html` page will open automatically when the build process has finished.
 
 When you're satisfied with the result, please open a PR against the master branch.

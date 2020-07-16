@@ -1,8 +1,11 @@
 * xref:index.adoc[Home]
 * Tutorials
+
 * How-to guides
 ** Authentication
 *** xref:how-tos/authentication/sudo.adoc[Sudo]
+** Cloudscale
+*** xref:how-tos/install/cloudscale.adoc[Cluster Setup]
 ** Google Cloud Platform
 *** xref:how-tos/gcp/project.adoc[Project Setup]
 *** xref:how-tos/install/gcp.adoc[Cluster Setup]
@@ -10,10 +13,12 @@
 ** xref:how-tos/install/hive.adoc[Hive]
 ** VMware vSphere
 *** xref:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
+
 * Technical reference
 ** xref:references/operators.adoc[Operators]
 ** xref:references/resources/gcp.adoc[Cluster resources on GCP]
 ** xref:references/storage/gcp.adoc[Storage options on GCP]
+
 * Explanation
 ** Google Cloud Platform
 *** xref:explanations/gcp/name_lengths.adoc[Name lengths]

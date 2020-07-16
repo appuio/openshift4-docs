@@ -1,0 +1,209 @@
+= Installation on Cloudscale
+
+[abstract]
+--
+Steps to install an OpenShift 4 cluster on https://cloudscale.ch[Cloudscale].
+
+These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html[Installing a cluster on bare metal] docs to set up a user provisioned installation (UPI).
+https://www.terraform.io[Terraform] is used to provision the cloud infrastructure.
+--
+
+[NOTE]
+--
+This how-to guide is still a work in progress and will change.
+It's currently very specific to VSHN and needs further changes to be more generic.
+--
+
+== Prerequisites
+* Cloudscale API token
+* `terraform`
+* `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client]
+* `jq`
+* Clone of the https://github.com/appuio/terraform-openshift4-cloudscale[terraform-openshift4-cloudscale] repository
+
+
+== Cluster Installation
+
+. Create a new Syn cluster: https://control.vshn.net/syn/lieutenantclusters
+
+. Configure input
++
+[source,console]
+----
+export CLOUDSCALE_TOKEN=<cloudscale-token> # From https://control.cloudscale.ch/user/api-tokens
+export CLUSTER_NAME=<cluster-name>
+export BASE_DOMAIN=ocp4-poc.appuio-beta.ch
+export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshift/install/pull-secret
+----
+
+. Create S3 buckets
++
+[source,console]
+----
+# Use already exiting bucket user
+response=$(curl -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+  https://api.cloudscale.ch/v1/objects-users | \
+  jq -e ".[] | select(.display_name == \"${CLUSTER_NAME}\")")
+
+# Or create a new one
+response=$(curl -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+  -F display_name=${CLUSTER_NAME} \
+  https://api.cloudscale.ch/v1/objects-users)
+
+export AWS_ACCESS_KEY_ID=$(echo $response | jq -r '.keys[0].access_key')
+export AWS_SECRET_ACCESS_KEY=$(echo $response | jq -r '.keys[0].secret_key')
+
+mc config host add \
+  s3 https://objects.rma.cloudscale.ch ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY}
+
+mc mb --ignore-existing\
+  "s3/${CLUSTER_NAME}-bootstrap-ignition" \
+  "s3/${CLUSTER_NAME}-tf-state"
+
+# Ignore the error
+mc policy set download "s3/${CLUSTER_NAME}-bootstrap-ignition"
+----
+
+. Prepare `install-config.yaml`
++
+[source,console]
+----
+mkdir ${CLUSTER_NAME}
+
+cat > "${CLUSTER_NAME}/install-config.yaml" <<EOF
+apiVersion: v1
+metadata:
+  name: ${CLUSTER_NAME}
+baseDomain: ${BASE_DOMAIN}
+compute:
+  - name: worker
+    replicas: 3
+controlPlane:
+  name: master
+  replicas: 3
+networking:
+  clusterNetwork:
+    - cidr: 10.128.0.0/14
+      hostPrefix: 23
+  networkType: OpenShiftSDN
+  serviceNetwork:
+    - 172.30.0.0/16
+platform:
+  none: {}
+pullSecret: |
+  ${PULL_SECRET}
+sshKey: "$(cat ~/.ssh/id_ed25519.pub)"
+EOF
+
+----
+
+. Prepare install manifests and ignition config
++
+[source,console]
+----
+openshift-install --dir ${CLUSTER_NAME} \
+  create manifests
+
+openshift-install --dir ${CLUSTER_NAME} \
+  create ignition-configs
+
+mc cp ${CLUSTER_NAME}/*.ign "s3/${CLUSTER_NAME}-bootstrap-ignition"
+----
+
+. Provision infrastructure
++
+[source,console]
+----
+terraform init \
+  -backend-config "bucket=${CLUSTER_NAME}-tf-state"
+
+export TF_VAR_cluster_name=$CLUSTER_NAME
+
+export TF_VAR_ssh_keys=[\"$(cat ~/.ssh/id_ed25519.pub)\"]
+
+terraform apply \
+  -target=cloudscale_floating_ip.api_vip \
+  -var api_eip=""
+
+terraform refresh
+
+export TF_VAR_api_eip="$(terraform output -json | jq -r .api_vip.value)"
+
+terraform apply \
+  -target=cloudscale_floating_ip.api_vip \
+  -target=cloudscale_server.bootstrap \
+  -target=cloudscale_server.master \
+  -var bootstrap_count=1
+----
+
+. Create the necessary DNS records
++
+[source,console]
+----
+terraform refresh
+
+terraform output -json | jq -r .dns_entries.value
+----
+
+. Wait for bootstrap to complete
++
+[source,console]
+----
+openshift-install --dir ${CLUSTER_NAME} \
+  wait-for bootstrap-complete
+----
+
+. Remove bootstrap node
++
+[source,console]
+----
+terraform apply \
+  -target=cloudscale_server.bootstrap
+----
+
+. Provision worker nodes
++
+[source,console]
+----
+terraform apply
+
+export KUBECONFIG=${CLUSTER_NAME}/auth/kubeconfig
+
+# Once CSRs in state Pending show up, approve them
+# Needs to be run twice
+kubectl get csr
+kubectl get csr --no-headers | \
+  grep Pending | awk '{ print $1 }' | xargs \
+  kubectl certificate approve
+
+kubectl get nodes
+----
+
+. Configure router HAProxy
++
+[source,console]
+----
+echo "router_servers=$(terraform output -json | jq .router_servers.value)" \
+  > terraform.tfvars
+
+terraform apply
+----
+
+. Create secret with S3 credentials https://docs.openshift.com/container-platform/4.5/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
++
+[source,console]
+----
+oc create secret generic image-registry-private-configuration-user \
+--namespace openshift-image-registry \
+--from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=${AWS_ACCESS_KEY_ID} \
+--from-literal=REGISTRY_STORAGE_S3_SECRETKEY=${AWS_SECRET_ACCESS_KEY}
+----
+
+. Synfection
++
+Synfect the cluster according to https://wiki.vshn.net/x/ngMBCg
++
+[source,console]
+----
+cat ${CLUSTER_NAME}/metadata.json
+----

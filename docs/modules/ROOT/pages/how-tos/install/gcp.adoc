@@ -20,7 +20,8 @@
 . Post install configuration
 --
 
-.Prerequisites
+== Prerequisites
+
 * GCP project setup according to xref:how-tos/gcp/project.adoc[GCP Project Setup]
 * Service Account Key (key.json)
 
@@ -28,7 +29,8 @@ include::../../explanations/gcp/name_length_warning.adoc[]
 
 TIP: https://github.com/projectsyn/purser[Purser] can be used to check if the preconditons are met.
 
-.Required input
+== Required input
+
 `<base domain>`:: The base domain used to make the cluster available.
 `<cluster name>`::
 The name of the cluster.
@@ -36,6 +38,8 @@ This name will be used as identifier or as part of identifiers.
 It also will become a subdomain to the base domain.
 `<service account key>`:: See <<how-tos/gcp/project.adoc#service-account-key, Service Account Key>>
 `<region>`:: The GCP region to place the cluster. Default to `europe-west6`
+
+== Install cluster
 
 . Obtain the installer and pull secret
 

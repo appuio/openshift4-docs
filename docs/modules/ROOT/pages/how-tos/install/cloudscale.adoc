@@ -1,8 +1,8 @@
-= Installation on Cloudscale
+= Installation on cloudscale.ch
 
 [abstract]
 --
-Steps to install an OpenShift 4 cluster on https://cloudscale.ch[Cloudscale].
+Steps to install an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
 
 These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html[Installing a cluster on bare metal] docs to set up a user provisioned installation (UPI).
 https://www.terraform.io[Terraform] is used to provision the cloud infrastructure.
@@ -15,7 +15,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 --
 
 == Prerequisites
-* Cloudscale API token
+* cloudscale.ch API token
 * `terraform`
 * `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client]
 * `jq`
@@ -24,7 +24,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 == Cluster Installation
 
-. Create a new Syn cluster: https://control.vshn.net/syn/lieutenantclusters
+. Register the new OpenShift 4 cluster in Lieutenant: https://control.vshn.net/syn/lieutenantclusters
 
 . Configure input
 +
@@ -199,9 +199,9 @@ oc create secret generic image-registry-private-configuration-user \
 --from-literal=REGISTRY_STORAGE_S3_SECRETKEY=${AWS_SECRET_ACCESS_KEY}
 ----
 
-. Synfection
+. Make the cluster Project Syn enabled
 +
-Synfect the cluster according to https://wiki.vshn.net/x/ngMBCg
+Install Steward on the cluster according to https://wiki.vshn.net/x/ngMBCg
 +
 [source,console]
 ----

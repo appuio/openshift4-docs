@@ -10,6 +10,7 @@
 *** xref:how-tos/gcp/project.adoc[Project Setup]
 *** xref:how-tos/install/gcp.adoc[Cluster Setup]
 *** xref:how-tos/destroy/gcp.adoc[Cluster Decommissioning]
+*** xref:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
 ** xref:how-tos/install/hive.adoc[Hive]
 ** VMware vSphere
 *** xref:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]

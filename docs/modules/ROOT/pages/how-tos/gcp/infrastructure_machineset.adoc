@@ -1,0 +1,201 @@
+= Creating infrastructure MachineSets on Google Compute Platform
+
+:toc:
+
+[abstract]
+--
+On OpenShift, nodes can be created that are dedicated for infrastructure workload.
+https://docs.openshift.com/container-platform/latest/machine_management/creating-infrastructure-machinesets.html[Creating infrastructure MachineSets] of the OpenShift documentation explains how to so.
+For GCP, this doesn't work as documented and or the documentation is missing essential details.
+This how to tries to fill the gaps but must leave open a some questions.
+--
+
+[NOTE]
+====
+This document discusses how to set up infrastructure nodes on a cluster set up using IPI on GCP.
+The same procedure can be used to create any type of custom node groups.
+At least in theory …
+====
+
+== Instructions
+
+NOTE: Please take note of the <<Open questions>>.
+
+. Create user data secret
++
+[source,bash]
+----
+# Get the base url for the machine config endpoint.
+SOURCE=$(oc -n openshift-machine-api get secret worker-user-data -o jsonpath='{.data.userData}' | base64 --decode | jq -r '.ignition.config.append[0].source' | sed 's|/worker||') 
+# Get the CA certificate of the machine config endpoint.
+CA=$(oc -n openshift-machine-api get secret worker-user-data -o jsonpath='{.data.userData}' | base64 --decode | jq -r '.ignition.security.tls.certificateAuthorities[0].source')
+# Create ignition config used when creating <role> machines.
+read -r -d '' USER_DATA <<EOF  
+{
+  "ignition": {
+    "config": {
+      "append": [
+        {
+          "source": "${SOURCE}/<role>",
+          "verification": {}
+        }
+      ]
+    },
+    "security": {
+      "tls": {
+        "certificateAuthorities": [
+          {
+            "source": "${CA}",
+            "verification": {}
+          }
+        ]
+      }
+    },
+    "timeouts": {},
+    "version": "2.2.0"
+  },
+  "networkd": {},
+  "passwd": {},
+  "storage": {},
+  "systemd": {}
+}
+EOF
+# Place the ignition config into a secret.
+oc -n openshift-machine-api create secret generic <role>-user-data --from-literal=disableTemplating=true --from-literal=userData=${USER_DATA}
+----
+
+. Create MachineConfigs and MachineConfigPool
++
+[IMPORTANT]
+====
+This is highly speculative and probably not meant to be done like this.
+See also <<Open questions>>.
+====
++
+Make a copy of all MachineConfigs found with `oc get machineconfig -l machineconfiguration.openshift.io/role=worker`.
+Rename them accordingly by replacing `worker` with `<role>`.
+Also set the value of the label `machineconfiguration.openshift.io/role` to `<role>`.
+Within `01-<role>-kubelet` the kublet Systemd unit is configured.
+Replace `--node-labels=node-role.kubernetes.io/worker` to `--node-labels=node-role.kubernetes.io/<role>`.
+
+. Crate MachineSet for the custom node group
++
+[NOTE]
+====
+The following example deviates at several places from what's documented at https://docs.openshift.com/container-platform/latest/machine_management/creating-infrastructure-machinesets.html[Creating infrastructure MachineSets].
+====
++
+[source,bash]
+----
+oc apply -f - <<EOF
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: <infrastructureID>
+  name: <infrastructureID>-i-a <1>
+  namespace: openshift-machine-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: <infrastructureID>
+      machine.openshift.io/cluster-api-machineset: <infrastructureID>-i-a
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        machine.openshift.io/cluster-api-cluster: <infrastructureID>
+        machine.openshift.io/cluster-api-machine-role: <role>
+        machine.openshift.io/cluster-api-machine-type: <role>
+        machine.openshift.io/cluster-api-machineset: <infrastructureID>-i-a
+    spec:
+      metadata:
+        labels:
+          node-role.kubernetes.io/<role>: ""
+      providerSpec:
+        value:
+          apiVersion: gcpprovider.openshift.io/v1beta1
+          canIPForward: false
+          credentialsSecret:
+            name: gcp-cloud-credentials
+          deletionProtection: false
+          disks:
+          - autoDelete: true
+            boot: true
+            image: <infrastructureID>-rhcos-image
+            labels: null
+            sizeGb: 128
+            type: pd-ssd
+          kind: GCPMachineProviderSpec
+          machineType: n1-standard-4
+          metadata:
+            creationTimestamp: null
+          networkInterfaces:
+          - network: <infrastructureID>-network
+            subnetwork: <infrastructureID>-worker-subnet <2>
+          projectID: <project_name>
+          region: us-central1
+          serviceAccounts:
+          - email: <infrastructureID>-w@<project_name>.iam.gserviceaccount.com
+            scopes:
+            - https://www.googleapis.com/auth/cloud-platform
+          tags:
+          - <infrastructureID>-worker <3>
+          userDataSecret:
+            name: <role>-user-data <4>
+          zone: us-central1-a
+EOF
+----
+<1> Use a naming that's different from workers.
+<2> Reuse the worker network.
+    Using a separated network might be desirable.
+    However, the subnetwork doesn't get created automatically and the worker one is chosen for simplicity.
+<3> Use the same tag as worker.
+    This tag is used in a firewall rule giving access to the machine config endpoint.
+    When using `<infrastructureID>-<role>`, the machine will fail to access the ignition configuration and thus fails to provision.
+    This can be seen within the VMs console output.
+<4> Use the custom user data created earlier.
+    Using the `worker-user-data` will work but then the resulting node will have both the `node-role.kubernetes.io/<role>` and the node-role.kubernetes.io/worker` label.
++
+Once the MachineSet is created, the machines will be provisioned and the nodes will come up with the desired labels.
+
+== Open questions
+
+=== Who's/what's supposed to create the subnetwork?
+
+https://docs.openshift.com/container-platform/latest/machine_management/creating-infrastructure-machinesets.html[Creating infrastructure MachineSets] suggests to use `<infrastructureID>-<role>-subnet` as the subnetwork within the MachineSet.
+When doing so, the machine will fail to provision because that subnetwork doesn't exist.
+The documentation fails to explain how this subnetwork is supposed to come into existence.
+
+=== Who's/what's supposed to change the firewall rules?
+
+https://docs.openshift.com/container-platform/latest/machine_management/creating-infrastructure-machinesets.html[Creating infrastructure MachineSets] suggests to use `<infrastructureID>-<role>` as the machines tag.
+Those tags are targeted in certain firewall rules.
+For this case, the rule granting access to the machine config endpoint is relevant.
+The firewall rules aren't altered when creating machines with custom tags.
+As a result, the crated VM isn't allowed to access the machine config endpoint and thus fails to load its ignition configuration.
+
+=== Who's/what's supposed to create the user data secret?
+
+https://docs.openshift.com/container-platform/latest/machine_management/creating-infrastructure-machinesets.html[Creating infrastructure MachineSets] suggests to use `worker-user-data` as the user data secret.
+When doing so, the resulting node, will come up with both the `node-role.kubernetes.io/<role>` and the `node-role.kubernetes.io/worker` label.
+Reason being, the node role isn't only set by the MachineSet but also by the MachineConfig.
+Using the `worker-user-data` user data secret, will result in the MachineConfigs of the `worker` MachineConfigPool to be applied.
+In the MachineConfig `01-worker-kubelet`, the label `node-role.kubernetes.io/worker` is hardcoded into the arguments to the kublets Systemd unit.
+Only when creating a custom MachineConfigPool, the nodes will _not_ receive the worker role.
+
+=== Who's/what's supposed to create the MachineConfig and MachineConfigPool?
+
+Except for the `99-<master|worker>-ssh` MachineConfigs, all MachineConfigs do have an owner reference.
+There content is fairly specific to a specific cluster and contains things that needs to be updated under certain conditions (for example the cluster CA certificate).
+This suggest, that creating them manually doesn't seemed to be intended.
+The documentation doesn't hint how those MachineConfig objects come into being.
+
+=== How can we change MachineConfigs created for master and worker?
+
+As figured above, several MachineConfigs have an owner reference.
+As a consequence, they can not be changed.
+Any changes made to the get reverted immediately.
+https://docs.openshift.com/container-platform/latest/nodes/nodes/nodes-nodes-managing.html[Managing Nodes] seems to explain this.
+https://docs.openshift.com/container-platform/4.5/rest_api/machine_apis/machine-apis-index.html#kubeletconfig-machineconfiguration-openshift-iov1[Machine APIs] also has hints on this.

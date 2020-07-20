@@ -1,1 +1,136 @@
 = Commodore Component Developer Guidelines
+
+This page defines the various conventions and best practices for writing a https://syn.tools/commodore/index.html[Commodore component] for OpenShift 4.
+
+[NOTE]
+====
+See the https://syn.tools/commodore/writing-a-component.html[Writing a Commodore Component] guide for a more general introduction and technical details of Commodore components.
+====
+
+== Conventions Used in These Guidelines
+
+The requirement level keywords _must_, _must not_, _required_, _shall_, _shall not_, _should_, _shouldn't_, _recommended_, _may_, and _optional_ used in this document are to be interpreted as described in https://www.ietf.org/rfc/rfc2119.txt[RFC 2119].
+
+
+== Component Naming
+
+The name of a component which configures something OpenShift 4 specific _must_ be prefixed with `openshift4-`.
+
+[NOTE]
+====
+When using the `commodore component new` command to bootstrap a new component, the `component-` prefix will be added automatically and _must not_ be specified:
+
+[source,console]
+----
+commodore component new openshift4-registry --name "OpenShift 4 Registry" --owner appuio
+----
+====
+
+
+== https://docs.openshift.com/container-platform/latest/operators/understanding_olm/olm-understanding-olm.html[Operator Lifecycle Manager (OLM)]
+
+We _recommend_ to avoid using the OLM to install operators on a cluster.
+This is mainly due to the added complexity the OLM introduces and us not using any of it's features. This might change in the future.
+
+Exceptions to this rule include cases where the Red Hat documentation explicitly requires the OLM.
+
+Any operators we **do** install with the OLM _should_ be restricted to single namespaces and _must not_ be installed using the `AllNamespaces` InstallMode.
+
+We don't provide any support for operators installed by customers via the OLM.
+
+
+== CustomResource (CR) Specs
+
+Components which configure one or multiple CRs _should_ do so by exposing its `.spec` field as a parameter.
+This enables the configuration of all possible fields via the inventory and provides the maximum flexibility.
+Default values _may_ either be set in the `defaults.yml` file of the component or in Jsonnet code.
+It _should_ always be possible to override default values in the inventory.
+
+[CAUTION]
+====
+Lists in the inventory get extended by http://reclass.pantsfullofunix.net/operations.html#data-merging[reclass] when being merged together.
+This means that the items of each list are added together in a new list.
+It can lead to undesired behavior if not accounted for.
+====
+
+If creating multiple CRs, a dict _should_ be used where its keys map to the names used for the CRs.
+Iterating over the keys of this dict in Jsonnet enables the enrichment of possible default values if not set.
+
+Due to the way http://reclass.pantsfullofunix.net/index.html[reclass] handels `null` overrides, the component _must_ handle `null` values in dicts and lists gracefully.
+
+.main.jsonnet
+[source,jsonnet]
+----
+local ingressControllers =
+  if params.ingressControllers != null
+  then std.objectFields(params.ingressControllers)
+  else [];
+
+{
+  [name]:
+    [kube._Object('operator.openshift.io/v1', 'IngressController', name) {
+      metadata+: {
+        namespace: params.namespace,
+      },
+      spec: {
+        defaultCertificate: {
+          name: acmeCertName,
+        },
+      } + params.ingressControllers[name],
+    }]
+  for name in ingressControllers
+} + {
+  [if std.length(ingressControllers) == 0 then '.gitkeep']: {},
+}
+----
+
+
+== Inventory Parameters
+
+A component _may_ define various parameters in the inventory (`defaults.yml`).
+These _should_ be namespaced in a dict with the component's name (hyphens replaced with underscores):
+
+.defaults.yml
+[source,yaml]
+----
+parameters:
+  openshift4_ingress:
+    namespace: openshift-ingress
+    cloud:
+      provider: ${cloud:provider}
+    ingressControllers:
+      default:
+        replicas: 2
+
+----
+
+If the component requires additional information like the cloud provider, cluster version or infrastructure ID, these _may_ also be accessed via parameters of the inventory (usually in the form of facts).
+In the future this information _should_ be automatically collected on the cluster and exposed in the inventory as facts.
+For information which isn't yet collected automatically, a manual entry in the cluster's class is required.
+
+.c-misty-sun-2392.yml
+[source,yaml]
+----
+parameters:
+  openshift:
+    infraID: c-mist-x7bvn
+    clusterID: ce7e78b4-dead-beef-9367-7c2223d2506b
+    appsDomain: apps.example.com
+----
+
+To avoid a high coupling of components, parameters of other components _must not_ be referenced directly.
+There _must_ always be a "glue-layer" to provide such parameters.
+In other words: a component _must_ only reference parameters in its own inventory namespace (dict).
+
+The following example shows how the `hostname` field of the `openshift4-registry` component is set in the inventory using the `openshift:appsDomain` fact, instead of using the fact in the component directly:
+
+.openshift4.yml
+[source,yaml]
+----
+parameters:
+  openshift4_registry:
+    config:
+      routes:
+        - name: registry-route
+          hostname: registry.${openshift:appsDomain}
+----

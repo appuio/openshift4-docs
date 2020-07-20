@@ -1,0 +1,240 @@
+= Installation on Exoscale
+
+[abstract]
+--
+Steps to install an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
+
+These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html[Installing a cluster on bare metal] docs to set up a user provisioned installation (UPI).
+https://www.terraform.io[Terraform] is used to provision the cloud infrastructure.
+--
+
+[NOTE]
+--
+This how-to guide is still a work in progress and will change.
+It's currently very specific to VSHN and needs further changes to be more generic.
+--
+
+== Prerequisites
+* Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
+* `terraform`
+* `exo` >= v1.14.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `jq`
+* `md5sum`
+* `virt-edit`
+* `cpio`
+* Clone of the https://github.com/appuio/terraform-openshift4-exoscale[terraform-openshift4-exoscale] repository
+* A DNS domain configured for https://community.exoscale.com/documentation/dns/configuration-examples/#configuring-the-domain-name-at-the-registrar[Exoscale DNS service]
+
+
+== Cluster Installation
+
+. Register the new OpenShift 4 cluster in Lieutenant: https://control.vshn.net/syn/lieutenantclusters
+
+. Configure input
++
+[source,console]
+----
+export EXOSCALE_ACCOUNT=<exoscale-account>
+export EXOSCALE_API_KEY=<exoscale-key>
+export EXOSCALE_API_SECRET=<exoscale-secret>
+export EXOSCALE_REGION=ch-dk-2
+export CLUSTER_ID=<cluster-name>
+export BASE_DOMAIN=ocp4-poc.appuio-beta.ch
+export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshift/install/pull-secret
+
+export AWS_ACCESS_KEY_ID=${EXOSCALE_API_KEY}
+export AWS_SECRET_ACCESS_KEY=${EXOSCALE_API_SECRET}
+export AWS_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
+----
+
+. Prepare Exoscale CLI
++
+[source,console]
+----
+mkdir -p ~/.exoscale
+cat <<EOF >> ~/.exoscale/exoscale.toml
+
+[[accounts]]
+  account = "${EXOSCALE_ACCOUNT}"
+  defaultZone = "${EXOSCALE_REGION}"
+  endpoint = "https://api.exoscale.ch/v1"
+  name = "${CLUSTER_ID}"
+EOF
+
+----
+
+. Create S3 buckets
++
+[source,console]
+----
+exo sos create "${CLUSTER_ID}-bootstrap-ignition"
+exo sos create "${CLUSTER_ID}-tf-state"
+----
+
+. Prepare `install-config.yaml`
++
+[source,console]
+----
+mkdir ${CLUSTER_ID}
+
+cat > "${CLUSTER_ID}/install-config.yaml" <<EOF
+apiVersion: v1
+metadata:
+  name: ${CLUSTER_ID}
+baseDomain: ${BASE_DOMAIN}
+compute:
+  - name: worker
+    replicas: 3
+controlPlane:
+  name: master
+  replicas: 3
+networking:
+  clusterNetwork:
+    - cidr: 10.128.0.0/14
+      hostPrefix: 23
+  networkType: OpenShiftSDN
+  serviceNetwork:
+    - 172.30.0.0/16
+platform:
+  none: {}
+pullSecret: |
+  ${PULL_SECRET}
+sshKey: "$(cat ~/.ssh/id_ed25519.pub)"
+EOF
+
+----
+
+. Prepare install manifests and ignition config
++
+[source,console]
+----
+openshift-install --dir ${CLUSTER_ID} \
+  create manifests
+
+openshift-install --dir ${CLUSTER_ID} \
+  create ignition-configs
+
+for file in bootstrap master worker; do \
+  exo sos upload "${CLUSTER_ID}-bootstrap-ignition" "${CLUSTER_ID}/${file}.ign" && \
+  exo sos acl add "${CLUSTER_ID}-bootstrap-ignition" "${file}.ign" \
+      --public-read ; \
+done
+----
+
+. Prepare RHCOS images
++
+[source,console]
+----
+RHCOS_VERSION="4.5.2"
+
+curl "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.5/latest/rhcos-${RHCOS_VERSION}-x86_64-openstack.x86_64.qcow2.gz" | gunzip > rhcos-${RHCOS_VERSION}.qcow2
+
+virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
+  -m /dev/sda1:/ /loader/entries/ostree-1-rhcos.conf \
+  -e 's/openstack/metal ignition.config.url=http://169.254.169.254/1.0/user-data/'
+
+exo sos upload "${CLUSTER_ID}-bootstrap-ignition" rhcos-${RHCOS_VERSION}.qcow2
+exo sos acl add "${CLUSTER_ID}-bootstrap-ignition" rhcos-${RHCOS_VERSION}.qcow2 --public-read
+
+exo vm template register \
+  --checksum $(md5sum rhcos-${RHCOS_VERSION}.qcow2 | awk '{ print $1 }') \
+  --boot-mode uefi \
+  --disable-password \
+  --username core \
+  --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}" \
+  --name "rhcos-${RHCOS_VERSION}" \
+  --url "https://${AWS_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap-ignition/rhcos-${RHCOS_VERSION}.qcow2"
+
+export TF_VAR_rhcos_template="rhcos-${RHCOS_VERSION}"
+----
+
+. Initialize Terraform
++
+[source,console]
+----
+terraform init \
+  -backend-config "bucket=${CLUSTER_ID}-tf-state"
+
+export TF_VAR_cluster_id=$CLUSTER_ID
+export TF_VAR_ssh_key="$(cat ~/.ssh/id_rsa.pub)"
+----
+
+. Set up DNS NS records on parent zone (see Terraform output `ns_records`)
++
+[source,console]
+----
+terraform apply \
+  -target exoscale_domain_record.exo_nameservers
+----
+
+. Bootstrap cluster
++
+[source,console]
+----
+terraform apply \
+  -var bootstrap_count=1 \
+  -var worker_count=0
+----
+
+. Wait for bootstrap to complete
++
+[source,console]
+----
+openshift-install --dir ${CLUSTER_ID} \
+  wait-for bootstrap-complete
+----
+
+. Remove bootstrap node and provision worker nodes
++
+[source,console]
+----
+terraform apply
+----
+
+. Approve worker certs
++
+[source,console]
+----
+export KUBECONFIG=${CLUSTER_ID}/auth/kubeconfig
+
+# Once CSRs in state Pending show up, approve them
+# Needs to be run twice, two CSRs for each node need to be approved
+kubectl get csr -w
+oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc adm certificate approve
+
+kubectl get nodes
+
+openshift-install --dir ${CLUSTER_ID} \
+  wait-for install-complete
+----
+
+. Create secret with S3 credentials https://docs.openshift.com/container-platform/4.5/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry] (will be https://ticket.vshn.net/browse/APPU-2790[automated])
++
+[source,console]
+----
+oc create secret generic image-registry-private-configuration-user \
+--namespace openshift-image-registry \
+--from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=${AWS_ACCESS_KEY_ID} \
+--from-literal=REGISTRY_STORAGE_S3_SECRETKEY=${AWS_SECRET_ACCESS_KEY}
+----
+
+. Create wildcard cert for router
++
+[source,console]
+----
+kubectl get secret router-certs-default \
+  -n openshift-ingress \
+  -ojson --export | \
+    jq 'del(.metadata.ownerReferences) | .metadata.name = "router-certs-snakeoil"' | \
+  kubectl -n openshift-ingress apply -f -
+----
+
+. Make the cluster Project Syn enabled
++
+Install Steward on the cluster according to https://wiki.vshn.net/x/ngMBCg
++
+[source,console]
+----
+cat ${CLUSTER_ID}/metadata.json
+----

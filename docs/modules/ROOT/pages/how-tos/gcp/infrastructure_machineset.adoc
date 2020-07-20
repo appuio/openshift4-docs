@@ -5,9 +5,9 @@
 [abstract]
 --
 On OpenShift, nodes can be created that are dedicated for infrastructure workload.
-https://docs.openshift.com/container-platform/latest/machine_management/creating-infrastructure-machinesets.html[Creating infrastructure MachineSets] of the OpenShift documentation explains how to so.
+https://docs.openshift.com/container-platform/latest/machine_management/creating-infrastructure-machinesets.html[Creating infrastructure MachineSets] of the OpenShift documentation explains how to do so.
 For GCP, this doesn't work as documented and or the documentation is missing essential details.
-This how to tries to fill the gaps but must leave open a some questions.
+This how to tries to fill the gaps but must leave open some questions.
 --
 
 [NOTE]
@@ -78,7 +78,7 @@ Also set the value of the label `machineconfiguration.openshift.io/role` to `<ro
 Within `01-<role>-kubelet` the kublet Systemd unit is configured.
 Replace `--node-labels=node-role.kubernetes.io/worker` to `--node-labels=node-role.kubernetes.io/<role>`.
 
-. Crate MachineSet for the custom node group
+. Create a MachineSet for the custom node group
 +
 [NOTE]
 ====
@@ -174,7 +174,7 @@ https://docs.openshift.com/container-platform/latest/machine_management/creating
 Those tags are targeted in certain firewall rules.
 For this case, the rule granting access to the machine config endpoint is relevant.
 The firewall rules aren't altered when creating machines with custom tags.
-As a result, the crated VM isn't allowed to access the machine config endpoint and thus fails to load its ignition configuration.
+As a result, the created VM isn't allowed to access the machine config endpoint and thus fails to load its ignition configuration.
 
 === Who's/what's supposed to create the user data secret?
 
@@ -188,14 +188,14 @@ Only when creating a custom MachineConfigPool, the nodes will _not_ receive the 
 === Who's/what's supposed to create the MachineConfig and MachineConfigPool?
 
 Except for the `99-<master|worker>-ssh` MachineConfigs, all MachineConfigs do have an owner reference.
-There content is fairly specific to a specific cluster and contains things that needs to be updated under certain conditions (for example the cluster CA certificate).
-This suggest, that creating them manually doesn't seemed to be intended.
+Their content is fairly specific to a specific cluster and contains things that needs to be updated under certain conditions (for example the cluster CA certificate).
+This suggests, that creating them manually doesn't seemed to be intended.
 The documentation doesn't hint how those MachineConfig objects come into being.
 
 === How can we change MachineConfigs created for master and worker?
 
 As figured above, several MachineConfigs have an owner reference.
 As a consequence, they can not be changed.
-Any changes made to the get reverted immediately.
+Any changes made to them get reverted immediately.
 https://docs.openshift.com/container-platform/latest/nodes/nodes/nodes-nodes-managing.html[Managing Nodes] seems to explain this.
 https://docs.openshift.com/container-platform/4.5/rest_api/machine_apis/machine-apis-index.html#kubeletconfig-machineconfiguration-openshift-iov1[Machine APIs] also has hints on this.

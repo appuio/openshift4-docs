@@ -17,8 +17,11 @@
 
 * Technical reference
 ** xref:references/operators.adoc[Operators]
-** xref:references/resources/gcp.adoc[Cluster resources on GCP]
-** xref:references/storage/gcp.adoc[Storage options on GCP]
+** Google Cloud Platform
+*** xref:references/resources/gcp.adoc[Cluster resources]
+*** xref:references/storage/gcp.adoc[Storage options]
+** Project Syn
+*** xref:references/projectsyn/developer.adoc[Commodore Component Developer Guidelines]
 
 * Explanation
 ** Google Cloud Platform

@@ -42,7 +42,7 @@ We don't provide any support for operators installed by customers via the OLM.
 == CustomResource (CR) Specs
 
 Components which configure one or multiple CRs _should_ do so by exposing its `.spec` field as a parameter.
-This enables the configuration of all possible fields via the inventory and provides the maximum flexibility.
+This enables the configuration of all possible fields via the inventory and provides maximum flexibility.
 Default values _may_ either be set in the `defaults.yml` file of the component or in Jsonnet code.
 It _should_ always be possible to override default values in the inventory.
 
@@ -53,8 +53,9 @@ This means that the items of each list are added together in a new list.
 It can lead to undesired behavior if not accounted for.
 ====
 
-If creating multiple CRs, a dict _should_ be used where its keys map to the names used for the CRs.
-Iterating over the keys of this dict in Jsonnet enables the enrichment of possible default values if not set.
+When creating multiple CRs, a dict _should_ be used where its keys map to the names used for the CRs.
+Iterating over the keys of this dict in Jsonnet enables the enrichment of possible default values.
+This allows to omit default values within the inventory.
 
 Due to the way http://reclass.pantsfullofunix.net/index.html[reclass] handels `null` overrides, the component _must_ handle `null` values in dicts and lists gracefully.
 
@@ -88,7 +89,8 @@ local ingressControllers =
 == Inventory Parameters
 
 A component _may_ define various parameters in the inventory (`defaults.yml`).
-These _should_ be namespaced in a dict with the component's name (hyphens replaced with underscores):
+These _must_ be namespaced in a dict with the component's name (hyphens replaced with underscores).
+A group of components _may_ agree upon a common prefix to share parameters between each other.
 
 .defaults.yml
 [source,yaml]
@@ -105,7 +107,7 @@ parameters:
 ----
 
 If the component requires additional information like the cloud provider, cluster version or infrastructure ID, these _may_ also be accessed via parameters of the inventory (usually in the form of facts).
-In the future this information _should_ be automatically collected on the cluster and exposed in the inventory as facts.
+In the future this information will be automatically collected on the cluster and exposed in the inventory as facts.
 For information which isn't yet collected automatically, a manual entry in the cluster's class is required.
 
 .c-misty-sun-2392.yml

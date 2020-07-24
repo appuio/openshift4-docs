@@ -6,7 +6,7 @@
 This document explains how custom node groups can be created on OpenShift 4.
 
 
-In OpenShift 4 the concept of node groups and their lables changed comparing to 3.11.
+In OpenShift 4 the concept of node groups and their labels changed comparing to OpenShift 3.11.
 
 [quote, 'https://github.com/openshift/machine-config-operator/blob/master/docs/custom-pools.md[machine-config-operator documentation]']
 ====

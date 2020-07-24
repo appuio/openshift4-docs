@@ -17,7 +17,7 @@ The default group with the role `worker` is the basis for all other node groups.
 The https://github.com/openshift/machine-config-operator[machine-config-operator] automatically creates the base `MachineConfig` and `MachineConfigPool` from a set of https://github.com/openshift/machine-config-operator/tree/master/templates[templates].
 
 To create a custom node group, the `worker` role and it's configuration should always be reused.
-This is done by including the label selector in the custom MachineConfigPool like this:
+This is done by including the label selector in the custom `MachineConfigPool` like this:
 
 [source,yaml]
 ----

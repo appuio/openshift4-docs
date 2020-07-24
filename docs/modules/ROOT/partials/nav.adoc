@@ -28,4 +28,5 @@
 * Explanation
 ** Google Cloud Platform
 *** xref:explanations/gcp/name_lengths.adoc[Name lengths]
+** xref:explanations/node-groups.adoc[Node Groups]
 ** xref:explanations/sudo.adoc[Sudo]

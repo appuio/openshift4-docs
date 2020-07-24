@@ -1,0 +1,51 @@
+= Node Groups
+:!toc:
+
+[abstract]
+.Abstract
+This document explains how custom node groups can be created on OpenShift 4.
+
+
+In OpenShift 4 the concept of node groups and their lables changed comparing to 3.11.
+
+[quote, 'https://github.com/openshift/machine-config-operator/blob/master/docs/custom-pools.md[machine-config-operator documentation]']
+====
+Custom pools are pools that inherit from the worker pool.
+====
+
+The default group with the role `worker` is the basis for all other node groups.
+The https://github.com/openshift/machine-config-operator[machine-config-operator] automatically creates the base `MachineConfig` and `MachineConfigPool` from a set of https://github.com/openshift/machine-config-operator/tree/master/templates[templates].
+
+To create a custom node group, the `worker` role and it's configuration should always be reused.
+This is done by including the label selector in the custom MachineConfigPool like this:
+
+[source,yaml]
+----
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfigPool
+metadata:
+  name: infra
+spec:
+  machineConfigSelector:
+    matchExpressions:
+      - {key: machineconfiguration.openshift.io/role, operator: In, values: [worker,infra]}
+  nodeSelector:
+    matchLabels:
+      node-role.kubernetes.io/infra: ""
+----
+
+To use the Machine API, it's required to either manually create the initial user-data in a secret or reuse the `worker-user-data` secret.
+
+[CAUTION]
+====
+Reusing the existing secret will apply only the worker config on first provision and only once the correct labes are set on the new node will the additional config be applied (this may or may not be a problem).
+====
+
+Also see xref:how-tos/gcp/infrastructure_machineset.adoc[how to create infra machine sets on GCP].
+
+
+== References
+
+* https://github.com/openshift/machine-config-operator/blob/master/docs/custom-pools.md
+* https://access.redhat.com/solutions/5034771
+* https://access.redhat.com/support/cases/#/case/02695925

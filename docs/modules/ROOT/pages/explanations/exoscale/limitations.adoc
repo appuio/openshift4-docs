@@ -1,0 +1,63 @@
+= Limitations on Exoscale
+
+[abstract]
+.Abstract
+Doing a UPI on Exoscale as xref:how-tos/install/exoscale.adoc[documented here] comes with some limitations which are outlined in this document.
+
+
+== Internal API Load Balancer
+
+One of the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html#installation-network-user-infra_installing-bare-metal[network topology requirements] for a UPI installation is a load balancer which is accessible internally to the cluster.
+This load balancer is used to access both the Kubernetes API and the ignition endpoint.
+
+There are several managed offerings that could be considered to implement this on Exoscale.
+
+=== Managed Elastic IPs
+
+Using a https://community.exoscale.com/documentation/compute/eip/#managed-eip[managed EIP] would allow to configure health checks and therefore automate the failover of one master to the other.
+
+[quote, 'https://community.exoscale.com/documentation/compute/eip/#limitations[Exoscale documentation]']
+____
+Instances sharing a common EIP can't communicate with each other by using the EIP address
+____
+
+Therefore we can't use them because the master nodes wouldn't be able to communicate via the EIP and this would prevent pods running on them from accessing the API.
+
+=== Network Load Balancer
+
+Using a https://community.exoscale.com/documentation/compute/network-load-balancer[Network Load Balancer] only allows to https://community.exoscale.com/documentation/compute/network-load-balancer/#limitations_1[target instance pools].
+Since during installation, the bootstrap node needs to be included in the load balancing, we can't use an instance pool.
+
+=== Current Workaround
+
+We use DNS round robin to include the IP of each master node and during installation also the bootstrap node in a DNS name.
+This leads to slow and unpredictable failovers.
+
+
+== Ingress Router Load Balancer
+
+To bring traffic into the cluster, a load balancer for the ingress router pods is required.
+It needs to be accessible both internally and externally of the cluster.
+This again prevents us from using a managed EIP as described in <<_managed_elastic_ips>>.
+
+Using an NLB could be a solution here, given that we can use an instance pool for worker nodes.
+
+
+== Instance Pools
+
+An https://community.exoscale.com/documentation/compute/instance-pools[instance pool] can only be used if the configuration of all the instances is the same.
+Currently we use a custom ignition config for each instance to set the hostname (writing it to `/etc/hostname`) because the Exoscale DHCP server doesn't set one.
+This is required since the hostname is used as the name of the node the kubelet bootstraps.
+We therefore can't use instance pools since all the nodes would have the same name.
+
+
+== HTTPS Health Checks
+
+Both managed EIPs and NLBs don't support HTTPS for health checks.
+This prevents us from using them for either the K8s API, ignition config or ingress router load balancers.
+A feature request was placed and Exoscale is working on it (no ETA).
+
+
+== Private Networks
+
+Since https://community.exoscale.com/documentation/compute/private-networks[private networks] can only be configured in **addition** to the public IP, nodes with only a private IP can't be created.

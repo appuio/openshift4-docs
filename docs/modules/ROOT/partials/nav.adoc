@@ -26,6 +26,8 @@
 *** xref:references/projectsyn/developer.adoc[Commodore Component Developer Guidelines]
 
 * Explanation
+** Exoscale
+*** xref:explanations/exoscale/limitations.adoc[Limitations]
 ** Google Cloud Platform
 *** xref:explanations/gcp/name_lengths.adoc[Name lengths]
 ** xref:explanations/node-groups.adoc[Node Groups]

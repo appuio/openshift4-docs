@@ -31,7 +31,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 [source,console]
 ----
 export CLOUDSCALE_TOKEN=<cloudscale-token> # From https://control.cloudscale.ch/user/api-tokens
-export CLUSTER_NAME=<cluster-name>
+export CLUSTER_ID=<cluster-name>
 export BASE_DOMAIN=ocp4-poc.appuio-beta.ch
 export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshift/install/pull-secret
 ----
@@ -43,11 +43,11 @@ export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshif
 # Use already exiting bucket user
 response=$(curl -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
   https://api.cloudscale.ch/v1/objects-users | \
-  jq -e ".[] | select(.display_name == \"${CLUSTER_NAME}\")")
+  jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
 
 # Or create a new one
 response=$(curl -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
-  -F display_name=${CLUSTER_NAME} \
+  -F display_name=${CLUSTER_ID} \
   https://api.cloudscale.ch/v1/objects-users)
 
 export AWS_ACCESS_KEY_ID=$(echo $response | jq -r '.keys[0].access_key')
@@ -57,23 +57,20 @@ mc config host add \
   s3 https://objects.rma.cloudscale.ch ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY}
 
 mc mb --ignore-existing\
-  "s3/${CLUSTER_NAME}-bootstrap-ignition" \
-  "s3/${CLUSTER_NAME}-tf-state"
-
-# Ignore the error
-mc policy set download "s3/${CLUSTER_NAME}-bootstrap-ignition"
+  "s3/${CLUSTER_ID}-bootstrap-ignition" \
+  "s3/${CLUSTER_ID}-tf-state"
 ----
 
 . Prepare `install-config.yaml`
 +
 [source,console]
 ----
-mkdir ${CLUSTER_NAME}
+mkdir ${CLUSTER_ID}
 
-cat > "${CLUSTER_NAME}/install-config.yaml" <<EOF
+cat > "${CLUSTER_ID}/install-config.yaml" <<EOF
 apiVersion: v1
 metadata:
-  name: ${CLUSTER_NAME}
+  name: ${CLUSTER_ID}
 baseDomain: ${BASE_DOMAIN}
 compute:
   - name: worker
@@ -101,13 +98,16 @@ EOF
 +
 [source,console]
 ----
-openshift-install --dir ${CLUSTER_NAME} \
+openshift-install --dir ${CLUSTER_ID} \
   create manifests
 
-openshift-install --dir ${CLUSTER_NAME} \
+openshift-install --dir ${CLUSTER_ID} \
   create ignition-configs
 
-mc cp ${CLUSTER_NAME}/*.ign "s3/${CLUSTER_NAME}-bootstrap-ignition"
+mc cp ${CLUSTER_ID}/bootstrap.ign "s3/${CLUSTER_ID}-bootstrap-ignition"
+
+export TF_VAR_ignition_bootstrap=$(mc share download --json --expire=1h "s3/${CLUSTER_ID}-bootstrap-ignition/bootstrap.ign" | jq -r '.share')
+
 ----
 
 . Provision infrastructure
@@ -117,15 +117,13 @@ mc cp ${CLUSTER_NAME}/*.ign "s3/${CLUSTER_NAME}-bootstrap-ignition"
 terraform init \
   -backend-config "bucket=${CLUSTER_NAME}-tf-state"
 
-export TF_VAR_cluster_name=$CLUSTER_NAME
+export TF_VAR_cluster_id=$CLUSTER_ID
 
 export TF_VAR_ssh_keys=[\"$(cat ~/.ssh/id_ed25519.pub)\"]
 
 terraform apply \
   -target=cloudscale_floating_ip.api_vip \
   -var api_eip=""
-
-terraform refresh
 
 export TF_VAR_api_eip="$(terraform output -json | jq -r .api_vip.value)"
 
@@ -149,7 +147,7 @@ terraform output -json | jq -r .dns_entries.value
 +
 [source,console]
 ----
-openshift-install --dir ${CLUSTER_NAME} \
+openshift-install --dir ${CLUSTER_ID} \
   wait-for bootstrap-complete
 ----
 
@@ -167,7 +165,7 @@ terraform apply \
 ----
 terraform apply
 
-export KUBECONFIG=${CLUSTER_NAME}/auth/kubeconfig
+export KUBECONFIG=${CLUSTER_ID}/auth/kubeconfig
 
 # Once CSRs in state Pending show up, approve them
 # Needs to be run twice
@@ -189,6 +187,14 @@ echo "router_servers=$(terraform output -json | jq .router_servers.value)" \
 terraform apply
 ----
 
+. Wait for installation to complete
++
+[source,console]
+----
+openshift-install --dir ${CLUSTER_ID} \
+  wait-for install-complete
+----
+
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/4.5/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
 +
 [source,console]
@@ -205,5 +211,5 @@ Install Steward on the cluster according to https://wiki.vshn.net/x/ngMBCg
 +
 [source,console]
 ----
-cat ${CLUSTER_NAME}/metadata.json
+cat ${CLUSTER_ID}/metadata.json
 ----

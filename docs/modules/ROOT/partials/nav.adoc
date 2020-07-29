@@ -5,15 +5,15 @@
 ** Authentication
 *** xref:how-tos/authentication/sudo.adoc[Sudo]
 ** cloudscale.ch
-*** xref:how-tos/install/cloudscale.adoc[Cluster Setup]
+*** xref:how-tos/cloudscale/install.adoc[Cluster Setup]
 ** Exoscale
-*** xref:how-tos/install/exoscale.adoc[Cluster Setup]
+*** xref:how-tos/exoscale/install.adoc[Cluster Setup]
 ** Google Cloud Platform
 *** xref:how-tos/gcp/project.adoc[Project Setup]
-*** xref:how-tos/install/gcp.adoc[Cluster Setup]
+*** xref:how-tos/gcp/install.adoc[Cluster Setup]
 *** xref:how-tos/destroy/gcp.adoc[Cluster Decommissioning]
 *** xref:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
-** xref:how-tos/install/hive.adoc[Hive]
+*** xref:how-tos/gcp/hive.adoc[Hive]
 ** VMware vSphere
 *** xref:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
 

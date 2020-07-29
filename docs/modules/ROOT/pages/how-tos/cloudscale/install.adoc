@@ -19,7 +19,8 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `terraform`
 * `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client]
 * `jq`
-* Clone of the https://github.com/appuio/terraform-openshift4-cloudscale[terraform-openshift4-cloudscale] repository
+* `openshift-install` https://cloud.redhat.com/openshift/install/metal/user-provisioned[OpenShift Installer]
+* Clone of the https://git.vshn.net/syn-dev/tf-poc/[tf-poc] repository
 
 
 == Cluster Installation
@@ -30,7 +31,9 @@ It's currently very specific to VSHN and needs further changes to be more generi
 +
 [source,console]
 ----
-export CLOUDSCALE_TOKEN=<cloudscale-token> # From https://control.cloudscale.ch/user/api-tokens
+export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
+export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
+export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/1462/terraform/state/cloudscale1"
 export CLUSTER_ID=<cluster-name>
 export BASE_DOMAIN=ocp4-poc.appuio-beta.ch
 export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshift/install/pull-secret
@@ -50,15 +53,22 @@ response=$(curl -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
   -F display_name=${CLUSTER_ID} \
   https://api.cloudscale.ch/v1/objects-users)
 
-export AWS_ACCESS_KEY_ID=$(echo $response | jq -r '.keys[0].access_key')
-export AWS_SECRET_ACCESS_KEY=$(echo $response | jq -r '.keys[0].secret_key')
-
 mc config host add \
-  s3 https://objects.rma.cloudscale.ch ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY}
+  s3 https://objects.rma.cloudscale.ch $(echo $response | jq -r '.keys[0].access_key') $(echo $response | jq -r '.keys[0].secret_key')
 
 mc mb --ignore-existing\
-  "s3/${CLUSTER_ID}-bootstrap-ignition" \
-  "s3/${CLUSTER_ID}-tf-state"
+  "s3/${CLUSTER_ID}-bootstrap-ignition"
+----
+
+. Prepare git repo
++
+[source,console]
+----
+git clone git@git.vshn.net:syn-dev/tf-poc.git
+
+cd tf-poc
+
+git checkout -b "setup/${CLUSTER_ID}"
 ----
 
 . Prepare `install-config.yaml`
@@ -91,7 +101,6 @@ pullSecret: |
   ${PULL_SECRET}
 sshKey: "$(cat ~/.ssh/id_ed25519.pub)"
 EOF
-
 ----
 
 . Prepare install manifests and ignition config
@@ -107,40 +116,72 @@ openshift-install --dir ${CLUSTER_ID} \
 mc cp ${CLUSTER_ID}/bootstrap.ign "s3/${CLUSTER_ID}-bootstrap-ignition"
 
 export TF_VAR_ignition_bootstrap=$(mc share download --json --expire=1h "s3/${CLUSTER_ID}-bootstrap-ignition/bootstrap.ign" | jq -r '.share')
-
 ----
 
-. Provision infrastructure
+. Create Terraform cluster config
++
+[source,console]
+----
+CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' "${CLUSTER_ID}/master.ign" | \
+  awk -F ',' '{ print $2 }' | \
+  base64 --decode)
+
+cat > "${CLUSTER_ID}.tf" <<EOF
+module "${CLUSTER_ID}" {
+  source = "github.com/appuio/terraform-openshift4-cloudscale?ref=module"
+
+  cluster_id = "${CLUSTER_ID}"
+
+  infra_count     = 0
+  master_count    = 0
+  bootstrap_count = 1
+
+  base_domain        = "${BASE_DOMAIN}"
+  ssh_keys           = var.ssh_keys
+  ignition_bootstrap = var.ignition_bootstrap
+  infra_servers      = module.${CLUSTER_ID}.infra_servers
+  ignition_ca        = <<EOL
+${CA_CERT}
+EOL
+}
+
+output "${CLUSTER_ID}_dns" {
+  value = module.${CLUSTER_ID}.dns_entries
+}
+EOF
+----
+
+. Provision bootstrap node
 +
 [source,console]
 ----
 terraform init \
-  -backend-config "bucket=${CLUSTER_NAME}-tf-state"
+  "-backend-config=address=${GITLAB_STATE_URL}" \
+  "-backend-config=lock_address=${GITLAB_STATE_URL}/lock" \
+  "-backend-config=unlock_address=${GITLAB_STATE_URL}/lock" \
+  "-backend-config=username=$(whoami)" \
+  "-backend-config=password=${GITLAB_TOKEN}" \
+  "-backend-config=lock_method=POST" \
+  "-backend-config=unlock_method=DELETE" \
+  "-backend-config=retry_wait_min=5"
 
-export TF_VAR_cluster_id=$CLUSTER_ID
+terraform apply
+----
 
-export TF_VAR_ssh_keys=[\"$(cat ~/.ssh/id_ed25519.pub)\"]
+. Provision master nodes
++
+[source,console]
+----
+sed -i="" '/^  master_count/d' "${CLUSTER_ID}.tf"
 
-terraform apply \
-  -target=cloudscale_floating_ip.api_vip \
-  -var api_eip=""
-
-export TF_VAR_api_eip="$(terraform output -json | jq -r .api_vip.value)"
-
-terraform apply \
-  -target=cloudscale_floating_ip.api_vip \
-  -target=cloudscale_server.bootstrap \
-  -target=cloudscale_server.master \
-  -var bootstrap_count=1
+terraform apply
 ----
 
 . Create the necessary DNS records
 +
 [source,console]
 ----
-terraform refresh
-
-terraform output -json | jq -r .dns_entries.value
+terraform output -json | jq -r ".[\"${CLUSTER_ID}_dns\"].value"
 ----
 
 . Wait for bootstrap to complete
@@ -151,40 +192,26 @@ openshift-install --dir ${CLUSTER_ID} \
   wait-for bootstrap-complete
 ----
 
-. Remove bootstrap node
+. Remove bootstrap node and provision infra nodes
 +
 [source,console]
 ----
-terraform apply \
-  -target=cloudscale_server.bootstrap
-----
+sed -i="" '/^  bootstrap_count/d' "${CLUSTER_ID}.tf"
+sed -i="" '/^  infra_count/d' "${CLUSTER_ID}.tf"
 
-. Provision worker nodes
-+
-[source,console]
-----
 terraform apply
 
 export KUBECONFIG=${CLUSTER_ID}/auth/kubeconfig
 
 # Once CSRs in state Pending show up, approve them
-# Needs to be run twice
-kubectl get csr
-kubectl get csr --no-headers | \
-  grep Pending | awk '{ print $1 }' | xargs \
-  kubectl certificate approve
+# Needs to be run twice, two CSRs for each node need to be approved
+while sleep 10; do \
+  oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc adm certificate approve; \
+done
 
-kubectl get nodes
-----
-
-. Configure router HAProxy
-+
-[source,console]
-----
-echo "router_servers=$(terraform output -json | jq .router_servers.value)" \
-  > terraform.tfvars
-
-terraform apply
+kubectl get nodes -lnode-role.kubernetes.io/worker
+kubectl label node -lnode-role.kubernetes.io/worker node-role.kubernetes.io/infra=""
 ----
 
 . Wait for installation to complete
@@ -193,6 +220,15 @@ terraform apply
 ----
 openshift-install --dir ${CLUSTER_ID} \
   wait-for install-complete
+----
+
+. Push new cluster config
++
+[source,console]
+----
+git add .
+git commit -m "Setup cluster ${CLUSTER_ID}"
+git push -u
 ----
 
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/4.5/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]

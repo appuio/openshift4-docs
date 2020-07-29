@@ -9,9 +9,9 @@ This document explains how custom node groups can be created on OpenShift 4.
 In OpenShift 4 the concept of node groups and their labels changed comparing to OpenShift 3.11.
 
 [quote, 'https://github.com/openshift/machine-config-operator/blob/master/docs/custom-pools.md[machine-config-operator documentation]']
-====
+____
 Custom pools are pools that inherit from the worker pool.
-====
+____
 
 The default group with the role `worker` is the basis for all other node groups.
 The https://github.com/openshift/machine-config-operator[machine-config-operator] automatically creates the base `MachineConfig` and `MachineConfigPool` from a set of https://github.com/openshift/machine-config-operator/tree/master/templates[templates].

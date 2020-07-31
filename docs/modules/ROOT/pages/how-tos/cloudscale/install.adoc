@@ -135,6 +135,7 @@ module "${CLUSTER_ID}" {
   region     = "${REGION}1"
 
   infra_count     = 0
+  worker_count    = 0
   master_count    = 0
   bootstrap_count = 1
 
@@ -222,6 +223,24 @@ kubectl label node -lnode-role.kubernetes.io/worker node-role.kubernetes.io/infr
 ----
 openshift-install --dir ${CLUSTER_ID} \
   wait-for install-complete
+----
+
+. Provision worker nodes
++
+[source,console]
+----
+sed -i="" '/^  worker_count/d' "${CLUSTER_ID}.tf"
+
+terraform apply
+
+export KUBECONFIG=${CLUSTER_ID}/auth/kubeconfig
+
+# Once CSRs in state Pending show up, approve them
+# Needs to be run twice, two CSRs for each node need to be approved
+while sleep 10; do \
+  oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc adm certificate approve; \
+done
 ----
 
 . Push new cluster config

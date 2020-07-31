@@ -34,6 +34,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
 export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
 export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/1462/terraform/state/cloudscale1"
+export REGION=rma
 export CLUSTER_ID=<cluster-name>
 export BASE_DOMAIN=ocp4-poc.appuio-beta.ch
 export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshift/install/pull-secret
@@ -54,7 +55,7 @@ response=$(curl -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
   https://api.cloudscale.ch/v1/objects-users)
 
 mc config host add \
-  s3 https://objects.rma.cloudscale.ch $(echo $response | jq -r '.keys[0].access_key') $(echo $response | jq -r '.keys[0].secret_key')
+  s3 https://objects.${REGION}.cloudscale.ch $(echo $response | jq -r '.keys[0].access_key') $(echo $response | jq -r '.keys[0].secret_key')
 
 mc mb --ignore-existing\
   "s3/${CLUSTER_ID}-bootstrap-ignition"
@@ -131,6 +132,7 @@ module "${CLUSTER_ID}" {
   source = "github.com/appuio/terraform-openshift4-cloudscale?ref=module"
 
   cluster_id = "${CLUSTER_ID}"
+  region     = "${REGION}1"
 
   infra_count     = 0
   master_count    = 0

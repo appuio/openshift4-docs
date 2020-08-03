@@ -69,7 +69,7 @@ mc mb --ignore-existing\
 ----
 cd commodore/
 
-mkdir target
+mkdir -p target
 
 cat > target/install-config.yaml <<EOF
 apiVersion: v1
@@ -104,6 +104,11 @@ EOF
 openshift-install --dir target \
   create manifests
 
+# Make any custom changes to the manifests
+# For example to change the "apps" domain:
+# yq w -i target/manifests/cluster-ingress-02-config.yml \
+#   spec.domain apps.example.com
+
 openshift-install --dir target \
   create ignition-configs
 
@@ -116,6 +121,7 @@ export TF_VAR_ignition_bootstrap=$(mc share download --json --expire=1h "s3/${CL
 +
 [source,console]
 ----
+# This will fail
 poetry run commodore catalog compile ${CLUSTER_ID}
 
 CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' target/master.ign | \
@@ -124,13 +130,28 @@ CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' target
 
 pushd "inventory/classes/${TENANT_ID}/"
 
-yq w -i "${CLUSTER_ID}.yml" "classes[+]" "components.openshift4-cloudscale"
+yq w -i "${CLUSTER_ID}.yml" \
+  "classes[+]" "components.openshift4-cloudscale"
 
-yq w -i "${CLUSTER_ID}.yml" parameters.openshift4_cloudscale.variables.base_domain "${BASE_DOMAIN}"
+yq w -i "${CLUSTER_ID}.yml" \
+  parameters.openshift.infraID -- "$(jq -r .infraID ../../../target/metadata.json)"
+yq w -i "${CLUSTER_ID}.yml" \
+  parameters.openshift.clusterID -- "$(jq -r .clusterID ../../../target/metadata.json)"
+yq w -i "${CLUSTER_ID}.yml" \
+  parameters.openshift.appsDomain -- "apps.${CLUSTER_ID}.${BASE_DOMAIN}"
 
-yq w -i "${CLUSTER_ID}.yml" "parameters.openshift4_cloudscale.variables.ssh_keys[+]" "$(cat ~/.ssh/id_ed25519.pub)"
+yq w -i "${CLUSTER_ID}.yml" \
+  parameters.openshift4_cloudscale.variables.base_domain -- "${BASE_DOMAIN}"
+yq w -i "${CLUSTER_ID}.yml" \
+  "parameters.openshift4_cloudscale.variables.ssh_keys[+]" -- "$(cat ~/.ssh/id_ed25519.pub)"
+yq w -i "${CLUSTER_ID}.yml" \
+  parameters.openshift4_cloudscale.variables.ignition_ca -- "${CA_CERT}"
 
-yq w -i "${CLUSTER_ID}.yml" parameters.openshift4_cloudscale.variables.ignition_ca "${CA_CERT}"
+yq w -i "${CLUSTER_ID}.yml" \
+  parameters.openshift4_ingress.ingressControllers.default.defaultCertificate.name router-certs-snakeoil
+
+git commit -a -m "Setup cluster ${CLUSTER_ID}"
+git push
 
 popd
 ----
@@ -139,7 +160,7 @@ popd
 +
 [source,console]
 ----
-poetry run commodore catalog compile ${CLUSTER_ID} --local
+poetry run commodore catalog compile ${CLUSTER_ID} --push
 ----
 
 . Setup Terraform
@@ -256,23 +277,6 @@ while sleep 3; do \
   oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
   xargs oc adm certificate approve; \
 done
-----
-
-. Commit changes to config
-+
-[source,console]
-----
-popd
-
-pushd "inventory/classes/${TENANT_ID}/"
-
-git commit -a -m "Setup cluster ${CLUSTER_ID}"
-
-git push
-
-popd
-
-poetry run commodore catalog compile ${CLUSTER_ID} --push
 ----
 
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/4.5/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry] (will be https://ticket.vshn.net/browse/APPU-2790[automated])

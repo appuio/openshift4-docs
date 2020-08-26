@@ -1,0 +1,64 @@
+= Generic Pre-Install Checklist
+
+[abstract]
+To successfully install an OpenShift 4 cluster some pre-requisites are needed and some questions need to be answered before starting the installation. This page helps to be prepared for the cluster planning and installation.
+
+== Checklist
+
+* [ ] <<Naming and DNS>> defined?
+* [ ] <<Resource requirements>> defined?
+* [ ] <<Infrastructure>> defined?
+* [ ] <<Network requirements>> defined?
+
+== Naming and DNS
+
+DNS names are very important, changing them later is usually not possible or a huge amount of (error prone) work. Plan the following points carefully:
+
+* Base domain
+
+Also have a look at xref:explanation/dns_scheme.adoc[DNS Scheme] to get an idea how DNS records are handled.
+
+== Resource requirements
+
+The main purpose of the cluster will be to run the users applications and these applications have specific resource requirements.
+
+This needs to be taken into consideration when answering the following questions:
+
+* What kind of virtual machines will be needed to satisfy the resource requirements (vCPU / Memory) for running the user's workload?
+* How many user application Pods will be scheduled (just an estimate)?
+* How many worker nodes will be needed?
+* How much room for failure and maintenance (`n+1` redundancy) is needed?
+
+Don't go below the defined minimum requirements.
+
+== Infrastructure
+
+Collect the following information about the infrastructure:
+
+* What infrastructure will be used (which cloud)?
+* In which account will the cluster be installed? Gather the needed access credentials with sufficient rights.
+
+Depending on what the infrastructure supports:
+
+* Which region and zone(s) will be used for the cluster?
+* Do the worker nodes have to be spread over multiple availability zones (AZ)?
+
+== Network requirements
+
+If the default network settings don't match the requirements, first answer the question "Is there really no way around using the default network settings?" - If the answer is no, prepare the following information:
+
+* What's the IP subnet for the nodes?
+* Which IP network can be used for `clusterNetwork` (SDN)? Should be a `/14`.
+* Which IP network can be used for `serviceNetwork`? Should be a `/16`.
+
+As this is a deviation from the defined default, it must be carefully designed and documented. A full network diagram is a requirement in this case.
+
+=== Firewall requirements
+
+Make sure the firewall requirements are met. See https://docs.openshift.com/container-platform/latest/installing/install_config/configuring-firewall.html[Configuring your firewall] and https://kb.vshn.ch/kb/vshn_infra_ips.html[VSHN Infrastructure - IP Addresses and Firewall Rules] for more details.
+
+== Infrastructure specific Check-Lists
+
+See the following infrastructure specific check-lists for further information:
+
+* xref:how-tos/vsphere/pre-install-checklist.adoc[Pre-Installation Checklist for OpenShift 4 on VMware vSphere]

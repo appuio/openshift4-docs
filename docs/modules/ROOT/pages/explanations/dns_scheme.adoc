@@ -1,4 +1,4 @@
-= DNS Scheme
+= DNS and Nameing Scheme
 
 An OpenShift 4 cluster requires using a specific DNS scheme which is described on this page. Most of the values are automatically generated and can't be changed.
 
@@ -35,6 +35,12 @@ An OpenShift 4 cluster requires using a specific DNS scheme which is described o
   The fully qualified domain name of machines belonging to the cluster.
 
   `<role><#>.<cluster domain>`
++
+[NOTE]
+====
+This will only be used for naming the machines.
+No DNS records will be created.
+====
 
 `<external api>`::
 
@@ -86,22 +92,6 @@ The following DNS records must resolve publicly:
 A full list of DNS records for one cluster using the above definition:
 
 ----
-; Hosts
-infra-454b.c-summer-shadow-2592.example.com IN A x.x.x.x
-infra-9031.c-summer-shadow-2592.example.com IN A x.x.x.x
-infra-c8f2.c-summer-shadow-2592.example.com IN A x.x.x.x
-
-lb-5f52.c-summer-shadow-2592.example.com IN A x.x.x.x
-lb-ba8f.c-summer-shadow-2592.example.com IN A x.x.x.x
-
-master-0e9c.c-summer-shadow-2592.example.com IN A x.x.x.x
-master-1a3c.c-summer-shadow-2592.example.com IN A x.x.x.x
-master-e976.c-summer-shadow-2592.example.com IN A x.x.x.x
-
-worker-4720.c-summer-shadow-2592.example.com IN A x.x.x.x
-worker-7d32.c-summer-shadow-2592.example.com IN A x.x.x.x
-worker-a640.c-summer-shadow-2592.example.com IN A x.x.x.x
-
 ; Services
 api-int.c-summer-shadow-2592.example.com IN A x.x.x.x
 api.c-summer-shadow-2592.example.com IN A x.x.x.x
@@ -119,3 +109,17 @@ _etcd-server-ssl._tcp.c-summer-shadow-2592.example.com IN SRV 0 10 2380 etcd-0.c
 _etcd-server-ssl._tcp.c-summer-shadow-2592.example.com IN SRV 0 10 2380 etcd-1.c-summer-shadow-2592.example.com
 _etcd-server-ssl._tcp.c-summer-shadow-2592.example.com IN SRV 0 10 2380 etcd-2.c-summer-shadow-2592.example.com
 ----
+
+Full list of hostnames for one cluster using the above definition:
+
+* `infra-454b.c-summer-shadow-2592.example.com`
+* `infra-9031.c-summer-shadow-2592.example.com`
+* `infra-c8f2.c-summer-shadow-2592.example.com`
+* `lb-5f52.c-summer-shadow-2592.example.com`
+* `lb-ba8f.c-summer-shadow-2592.example.com`
+* `master-0e9c.c-summer-shadow-2592.example.com`
+* `master-1a3c.c-summer-shadow-2592.example.com`
+* `master-e976.c-summer-shadow-2592.example.com`
+* `worker-4720.c-summer-shadow-2592.example.com`
+* `worker-7d32.c-summer-shadow-2592.example.com`
+* `worker-a640.c-summer-shadow-2592.example.com`

@@ -20,7 +20,7 @@ An OpenShift 4 cluster requires using a specific DNS scheme which is described o
 
 `<#>`::
 
-  A automatically randomly defined character sequence with four digits.
+  An automatically, randomly defined character sequence with four digits.
 
 `<index>`::
 

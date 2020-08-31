@@ -6,6 +6,8 @@ Steps to install an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
 
 These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html[Installing a cluster on bare metal] docs to set up a user provisioned installation (UPI).
 https://www.terraform.io[Terraform] is used to provision the cloud infrastructure.
+
+The commands are idempotent and can be retried if any of the steps fail.
 --
 
 [NOTE]
@@ -14,61 +16,85 @@ This how-to guide is still a work in progress and will change.
 It's currently very specific to VSHN and needs further changes to be more generic.
 --
 
+
 == Prerequisites
-* cloudscale.ch API token
-* `terraform`
-* `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client]
+
+* `docker`
+* `docker-compose`
+* `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor]
 * `openshift-install` https://cloud.redhat.com/openshift/install/metal/user-provisioned[OpenShift Installer]
-* Working local https://github.com/projectsyn/commodore[Commodore] setup
+* https://github.com/projectsyn/commodore[Commodore] docker-compose setup
 
 
 == Cluster Installation
 
-. Register the new OpenShift 4 cluster in Lieutenant: https://control.vshn.net/syn/lieutenantclusters
+Register the new OpenShift 4 cluster in Lieutenant: https://control.vshn.net/syn/lieutenantclusters
 
-. Configure input
-+
+=== Configure input
+
 [source,console]
 ----
 export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
 export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
-export GITLAB_CATALOG_PROJECT_ID=<project-id> # GitLab project ID of the catalog repo
-export REGION=rma # rma or lpg
-export CLUSTER_ID=<cluster-id>
-export TENANT_ID=<tenant-id>
-export BASE_DOMAIN=ocp4-poc.appuio-beta.ch
-export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshift/install/pull-secret
+export GITLAB_CATALOG_PROJECT_ID=<project-id> # GitLab numerical project ID of the catalog repo
+export REGION=rma # rma or lpg (without the zone number)
+export CLUSTER_ID=<lieutenant-cluster-id>
+export TENANT_ID=<lieutenant-tenant-id>
+export BASE_DOMAIN=ocp4-poc.appuio-beta.ch # See xref:explanation/dns_scheme.adoc[DNS Scheme]
+export PULL_SECRET=<redhat-pull-secret> # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret"
 ----
 
-. Create S3 buckets
+=== Set up S3 bucket
+
+. Create S3 bucket
+
+.. If a bucket user already exists for this cluster:
 +
 [source,console]
 ----
 # Use already exiting bucket user
-response=$(curl -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
   https://api.cloudscale.ch/v1/objects-users | \
   jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
+----
 
-# Or create a new one
-response=$(curl -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+.. To create a new bucket user:
++
+[source,console]
+----
+# Create a new user
+response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
   -F display_name=${CLUSTER_ID} \
   https://api.cloudscale.ch/v1/objects-users)
-
-mc config host add \
-  s3 "https://objects.${REGION}.cloudscale.ch" $(echo $response | jq -r '.keys[0].access_key') $(echo $response | jq -r '.keys[0].secret_key')
-
-mc mb --ignore-existing\
-  "s3/${CLUSTER_ID}-bootstrap-ignition"
 ----
+
+. Configure the Minio client
++
+[source,console]
+----
+mc config host add \
+  "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
+  $(echo $response | jq -r '.keys[0].access_key') \
+  $(echo $response | jq -r '.keys[0].secret_key')
+
+mc mb --ignore-existing \
+  "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+----
+
+=== OpenShift Installer Setup
+
+For the following steps, change into your local checkout of the https://github.com/projectsyn/commodore[Commodore] repository.
+
+[WARNING]
+These are the only steps which aren't idempotent.
+If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
 
 . Prepare `install-config.yaml`
 +
 [source,console]
 ----
-cd commodore/
-
 mkdir -p target
 
 cat > target/install-config.yaml <<EOF
@@ -76,55 +102,71 @@ apiVersion: v1
 metadata:
   name: ${CLUSTER_ID}
 baseDomain: ${BASE_DOMAIN}
-compute:
-  - name: worker
-    replicas: 3
-controlPlane:
-  name: master
-  replicas: 3
-networking:
-  clusterNetwork:
-    - cidr: 10.128.0.0/14
-      hostPrefix: 23
-  networkType: OpenShiftSDN
-  serviceNetwork:
-    - 172.30.0.0/16
 platform:
   none: {}
 pullSecret: |
   ${PULL_SECRET}
-sshKey: "$(cat ~/.ssh/id_ed25519.pub)"
 EOF
 ----
 
-. Prepare install manifests and ignition config
+. Render install manifests (this will consume the `install-config.yaml`)
 +
 [source,console]
 ----
 openshift-install --dir target \
   create manifests
+----
 
-# Make any custom changes to the manifests
-# For example to change the "apps" domain:
-# yq w -i target/manifests/cluster-ingress-02-config.yml \
-#   spec.domain apps.example.com
+. If you want to change the default "apps" domain for the cluster:
++
+[source,console]
+----
+yq w -i target/manifests/cluster-ingress-02-config.yml \
+  spec.domain apps.example.com
+----
 
+. Render and upload ignition config (this will consume all the manifests)
++
+[source,console]
+----
 openshift-install --dir target \
   create ignition-configs
 
-mc cp target/bootstrap.ign "s3/${CLUSTER_ID}-bootstrap-ignition"
+mc cp target/bootstrap.ign "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
 
-export TF_VAR_ignition_bootstrap=$(mc share download --json --expire=1h "s3/${CLUSTER_ID}-bootstrap-ignition/bootstrap.ign" | jq -r '.share')
+export TF_VAR_ignition_bootstrap=$(mc share download \
+  --json --expire=1h \
+  "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/bootstrap.ign" | jq -r '.share')
 ----
 
-. Create Terraform cluster config
+=== Terraform Cluster Config
+
+. Build Commodore docker image
++
+[source,console]
+----
+docker-compose build
+----
+
+. Prepare Commodore inventory.
++
+This command will fail due to circular dependencies in the Commodore setup.
+As long as all components are cloned for the cluster it's enough to proceed.
++
+This can be improved once https://github.com/projectsyn/commodore/issues/135[this issue] is solved.
 +
 [source,console]
 ----
 # This will fail
-poetry run commodore catalog compile ${CLUSTER_ID}
+docker-compose run commodore catalog compile ${CLUSTER_ID}
+----
 
-CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' target/master.ign | \
+. Prepare Terraform cluster config
++
+[source,console]
+----
+CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
+  target/master.ign | \
   awk -F ',' '{ print $2 }' | \
   base64 --decode)
 
@@ -143,12 +185,7 @@ yq w -i "${CLUSTER_ID}.yml" \
 yq w -i "${CLUSTER_ID}.yml" \
   parameters.openshift4_cloudscale.variables.base_domain -- "${BASE_DOMAIN}"
 yq w -i "${CLUSTER_ID}.yml" \
-  "parameters.openshift4_cloudscale.variables.ssh_keys[+]" -- "$(cat ~/.ssh/id_ed25519.pub)"
-yq w -i "${CLUSTER_ID}.yml" \
   parameters.openshift4_cloudscale.variables.ignition_ca -- "${CA_CERT}"
-
-yq w -i "${CLUSTER_ID}.yml" \
-  parameters.openshift4_ingress.ingressControllers.default.defaultCertificate.name router-certs-snakeoil
 
 git commit -a -m "Setup cluster ${CLUSTER_ID}"
 git push
@@ -156,17 +193,33 @@ git push
 popd
 ----
 
-. Compile Terraform setup
+. Compile and push Terraform setup
 +
 [source,console]
 ----
-poetry run commodore catalog compile ${CLUSTER_ID} --push
+docker-compose run commodore catalog compile ${CLUSTER_ID} --push -i
 ----
+
+=== Provision Infrastructure
 
 . Setup Terraform
 +
 [source,console]
 ----
+tf_image=$(\
+  yq r dependencies/openshift4-cloudscale/class/defaults.yml \
+  parameters.openshift4_cloudscale.images.terraform.image)
+tf_tag=$(\
+  yq r dependencies/openshift4-cloudscale/class/defaults.yml \
+  parameters.openshift4_cloudscale.images.terraform.tag)
+
+alias terraform="docker run -it --rm \
+  -e CLOUDSCALE_TOKEN="${CLOUDSCALE_TOKEN}" \
+  -w /tf \
+  -v $(pwd):/tf \
+  -v $CLUSTER_ID:/tf/.terraform \
+  ${tf_image}:${tf_tag} terraform"
+
 export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/${GITLAB_CATALOG_PROJECT_ID}/terraform/state/cluster"
 
 pushd catalog/manifests/openshift4-cloudscale/
@@ -198,7 +251,13 @@ EOF
 terraform apply
 ----
 
-. Create the shown DNS records
+. Create the shown DNS records and wait for them to propagate!
++
+[source,console]
+----
+sleep 600
+host "api.${CLUSTER_ID}.${BASE_DOMAIN}"
+----
 
 . Provision master nodes
 +
@@ -252,7 +311,8 @@ while sleep 3; do \
 done
 
 kubectl get nodes -lnode-role.kubernetes.io/worker
-kubectl label node -lnode-role.kubernetes.io/worker node-role.kubernetes.io/infra=""
+kubectl label node -lnode-role.kubernetes.io/worker \
+  node-role.kubernetes.io/infra=""
 ----
 
 . Wait for installation to complete
@@ -278,8 +338,10 @@ while sleep 3; do \
   xargs oc adm certificate approve; \
 done
 
-kubectl label --overwrite node -lnode-role.kubernetes.io/worker node-role.kubernetes.io/app=""
-kubectl label node -lnode-role.kubernetes.io/infra node-role.kubernetes.io/app-
+kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
+  node-role.kubernetes.io/app=""
+kubectl label node -lnode-role.kubernetes.io/infra \
+  node-role.kubernetes.io/app-
 ----
 
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/4.5/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry] (will be https://ticket.vshn.net/browse/APPU-2790[automated])
@@ -288,26 +350,26 @@ kubectl label node -lnode-role.kubernetes.io/infra node-role.kubernetes.io/app-
 ----
 oc create secret generic image-registry-private-configuration-user \
 --namespace openshift-image-registry \
---from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=$(mc config host ls s3 -json | jq -r .accessKey) \
---from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls s3 -json | jq -r .secretKey)
-----
-
-. Create wildcard cert for router
-+
-[source,console]
-----
-kubectl get secret router-certs-default \
-  -n openshift-ingress \
-  -ojson --export | \
-    jq 'del(.metadata.ownerReferences) | .metadata.name = "router-certs-snakeoil"' | \
-  kubectl -n openshift-ingress apply -f -
+--from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
+--from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
 ----
 
 . Make the cluster Project Syn enabled
 +
 Install Steward on the cluster according to https://wiki.vshn.net/x/ngMBCg
+
+. Save the admin credentials in the https://password.vshn.net[password manager].
+You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
 +
 [source,console]
 ----
-cat ${CLUSTER_ID}/metadata.json
+popd
+ls -l target/auth/
+----
+
+. Delete local config files
++
+[source,console]
+----
+rm -r target/
 ----

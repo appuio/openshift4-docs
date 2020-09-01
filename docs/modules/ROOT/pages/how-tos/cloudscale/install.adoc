@@ -6,7 +6,10 @@ Steps to install an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
 
 These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html[Installing a cluster on bare metal] docs to set up a user provisioned installation (UPI).
 https://www.terraform.io[Terraform] is used to provision the cloud infrastructure.
+--
 
+[NOTE]
+--
 The commands are idempotent and can be retried if any of the steps fail.
 --
 
@@ -30,7 +33,14 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 == Cluster Installation
 
-Register the new OpenShift 4 cluster in Lieutenant: https://control.vshn.net/syn/lieutenantclusters
+Register the new OpenShift 4 cluster in Lieutenant.
+
+.Lietenant API endpoint
+****
+Use the following endpoint for Lieutenant:
+
+VSHN:: https://control.vshn.net/syn/lieutenantclusters
+****
 
 === Configure input
 
@@ -42,7 +52,7 @@ export GITLAB_CATALOG_PROJECT_ID=<project-id> # GitLab numerical project ID of t
 export REGION=rma # rma or lpg (without the zone number)
 export CLUSTER_ID=<lieutenant-cluster-id>
 export TENANT_ID=<lieutenant-tenant-id>
-export BASE_DOMAIN=ocp4-poc.appuio-beta.ch # See xref:explanation/dns_scheme.adoc[DNS Scheme]
+export BASE_DOMAIN=appuio-beta.ch # See xref:explanation/dns_scheme.adoc[DNS Scheme]
 export PULL_SECRET=<redhat-pull-secret> # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret"
 ----
 
@@ -87,7 +97,7 @@ mc mb --ignore-existing \
 
 For the following steps, change into your local checkout of the https://github.com/projectsyn/commodore[Commodore] repository.
 
-[WARNING]
+[CAUTION]
 These are the only steps which aren't idempotent.
 If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
 
@@ -251,7 +261,9 @@ EOF
 terraform apply
 ----
 
-. Create the shown DNS records and wait for them to propagate!
+. Create the shown DNS records
+
+. Wait for the DNS records to propagate!
 +
 [source,console]
 ----

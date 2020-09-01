@@ -2,6 +2,7 @@
 * Tutorials
 
 * How-to guides
+** xref:how-tos/generic-pre-install-checklist.adoc[Generic Pre-Install Checklist]
 ** Authentication
 *** xref:how-tos/authentication/sudo.adoc[Sudo]
 ** cloudscale.ch

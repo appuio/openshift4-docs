@@ -1,4 +1,4 @@
-= DNS and Nameing Scheme
+= DNS and Naming Scheme
 
 An OpenShift 4 cluster requires using a specific DNS scheme which is described on this page. Most of the values are automatically generated and can't be changed.
 

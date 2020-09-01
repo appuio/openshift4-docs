@@ -1,4 +1,4 @@
-= DNS and Nameing Scheme
+= DNS and Naming Scheme
 
 An OpenShift 4 cluster requires using a specific DNS scheme which is described on this page. Most of the values are automatically generated and can't be changed.
 
@@ -89,6 +89,8 @@ The following DNS records must resolve publicly:
 
 == Example
 
+=== DNS Records
+
 A full list of DNS records for one cluster using the above definition:
 
 ----
@@ -110,16 +112,23 @@ _etcd-server-ssl._tcp.c-summer-shadow-2592.example.com IN SRV 0 10 2380 etcd-1.c
 _etcd-server-ssl._tcp.c-summer-shadow-2592.example.com IN SRV 0 10 2380 etcd-2.c-summer-shadow-2592.example.com
 ----
 
-Full list of hostnames for one cluster using the above definition:
+=== Hostnames
 
-* `infra-454b.c-summer-shadow-2592.example.com`
-* `infra-9031.c-summer-shadow-2592.example.com`
-* `infra-c8f2.c-summer-shadow-2592.example.com`
-* `lb-5f52.c-summer-shadow-2592.example.com`
-* `lb-ba8f.c-summer-shadow-2592.example.com`
-* `master-0e9c.c-summer-shadow-2592.example.com`
-* `master-1a3c.c-summer-shadow-2592.example.com`
-* `master-e976.c-summer-shadow-2592.example.com`
-* `worker-4720.c-summer-shadow-2592.example.com`
-* `worker-7d32.c-summer-shadow-2592.example.com`
-* `worker-a640.c-summer-shadow-2592.example.com`
+A full list of example hostnames for one cluster using the above definition:
+
+----
+infra-454b.c-summer-shadow-2592.example.com
+infra-9031.c-summer-shadow-2592.example.com
+infra-c8f2.c-summer-shadow-2592.example.com
+
+lb-5f52.c-summer-shadow-2592.example.com
+lb-ba8f.c-summer-shadow-2592.example.com
+
+master-0e9c.c-summer-shadow-2592.example.com
+master-1a3c.c-summer-shadow-2592.example.com
+master-e976.c-summer-shadow-2592.example.com
+
+worker-4720.c-summer-shadow-2592.example.com
+worker-7d32.c-summer-shadow-2592.example.com
+worker-a640.c-summer-shadow-2592.example.com
+----

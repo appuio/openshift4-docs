@@ -23,12 +23,10 @@ It's currently very specific to VSHN and needs further changes to be more generi
 == Prerequisites
 
 * `docker`
-* `docker-compose`
 * `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor]
 * `openshift-install` https://cloud.redhat.com/openshift/install/metal/user-provisioned[OpenShift Installer]
-* https://github.com/projectsyn/commodore[Commodore] docker-compose setup
 
 
 == Cluster Installation
@@ -54,6 +52,9 @@ export CLUSTER_ID=<lieutenant-cluster-id>
 export TENANT_ID=<lieutenant-tenant-id>
 export BASE_DOMAIN=appuio-beta.ch # See xref:explanation/dns_scheme.adoc[DNS Scheme]
 export PULL_SECRET=<redhat-pull-secret> # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret"
+export COMMODORE_API_URL=<lieutenant-api-endpoint> # For example: https://api-int.syn.vshn.net
+export COMMODORE_GLOBAL_GIT_BASE=ssh://git@git.vshn.net/syn
+export COMMODORE_API_TOKEN=<lieutenant-api-token> # See https://wiki.vshn.net/pages/viewpage.action?pageId=167838622#ClusterRegistryinLieutenantSynfectaCluster(synfection)-Preparation
 ----
 
 === Set up S3 bucket
@@ -95,7 +96,7 @@ mc mb --ignore-existing \
 
 === OpenShift Installer Setup
 
-For the following steps, change into your local checkout of the https://github.com/projectsyn/commodore[Commodore] repository.
+For the following steps, change into a clean directory (for example a /tmp/ directory).
 
 [CAUTION]
 These are the only steps which aren't idempotent.
@@ -151,11 +152,30 @@ export TF_VAR_ignition_bootstrap=$(mc share download \
 
 === Terraform Cluster Config
 
-. Build Commodore docker image
+. Configure Commodore
 +
 [source,console]
 ----
-docker-compose build
+docker pull docker.io/projectsyn/commodore:latest
+
+commodore () {
+    docker run \
+    --interactive=true \
+    --tty \
+    --rm \
+    --user="$(id -u)" \
+    --volume "$HOME"/.ssh:/app/.ssh:ro \
+    --volume "$PWD"/compiled/:/app/compiled/ \
+    --volume "$PWD"/catalog/:/app/catalog \
+    --volume "$PWD"/dependencies/:/app/dependencies/ \
+    --volume "$PWD"/inventory/:/app/inventory/ \
+    --volume ~/.gitconfig:/app/.gitconfig:ro \
+    -e COMMODORE_API_URL=$COMMODORE_API_URL \
+    -e COMMODORE_GLOBAL_GIT_BASE=$COMMODORE_GLOBAL_GIT_BASE \
+    -e COMMODORE_API_TOKEN=$COMMODORE_API_TOKEN \
+    projectsyn/commodore:latest \
+    $*
+}
 ----
 
 . Prepare Commodore inventory.
@@ -168,7 +188,7 @@ This can be improved once https://github.com/projectsyn/commodore/issues/135[thi
 [source,console]
 ----
 # This will fail
-docker-compose run commodore catalog compile ${CLUSTER_ID}
+commodore catalog compile ${CLUSTER_ID}
 ----
 
 . Prepare Terraform cluster config
@@ -207,7 +227,7 @@ popd
 +
 [source,console]
 ----
-docker-compose run commodore catalog compile ${CLUSTER_ID} --push -i
+commodore catalog compile ${CLUSTER_ID} --push -i
 ----
 
 === Provision Infrastructure

@@ -109,17 +109,3 @@ _etcd-server-ssl._tcp.c-summer-shadow-2592.example.com IN SRV 0 10 2380 etcd-0.c
 _etcd-server-ssl._tcp.c-summer-shadow-2592.example.com IN SRV 0 10 2380 etcd-1.c-summer-shadow-2592.example.com
 _etcd-server-ssl._tcp.c-summer-shadow-2592.example.com IN SRV 0 10 2380 etcd-2.c-summer-shadow-2592.example.com
 ----
-
-Full list of hostnames for one cluster using the above definition:
-
-* `infra-454b.c-summer-shadow-2592.example.com`
-* `infra-9031.c-summer-shadow-2592.example.com`
-* `infra-c8f2.c-summer-shadow-2592.example.com`
-* `lb-5f52.c-summer-shadow-2592.example.com`
-* `lb-ba8f.c-summer-shadow-2592.example.com`
-* `master-0e9c.c-summer-shadow-2592.example.com`
-* `master-1a3c.c-summer-shadow-2592.example.com`
-* `master-e976.c-summer-shadow-2592.example.com`
-* `worker-4720.c-summer-shadow-2592.example.com`
-* `worker-7d32.c-summer-shadow-2592.example.com`
-* `worker-a640.c-summer-shadow-2592.example.com`

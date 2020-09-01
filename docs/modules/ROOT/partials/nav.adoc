@@ -30,5 +30,6 @@
 *** xref:explanations/exoscale/limitations.adoc[Limitations]
 ** Google Cloud Platform
 *** xref:explanations/gcp/name_lengths.adoc[Name lengths]
-** xref:explanations/node-groups.adoc[Node Groups]
+** xref:explanations/dns_scheme.adoc[DNS Scheme]
+** xref:explanations/node_groups.adoc[Node Groups]
 ** xref:explanations/sudo.adoc[Sudo]

@@ -11,6 +11,9 @@ https://www.terraform.io[Terraform] is used to provision the cloud infrastructur
 [NOTE]
 --
 The commands are idempotent and can be retried if any of the steps fail.
+
+The certificates created during bootstrap are only valid for 24h.
+So make sure you complete these steps within 24h.
 --
 
 [NOTE]
@@ -128,7 +131,7 @@ openshift-install --dir target \
   create manifests
 ----
 
-. If you want to change the default "apps" domain for the cluster:
+.. If you want to change the default "apps" domain for the cluster:
 +
 [source,console]
 ----
@@ -143,7 +146,7 @@ yq w -i target/manifests/cluster-ingress-02-config.yml \
 openshift-install --dir target \
   create ignition-configs
 
-mc cp target/bootstrap.ign "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+mc cp target/bootstrap.ign "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/"
 
 export TF_VAR_ignition_bootstrap=$(mc share download \
   --json --expire=1h \
@@ -159,6 +162,7 @@ export TF_VAR_ignition_bootstrap=$(mc share download \
 docker pull docker.io/projectsyn/commodore:latest
 
 commodore () {
+    mkdir -p inventory/classes/global dependencies/lib compiled/ catalog/
     docker run \
     --interactive=true \
     --tty \
@@ -181,6 +185,7 @@ commodore () {
 . Prepare Commodore inventory.
 +
 This command will fail due to circular dependencies in the Commodore setup.
+You will see error messages starting with `Cannot resolve ${openshift:*}`.
 As long as all components are cloned for the cluster it's enough to proceed.
 +
 This can be improved once https://github.com/projectsyn/commodore/issues/135[this issue] is solved.
@@ -243,12 +248,14 @@ tf_tag=$(\
   yq r dependencies/openshift4-cloudscale/class/defaults.yml \
   parameters.openshift4_cloudscale.images.terraform.tag)
 
-alias terraform="docker run -it --rm \
+alias terraform='docker run -it --rm \
   -e CLOUDSCALE_TOKEN="${CLOUDSCALE_TOKEN}" \
+  -e TF_VAR_ignition_bootstrap="${TF_VAR_ignition_bootstrap}" \
   -w /tf \
   -v $(pwd):/tf \
   -v $CLUSTER_ID:/tf/.terraform \
-  ${tf_image}:${tf_tag} terraform"
+  --ulimit memlock=-1 \
+  ${tf_image}:${tf_tag} terraform'
 
 export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/${GITLAB_CATALOG_PROJECT_ID}/terraform/state/cluster"
 

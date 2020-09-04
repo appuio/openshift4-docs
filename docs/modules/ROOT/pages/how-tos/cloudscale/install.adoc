@@ -167,7 +167,7 @@ commodore () {
     --interactive=true \
     --tty \
     --rm \
-    --user="$(id -u)" \
+    --user="$(id -u):$(id -u)" \
     --volume "$HOME"/.ssh:/app/.ssh:ro \
     --volume "$PWD"/compiled/:/app/compiled/ \
     --volume "$PWD"/catalog/:/app/catalog \

@@ -54,7 +54,7 @@ export REGION=rma # rma or lpg (without the zone number)
 export CLUSTER_ID=<lieutenant-cluster-id>
 export TENANT_ID=<lieutenant-tenant-id>
 export BASE_DOMAIN=appuio-beta.ch # See xref:explanation/dns_scheme.adoc[DNS Scheme]
-export PULL_SECRET=<redhat-pull-secret> # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret"
+export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
 export COMMODORE_API_URL=<lieutenant-api-endpoint> # For example: https://api-int.syn.vshn.net
 export COMMODORE_GLOBAL_GIT_BASE=ssh://git@git.vshn.net/syn
 export COMMODORE_API_TOKEN=<lieutenant-api-token> # See https://wiki.vshn.net/pages/viewpage.action?pageId=167838622#ClusterRegistryinLieutenantSynfectaCluster(synfection)-Preparation

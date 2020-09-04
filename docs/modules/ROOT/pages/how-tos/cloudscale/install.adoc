@@ -99,7 +99,7 @@ mc mb --ignore-existing \
 
 === OpenShift Installer Setup
 
-For the following steps, change into a clean directory (for example a /tmp/ directory).
+For the following steps, change into a clean directory (for example a directory in your home).
 
 [CAUTION]
 These are the only steps which aren't idempotent.

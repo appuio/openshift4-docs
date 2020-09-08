@@ -162,7 +162,7 @@ export TF_VAR_ignition_bootstrap=$(mc share download \
 docker pull docker.io/projectsyn/commodore:latest
 
 commodore () {
-    mkdir -p inventory/classes/global dependencies/lib compiled/ catalog/
+    mkdir -p inventory/classes/global dependencies/lib compiled/ catalog/ cache/
     docker run \
     --interactive=true \
     --tty \
@@ -174,6 +174,7 @@ commodore () {
     --volume "$PWD"/dependencies/:/app/dependencies/ \
     --volume "$PWD"/inventory/:/app/inventory/ \
     --volume ~/.gitconfig:/app/.gitconfig:ro \
+    --volume "$PWD"/cache:/app/.cache \
     -e COMMODORE_API_URL=$COMMODORE_API_URL \
     -e COMMODORE_GLOBAL_GIT_BASE=$COMMODORE_GLOBAL_GIT_BASE \
     -e COMMODORE_API_TOKEN=$COMMODORE_API_TOKEN \

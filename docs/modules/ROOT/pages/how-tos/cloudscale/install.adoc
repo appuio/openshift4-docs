@@ -316,7 +316,8 @@ terraform apply
 ----
 
 . Create the remaining DNS records
-. NOTE: Service DNS records must end with a dot (.)
+
+NOTE: Service DNS records must end with a dot (.)
 +
 [source,console]
 ----

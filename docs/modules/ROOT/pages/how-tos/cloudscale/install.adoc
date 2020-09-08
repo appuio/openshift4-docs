@@ -315,9 +315,7 @@ EOF
 terraform apply
 ----
 
-. Create the remaining DNS records
-+
-Service DNS records must end with a dot (.)
+. Create the remaining DNS records. Pay attention that service DNS records must end with a dot (.)
 +
 [source,console]
 ----

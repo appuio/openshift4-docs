@@ -30,6 +30,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor]
 * `openshift-install` https://cloud.redhat.com/openshift/install/metal/user-provisioned[OpenShift Installer]
+* `rhcos-4.5` image must be present in the cloudscale.ch account where you want to install
 
 
 == Cluster Installation
@@ -315,6 +316,7 @@ terraform apply
 ----
 
 . Create the remaining DNS records
+. NOTE: Service DNS records must end with a dot (.)
 +
 [source,console]
 ----

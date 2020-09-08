@@ -318,7 +318,7 @@ terraform apply
 . Create the remaining DNS records
 +
 Service DNS records must end with a dot (.)
-
++
 [source,console]
 ----
 terraform output -json | jq -r ".cluster_dns.value"

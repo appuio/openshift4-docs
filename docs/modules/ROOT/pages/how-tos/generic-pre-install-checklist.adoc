@@ -16,7 +16,7 @@ DNS names are very important, changing them later is usually not possible or a h
 
 * Base domain
 
-Also have a look at xref:explanation/dns_scheme.adoc[DNS Scheme] to get an idea how DNS records are handled.
+Also have a look at xref:explanations/dns_scheme.adoc[DNS Scheme] to get an idea how DNS records are handled.
 
 == Resource requirements
 

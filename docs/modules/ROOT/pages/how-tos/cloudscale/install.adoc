@@ -407,6 +407,14 @@ vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
   token=${CLOUDSCALE_TOKEN}
 ----
 
+. Save the registry HTTP secret in Vault:
++
+[source,console]
+----
+vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/registry \
+  httpSecret=$(pwgen -s 128 1)
+----
+
 . Make the cluster Project Syn enabled
 +
 Install Steward on the cluster (see https://wiki.vshn.net/pages/viewpage.action?pageId=167838622#ClusterRegistryinLieutenantSynfectaCluster(synfection)-TheCLIway[wiki] for more details):

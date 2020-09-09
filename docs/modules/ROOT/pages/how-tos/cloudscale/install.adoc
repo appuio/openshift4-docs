@@ -110,6 +110,7 @@ And then put the LDAP service ID in the following variable:
 [source,console]
 ----
 export LDAP_ID="Your_LDAP_ID_here"
+export LDAP_PASSWORD="Your_LDAP_pw_here"
 ----
 
 
@@ -430,6 +431,14 @@ vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
 ----
 vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/registry \
   httpSecret=$(pwgen -s 128 1)
+----
+
+. Save the LDAP password in Vault:
++
+[source,console]
+----
+vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
+  bindPassword=${LDAP_PASSWORD}
 ----
 
 . Make the cluster Project Syn enabled

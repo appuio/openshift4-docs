@@ -1,0 +1,124 @@
+= Uninstallation on cloudscale.ch
+
+[abstract]
+--
+Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch].
+--
+
+[NOTE]
+--
+The commands are idempotent and can be retried if any of the steps fail.
+--
+
+
+== Prerequisites
+
+* `docker`
+* `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
+* `jq`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor]
+
+
+== Cluster Decommission
+
+. Export the following vars
++
+[source,console]
+----
+export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
+export CLUSTER_ID=<lieutenant-cluster-id>
+export REGION=<region> # rma or lpg (without the zone number)
+export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
+export GITLAB_CATALOG_PROJECT_ID=<project-id> # GitLab numerical project ID of the catalog repo
+----
+
+. Setup Terraform
++
+Initiate access to s3 bucket and initiate terraform
++
+[source,console]
+----
+# Use already exiting bucket user
+response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+  https://api.cloudscale.ch/v1/objects-users | \
+  jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
+
+# configure minio client to use the bucket
+mc config host add \
+  "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
+  $(echo $response | jq -r '.keys[0].access_key') \
+  $(echo $response | jq -r '.keys[0].secret_key')
+
+# list/confirm contentes of the bucket
+mc tree ${CLUSTER_ID}
+
+# Get ignition_bootstrap token from bucket
+export TF_VAR_ignition_bootstrap=$(mc share download \
+  --json --expire=1h \
+  "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/bootstrap.ign" | jq -r '.share')
+
+# Set terraform image and tag to be used
+tf_image=$(\
+  yq r dependencies/openshift4-cloudscale/class/defaults.yml \
+  parameters.openshift4_cloudscale.images.terraform.image)
+tf_tag=$(\
+  yq r dependencies/openshift4-cloudscale/class/defaults.yml \
+  parameters.openshift4_cloudscale.images.terraform.tag)
+  
+# Generate the terraform alias
+alias terraform='docker run -it --rm \
+  -e CLOUDSCALE_TOKEN="${CLOUDSCALE_TOKEN}" \
+  -e TF_VAR_ignition_bootstrap="${TF_VAR_ignition_bootstrap}" \
+  -w /tf \
+  -v $(pwd):/tf \
+  -v $CLUSTER_ID:/tf/.terraform \
+  --ulimit memlock=-1 \
+  ${tf_image}:${tf_tag} terraform'
+
+pushd catalog/manifests/openshift4-cloudscale/
+ 
+terraform init \
+  "-backend-config=address=${GITLAB_STATE_URL}" \
+  "-backend-config=lock_address=${GITLAB_STATE_URL}/lock" \
+  "-backend-config=unlock_address=${GITLAB_STATE_URL}/lock" \
+  "-backend-config=username=$(whoami)" \
+  "-backend-config=password=${GITLAB_TOKEN}" \
+  "-backend-config=lock_method=POST" \
+  "-backend-config=unlock_method=DELETE" \
+  "-backend-config=retry_wait_min=5"
+----
+
+. Delete resources from clouscale.ch
++
+[source,console]
+----
+terraform destroy
+----
+
+. After all resources are deleted we need to remove the bucket
++
+[source,console]
+----
+# list/confirm contents of the bucket
+mc tree ${CLUSTER_ID}
+
+# delete bootstrap-ignition object
+mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition" --force
+
+# delete image-registry object
+mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry --force
+----
+
+. Delete cluster from Lieutenant API (via portal)
++
+Go to https://control.vshn.net/syn/lieutenantclusters
++
+- Select the Lieutenant API Endpoint
++
+- Search cluster name
++
+- Delete cluster entry using the delete button
+
+. Delete all DNS records related with cluster (zonefiles)
+
+. Update any related documentation

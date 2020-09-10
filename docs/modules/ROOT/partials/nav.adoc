@@ -7,6 +7,7 @@
 *** xref:how-tos/authentication/sudo.adoc[Sudo]
 ** cloudscale.ch
 *** xref:how-tos/cloudscale/install.adoc[Cluster Setup]
+*** xref:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
 ** Exoscale
 *** xref:how-tos/exoscale/install.adoc[Cluster Setup]
 ** Google Cloud Platform

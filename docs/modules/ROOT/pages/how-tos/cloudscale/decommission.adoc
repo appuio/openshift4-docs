@@ -34,29 +34,10 @@ export GITLAB_CATALOG_PROJECT_ID=<project-id> # GitLab numerical project ID of t
 
 . Setup Terraform
 +
-Initiate access to s3 bucket and initiate terraform
+Initiate terraform
 +
 [source,console]
 ----
-# Use already exiting bucket user
-response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
-  https://api.cloudscale.ch/v1/objects-users | \
-  jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
-
-# configure minio client to use the bucket
-mc config host add \
-  "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
-  $(echo $response | jq -r '.keys[0].access_key') \
-  $(echo $response | jq -r '.keys[0].secret_key')
-
-# list/confirm contentes of the bucket
-mc tree ${CLUSTER_ID}
-
-# Get ignition_bootstrap token from bucket
-export TF_VAR_ignition_bootstrap=$(mc share download \
-  --json --expire=1h \
-  "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/bootstrap.ign" | jq -r '.share')
-
 # Set terraform image and tag to be used
 tf_image=$(\
   yq r dependencies/openshift4-cloudscale/class/defaults.yml \
@@ -68,7 +49,6 @@ tf_tag=$(\
 # Generate the terraform alias
 alias terraform='docker run -it --rm \
   -e CLOUDSCALE_TOKEN="${CLOUDSCALE_TOKEN}" \
-  -e TF_VAR_ignition_bootstrap="${TF_VAR_ignition_bootstrap}" \
   -w /tf \
   -v $(pwd):/tf \
   -v $CLUSTER_ID:/tf/.terraform \
@@ -99,8 +79,16 @@ terraform destroy
 +
 [source,console]
 ----
-# list/confirm contents of the bucket
-mc tree ${CLUSTER_ID}
+# Use already exiting bucket user
+response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+  https://api.cloudscale.ch/v1/objects-users | \
+  jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
+
+# configure minio client to use the bucket
+mc config host add \
+  "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
+  $(echo $response | jq -r '.keys[0].access_key') \
+  $(echo $response | jq -r '.keys[0].secret_key')
 
 # delete bootstrap-ignition object
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition" --force

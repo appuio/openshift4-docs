@@ -76,7 +76,7 @@ export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=ldap username=<your.name>
 
 # delete token secret
-vault kv delete kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale
+vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale
 
 # delete registry secret
 vault kv delete kv/${TENANT_ID}/${CLUSTER_ID}/registry

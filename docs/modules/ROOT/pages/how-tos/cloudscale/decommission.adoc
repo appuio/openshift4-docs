@@ -72,7 +72,7 @@ curl -i -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" -X DELETE $(echo $respons
 [source,console]
 ----
 # Vault login
-export VAULT_ADDR=https://vault.syn.vshn.net
+export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=ldap username=<your.name>
 
 # delete token secret

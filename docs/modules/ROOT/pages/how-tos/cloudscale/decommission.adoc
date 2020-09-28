@@ -95,6 +95,9 @@ mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition" --force
 
 # delete image-registry object
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry --force
+
+# delete cloudscale.ch user object
+curl -i -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" -X DELETE $(echo $response | jq -r '.href')
 ----
 
 . Delete cluster from Lieutenant API (via portal)

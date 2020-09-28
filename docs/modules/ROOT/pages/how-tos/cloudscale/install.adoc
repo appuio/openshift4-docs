@@ -258,40 +258,7 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 
 === Provision Infrastructure
 
-. Setup Terraform
-+
-[source,console]
-----
-tf_image=$(\
-  yq r dependencies/openshift4-cloudscale/class/defaults.yml \
-  parameters.openshift4_cloudscale.images.terraform.image)
-tf_tag=$(\
-  yq r dependencies/openshift4-cloudscale/class/defaults.yml \
-  parameters.openshift4_cloudscale.images.terraform.tag)
-
-alias terraform='docker run -it --rm \
-  -e CLOUDSCALE_TOKEN="${CLOUDSCALE_TOKEN}" \
-  -e TF_VAR_ignition_bootstrap="${TF_VAR_ignition_bootstrap}" \
-  -w /tf \
-  -v $(pwd):/tf \
-  -v $CLUSTER_ID:/tf/.terraform \
-  --ulimit memlock=-1 \
-  ${tf_image}:${tf_tag} terraform'
-
-export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/${GITLAB_CATALOG_PROJECT_ID}/terraform/state/cluster"
-
-pushd catalog/manifests/openshift4-cloudscale/
-
-terraform init \
-  "-backend-config=address=${GITLAB_STATE_URL}" \
-  "-backend-config=lock_address=${GITLAB_STATE_URL}/lock" \
-  "-backend-config=unlock_address=${GITLAB_STATE_URL}/lock" \
-  "-backend-config=username=$(whoami)" \
-  "-backend-config=password=${GITLAB_TOKEN}" \
-  "-backend-config=lock_method=POST" \
-  "-backend-config=unlock_method=DELETE" \
-  "-backend-config=retry_wait_min=5"
-----
+include::partial$setup_terraform.adoc[]
 
 . Provision bootstrap node
 +

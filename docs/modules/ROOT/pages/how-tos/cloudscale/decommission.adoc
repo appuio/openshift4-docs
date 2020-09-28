@@ -67,7 +67,7 @@ mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry --force
 curl -i -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" -X DELETE $(echo $response | jq -r '.href')
 ----
 
-. Delete vault entries (you can find the credentials in the https://password.vshn.net/cred/detail/2162[password manager]):
+. Delete vault entries:
 +
 [source,console]
 ----

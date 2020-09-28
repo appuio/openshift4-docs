@@ -7,9 +7,9 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch]
 
 [NOTE]
 --
-The commands are idempotent and can be retried if any of the steps fail.
+- The commands are idempotent and can be retried if any of the steps fail.
+- In the future, this procedure will be mostly automated
 --
-
 
 == Prerequisites
 
@@ -27,6 +27,7 @@ The commands are idempotent and can be retried if any of the steps fail.
 ----
 export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
 export CLUSTER_ID=<lieutenant-cluster-id>
+export TENANT_ID=<lieutenant-tenant-id>
 export REGION=<region> # rma or lpg (without the zone number)
 export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
 export GITLAB_CATALOG_PROJECT_ID=<project-id> # GitLab numerical project ID of the catalog repo
@@ -98,6 +99,24 @@ mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry --force
 
 # delete cloudscale.ch user object
 curl -i -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" -X DELETE $(echo $response | jq -r '.href')
+----
+
+. Delete vault entries (you can find the credentials in the https://password.vshn.net/cred/detail/2162[password manager]):
++
+[source,console]
+----
+# Vault login
+export VAULT_ADDR=https://vault.syn.vshn.net
+vault login
+
+# delete token secret
+vault kv delete kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale
+
+# delete registry secret
+vault kv delete kv/${TENANT_ID}/${CLUSTER_ID}/registry
+
+# delete ldap secret
+vault kv delete kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap
 ----
 
 . Delete cluster from Lieutenant API (via portal)

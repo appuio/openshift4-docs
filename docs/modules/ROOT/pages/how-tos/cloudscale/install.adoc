@@ -381,14 +381,14 @@ oc create secret generic image-registry-private-configuration-user \
 --from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
 ----
 
-. Save the cloudscale.ch token in Vault (you can find the credentials in the https://password.vshn.net/cred/detail/2162[password manager]):
+. Save the cloudscale.ch token in Vault
 +
 [source,console]
 ----
-export VAULT_ADDR=https://vault.syn.vshn.net
-vault login
+export VAULT_ADDR=https://vault-prod.syn.vshn.net
+vault login -method=ldap username=<your.name>
 
-vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
   token=${CLOUDSCALE_TOKEN}
 ----
 
@@ -396,7 +396,7 @@ vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
 +
 [source,console]
 ----
-vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/registry \
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
   httpSecret=$(pwgen -s 128 1)
 ----
 
@@ -404,7 +404,7 @@ vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/registry \
 +
 [source,console]
 ----
-vault kv put kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
   bindPassword=${LDAP_PASSWORD}
 ----
 

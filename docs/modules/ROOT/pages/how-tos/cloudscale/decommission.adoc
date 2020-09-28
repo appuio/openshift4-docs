@@ -79,10 +79,10 @@ vault login -method=ldap username=<your.name>
 vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale
 
 # delete registry secret
-vault kv delete kv/${TENANT_ID}/${CLUSTER_ID}/registry
+vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry
 
 # delete ldap secret
-vault kv delete kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap
+vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap
 ----
 
 . Delete cluster from Lieutenant API (via portal)

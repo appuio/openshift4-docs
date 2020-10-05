@@ -1,0 +1,58 @@
+// Originally from https://github.com/appuio/openshift4-docs/issues/20
+= Cluster Monitoring
+
+OpenShift 4 includes a https://docs.openshift.com/container-platform/latest/monitoring/cluster_monitoring/about-cluster-monitoring.html[cluster monitoring solution] based on Prometheus.
+This document aims to explain how we use it in our setups.
+
+
+== Motivation
+
+The documentation about https://docs.openshift.com/container-platform/latest/monitoring/cluster_monitoring/configuring-the-monitoring-stack.html#maintenance-and-support_configuring-monitoring[configuring the monitoring stack] lists quite a lot of unsupported cases:
+
+* Add additional `ServiceMonitor` objects
+* Create additional `ConfigMap` objects or `PrometheusRule` objects
+* Directly edit the resources and custom resources of the monitoring stack
+* Using resources of the stack for your own purposes
+* Stopping the Cluster Monitoring Operator from reconciling the monitoring stack
+* Create new and edit existing alert rules
+* Modify Grafana
+
+We know from experience with OpenShift 3.11: some tweaking will be required at some point.
+This includes adding `ServiceMonitor` objects for things not (yet) covered by Cluster Monitoring, adding new rules to cover additional failure scenarios and filtering rules that are noisy or not actionable.
+
+
+== Design Proposal
+
+Based on all those restrictions, one could conclude to omit the Cluster Monitoring altogether and do it on your own.
+This would give full control over everything.
+But the Cluster Monitoring is a fundamental part of an OpenShift 4 setup and will always be present.
+It's required for certain things to work properly.
+The result of doing everything again, would be a huge waste of resources both in terms of management/engineering, compute and storage resources.
+
+For that reason we will make use of Cluster Monitoring as much as possible.
+We will operate a second pair of Prometheus instances in parallel to the Cluster Monitoring ones.
+Yet that second pair of instances only takes care of the things we can't do with the Cluster Monitoring.
+
+Those additional Prometheus instances will get the needed metrics from Cluster Monitoring.
+Targets are only scraped directly, when Cluster Monitoring doesn't do so.
+Alerts will be sent to the Alertmanager instances of the Cluster Monitoring.
+
+
+== Implementation Details
+
+Our own pair of Prometheus instances will use https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote_read[remote read] to federate metrics from the Cluster Monitoring.
+This doesn't create copies of the metrics and no additional storage is used.
+The remote read is also efficient in memory usage (see https://prometheus.io/blog/2019/10/10/remote-read-meets-streaming[Remote Read Meets Streaming]).
+
+
+== Risks and Mitigations
+
+This setup mitigates all the configuration restrictions of Cluster Monitoring.
+It also does so with no or only a minimal resource overhead.
+
+The remote read is a source of failure usually not present and has to be accounted for:
+
+* Cluster Monitoring operates two Prometheus instances configured equally
+* Thanos Querier load balances queries to those Prometheus instances
+* Two additional Prometheus instances operated for scraping additional metrics and evaluation of rules
+* Alert rules must be engineered to discover if the remote read is experiencing issues

@@ -22,8 +22,8 @@
 * Technical reference
 ** xref:references/operators.adoc[Operators]
 ** Google Cloud Platform
-*** xref:references/resources/gcp.adoc[Cluster resources]
-*** xref:references/storage/gcp.adoc[Storage options]
+*** xref:references/resources/gcp.adoc[Cluster Resources]
+*** xref:references/storage/gcp.adoc[Storage Options]
 ** Project Syn
 *** xref:references/projectsyn/developer.adoc[Commodore Component Developer Guidelines]
 
@@ -31,7 +31,8 @@
 ** Exoscale
 *** xref:explanations/exoscale/limitations.adoc[Limitations]
 ** Google Cloud Platform
-*** xref:explanations/gcp/name_lengths.adoc[Name lengths]
+*** xref:explanations/gcp/name_lengths.adoc[Name Lengths]
+** xref:explanations/cluster_monitoring.adoc[Cluster Monitoring]
 ** xref:explanations/dns_scheme.adoc[DNS Scheme]
 ** xref:explanations/node_groups.adoc[Node Groups]
 ** xref:explanations/sudo.adoc[Sudo]

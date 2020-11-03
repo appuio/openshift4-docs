@@ -15,6 +15,7 @@ tf_tag=$(\
 # Generate the terraform alias
 alias terraform='docker run -it --rm \
   -e CLOUDSCALE_TOKEN="${CLOUDSCALE_TOKEN}" \
+  -e TF_VAR_ignition_bootstrap="${TF_VAR_ignition_bootstrap}" \
   -w /tf \
   -v $(pwd):/tf \
   -v $CLUSTER_ID:/tf/.terraform \

@@ -33,6 +33,10 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
 * `rhcos-4.5` image must be present in the cloudscale.ch account where you want to install
 
+[WARNING]
+====
+Make sure the version of openshift-install and the rhcos image is the same, otherwise ignition will fail.
+====
 
 == Cluster Installation
 
@@ -234,6 +238,7 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 ----
 
 === Provision Infrastructure
+
 
 include::partial$setup_terraform.adoc[]
 

@@ -9,7 +9,7 @@ kubectl --as cluster-admin get clusterversion version -o json | jq '.status.avai
        
 . Update the configuration hierarchy
 +
-Set the follwoing parameters to the values retrieved in the previous step:
+Set the following parameters to the values retrieved in the previous step:
 +
 * `parameters.openshift4_version.spec.desiredUpdate.image`
 * `parameters.openshift4_version.spec.desiredUpdate.version`
@@ -26,6 +26,6 @@ kubectl --as cluster-admin get clusterversion version --watch
 ----
 
 So far, that process just worked.
-In consequence we do lack the experience on how to observe and debugg.
+In consequence we do lack the experience on how to observe and debug.
 Instruction will be added here, as soon as we gained that knowledge.
 As a starting point on the process, checkout https://docs.openshift.com/container-platform/latest/updating/updating-cluster-between-minor.html[Updating a cluster between minor versions] of the OpenShift 4 documentation.

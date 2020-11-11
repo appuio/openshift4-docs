@@ -1,6 +1,6 @@
 . Setup Terraform
 +
-Initiate terraform
+Prepare terraform
 +
 [source,console]
 ----
@@ -11,7 +11,7 @@ tf_image=$(\
 tf_tag=$(\
   yq r dependencies/openshift4-cloudscale/class/defaults.yml \
   parameters.openshift4_cloudscale.images.terraform.tag)
-  
+
 # Generate the terraform alias
 alias terraform='docker run -it --rm \
   -e CLOUDSCALE_TOKEN="${CLOUDSCALE_TOKEN}" \
@@ -25,7 +25,12 @@ alias terraform='docker run -it --rm \
 export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/${GITLAB_CATALOG_PROJECT_ID}/terraform/state/cluster"
 
 pushd catalog/manifests/openshift4-cloudscale/
- 
+----
++
+Initiate terraform
++
+[source,console]
+----
 terraform init \
   "-backend-config=address=${GITLAB_STATE_URL}" \
   "-backend-config=lock_address=${GITLAB_STATE_URL}/lock" \

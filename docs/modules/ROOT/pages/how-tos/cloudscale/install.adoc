@@ -22,6 +22,11 @@ This how-to guide is still a work in progress and will change.
 It's currently very specific to VSHN and needs further changes to be more generic.
 --
 
+== Starting situation
+
+* You already have a Tenant and its git repository
+* You have a CCSP Red Hat login and are logged into https://cloud.redhat.com/openshift/install/metal/user-provisioned[Red Hat Openshift Cluster Manager]
+* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on Cloudscale
 
 == Prerequisites
 
@@ -29,7 +34,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor]
-* `openshift-install` https://cloud.redhat.com/openshift/install/metal/user-provisioned[OpenShift Installer]
+* `openshift-install` https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.5/openshift-install-linux.tar.gz[OpenShift Installer]
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
 * `rhcos-4.5` image must be present in the cloudscale.ch account where you want to install
 
@@ -49,6 +54,20 @@ Use the following endpoint for Lieutenant:
 VSHN:: https://control.vshn.net/syn/lieutenantclusters
 ****
 
+=== Set up LDAP service
+
+. Create an LDAP service
++
+Use https://control.vshn.net/vshn/services/_create to create a service.
+The name must contain the customer and the cluster name.
+And then put the LDAP service ID in the following variable:
++
+[source,console]
+----
+export LDAP_ID="Your_LDAP_ID_here"
+export LDAP_PASSWORD="Your_LDAP_pw_here"
+----
+
 === Configure input
 
 [source,console]
@@ -57,14 +76,15 @@ export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale
 export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
 export GITLAB_CATALOG_PROJECT_ID=<project-id> # GitLab numerical project ID of the catalog repo
 export REGION=rma # rma or lpg (without the zone number)
-export CLUSTER_ID=<lieutenant-cluster-id>
-export TENANT_ID=<lieutenant-tenant-id>
-export BASE_DOMAIN=appuio-beta.ch # See xref:explanation/dns_scheme.adoc[DNS Scheme]
+export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<verb>-<noun>-<number>
+export TENANT_ID=<lieutenant-tenant-id> # Looks like: t-<verb>-<noun>-<number>
+export BASE_DOMAIN=appuio-beta.ch
 export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
 export COMMODORE_API_URL=<lieutenant-api-endpoint> # For example: https://api-int.syn.vshn.net
-export COMMODORE_GLOBAL_GIT_BASE=ssh://git@git.vshn.net/syn
 export COMMODORE_API_TOKEN=<lieutenant-api-token> # See https://wiki.vshn.net/pages/viewpage.action?pageId=167838622#ClusterRegistryinLieutenantSynfectaCluster(synfection)-Preparation
 ----
+
+For `BASE_DOMAIN` explanation, see xref:explanation/dns_scheme.adoc[DNS Scheme].
 
 === Set up S3 bucket
 
@@ -74,7 +94,7 @@ export COMMODORE_API_TOKEN=<lieutenant-api-token> # See https://wiki.vshn.net/pa
 +
 [source,console]
 ----
-# Use already exiting bucket user
+# Use already existing bucket user
 response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
   https://api.cloudscale.ch/v1/objects-users | \
   jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
@@ -103,27 +123,12 @@ mc mb --ignore-existing \
   "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
 ----
 
-=== Set up LDAP service
-
-. Create an LDAP service
-+
-Use https://control.vshn.net/vshn/services/_create to create a service.
-The name must contain the customer and the cluster name.
-And then put the LDAP service ID in the following variable:
-+
-[source,console]
-----
-export LDAP_ID="Your_LDAP_ID_here"
-export LDAP_PASSWORD="Your_LDAP_pw_here"
-----
-
-
 === OpenShift Installer Setup
 
 For the following steps, change into a clean directory (for example a directory in your home).
 
 [CAUTION]
-These are the only steps which aren't idempotent.
+These are the only steps which aren't idempotent and have to be completed uninterrupted in one go.
 If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
 
 . Prepare `install-config.yaml`
@@ -170,7 +175,7 @@ openshift-install --dir target \
 mc cp target/bootstrap.ign "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/"
 
 export TF_VAR_ignition_bootstrap=$(mc share download \
-  --json --expire=1h \
+  --json --expire=4h \
   "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/bootstrap.ign" | jq -r '.share')
 ----
 
@@ -258,7 +263,7 @@ EOF
 terraform apply
 ----
 
-. Create the shown DNS records
+. Create the first shown DNS records
 
 . Wait for the DNS records to propagate!
 +
@@ -283,7 +288,7 @@ EOF
 terraform apply
 ----
 
-. Create the remaining DNS records. Pay attention that service DNS records must end with a dot (.)
+. Add the remaining DNS records to the previous ones.
 +
 [source,console]
 ----
@@ -379,7 +384,7 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
 [source,console]
 ----
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
-  httpSecret=$(pwgen -s 128 1)
+  httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
 ----
 
 . Save the LDAP password in Vault:
@@ -396,9 +401,8 @@ Install Steward on the cluster (see https://wiki.vshn.net/pages/viewpage.action?
 +
 [source,console]
 ----
-export LIEUTENANT_URL="api.syn.vshn.net"
-export LIEUTENANT_NS="lieutenant-prod"
-export LIEUTENANT_AUTH="Authorization:Bearer ${LIEUTENANT_TOKEN}"
+export LIEUTENANT_NS="lieutenant-prod" # or lieutenant-[dev,int] accordingly
+export LIEUTENANT_AUTH="Authorization:Bearer ${COMMODORE_API_TOKEN}"
 
 # Reset the token
 curl \
@@ -408,7 +412,7 @@ curl \
   -d '[{ "op": "remove", "path": "/status/bootstrapToken" }]' \
   "https://rancher.vshn.net/k8s/clusters/c-c6j2w/apis/syn.tools/v1alpha1/namespaces/${LIEUTENANT_NS}/clusters/${CLUSTER_ID}/status"
 
-kubectl apply -f $(http -pb "https://${LIEUTENANT_URL}/clusters/${CLUSTER_ID}" "${LIEUTENANT_AUTH}" | jq -r ".installURL")
+kubectl --kubeconfig target/auth/kubeconfig apply -f $(curl -sH "${LIEUTENANT_AUTH}" "https://${COMMODORE_API_URL}/clusters/${CLUSTER_ID}" | jq -r ".installURL")
 ----
 
 . Save the admin credentials in the https://password.vshn.net[password manager].

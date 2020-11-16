@@ -132,32 +132,24 @@ export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=ldap username=<your.name>
 ----
 
-.Set the cloudscale.ch access secrets
+.Store various secrets in vault
 [source,console]
 ----
+# Set the cloudscale.ch access secrets
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
   token=${CLOUDSCALE_TOKEN} \
   s3_access_key=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
   s3_secret_key=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
-----
 
-.Generate an HTTP secret for the registry
-[source,console]
-----
+# Generate an HTTP secret for the registry
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
   httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
-----
 
-.Set the LDAP password
-[source,console]
-----
+# Set the LDAP password
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
   bindPassword=${LDAP_PASSWORD}
-----
 
-.Generate a master password for backups
-[source,console]
-----
+# Generate a master password for backups
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
   password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
 ----

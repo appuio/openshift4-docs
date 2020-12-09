@@ -5,6 +5,7 @@
 * Executables used in this guide:
 ** `kubectl`
 ** `jq`
+** `yq`
 ** `restic`
 * API access to the target cluster
 
@@ -33,7 +34,53 @@ export AWS_SECRET_ACCESS_KEY=$(kubectl --as cluster-admin -n syn-cluster-backup 
 
 === Obtaining restic configuration from catalog and vault
 
-TBD
+1. Obtain the repository URL of the clusters catalog and export it to `REPO_URL`
++
+Get the URL from https://control.vshn.net/syn/lieutenantclusters.
+Alternatively, get it from the Lieutenant API or the Kubernetes API Lieutenant is running on.
++
+.Use the Lieutenant API
+[source,console]
+----
+REPO_URL=$(curl -sH "${LIEUTENANT_AUTH}" "https://${LIEUTENANT_URL}/clusters/${CLUSTER_ID}" | jq -r .gitRepo.url)
+----
++
+.Use the Kubernetes API
+[source,console]
+----
+REPO_URL=$(kubectl -n ${LIEUTENANT_NS} get cluster -o jsonpath='{.spec.gitRepoURL}' ${CLUSTER_ID})
+----
+
+2. Download and extract the cluster catalog
++
+[source,console]
+----
+mkdir catalog
+git archive --remote ${REPO_URL} master | tar -xC catalog
+----
+
+3. Login to vault
++
+[source,console]
+----
+vault login -method=ldap username=<your username>
+----
+
+4. Export restic configuration
++
+[source,console]
+----
+export RESTIC_REPOSITORY=s3:$(yq read -cjd'*' catalog/manifests/cluster-backup/05_schedule.yaml | jq -r '.[] | select(.kind == "Schedule") | .spec.backend.s3 | .endpoint + "/" + .bucket')
+
+PASSWORD_KEY="$(cat catalog/manifests/cluster-backup/* | yq read -cjd'*' - | jq -r '.[] | select(.kind == "Secret" and .metadata.name == "objects-backup-password") | .stringData.password' | cut -d: -f2)"
+export RESTIC_PASSWORD=$(vault kv get -format json "clusters/kv/${PASSWORD_KEY%/*}" | jq -r ".data.data.${PASSWORD_KEY##*/}")
+
+ID_KEY="$(cat catalog/manifests/cluster-backup/* | yq read -cjd'*' - | jq -r '.[] | select(.kind == "Secret" and .metadata.name == "object-backup-s3-credentials") | .stringData.username' | cut -d: -f2)"
+export AWS_ACCESS_KEY_ID=$(vault kv get -format json "clusters/kv/${ID_KEY%/*}" | jq -r ".data.data.${ID_KEY##*/}")
+
+SECRET_KEY="$(cat catalog/manifests/cluster-backup/* | yq read -cjd'*' - | jq -r '.[] | select(.kind == "Secret" and .metadata.name == "object-backup-s3-credentials") | .stringData.password' | cut -d: -f2)"
+export AWS_SECRET_ACCESS_KEY=$(vault kv get -format json "clusters/kv/${SECRET_KEY%/*}" | jq -r ".data.data.${SECRET_KEY##*/}")
+----
 
 == Identify and retrieve snapshot
 

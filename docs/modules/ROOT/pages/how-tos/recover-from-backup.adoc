@@ -1,0 +1,94 @@
+= Recover objects from backup
+
+== Prerequisites
+
+* Executables used in this guide:
+** `kubectl`
+** `jq`
+** `restic`
+* API access to the target cluster
+
+== General procedure
+
+1. Collect configuration for restic
+2. Identify and retrieve restic snapshot
+3. Extract files containing the desired objects and prepare them
+4. Apply objects to the cluster
+
+== Collect restic configuration
+
+Restic requires the environment variables `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` to be set.
+They can be obtained from the target cluster itself.
+They can also be obtained from the cluster catalog and Vault.
+
+=== Obtaining restic configuration from cluster
+
+[source,console]
+----
+export RESTIC_REPOSITORY=$(kubectl -n syn-cluster-backup get schedule objects -o jsonpath='s3:{.spec.backend.s3.endpoint}/{.spec.backend.s3.bucket}')
+export RESTIC_PASSWORD=$(kubectl --as cluster-admin -n syn-cluster-backup get secret objects-backup-password -o jsonpath='{.data.password}' | base64 --decode)
+export AWS_ACCESS_KEY_ID=$(kubectl --as cluster-admin -n syn-cluster-backup get secret object-backup-s3-credentials -o jsonpath='{.data.username}' | base64 --decode)
+export AWS_SECRET_ACCESS_KEY=$(kubectl --as cluster-admin -n syn-cluster-backup get secret object-backup-s3-credentials -o jsonpath='{.data.password}' | base64 --decode)
+----
+
+=== Obtaining restic configuration from catalog and vault
+
+TBD
+
+== Identify and retrieve snapshot
+
+1. List the available snapshots.
+   Identify the one you do want to restore.
+   Take note its `ID`.
++
+[source,console]
+----
+restic snapshots
+----
+
+2. Retrieve the backup archive
++
+[source,console]
+----
+restic restore <ID> --target . 
+----
+
+== Extract and prepare files
+
+1. List files in the backup.
+   Take note of the path containing the required files.
++
+[source,console]
+----
+tar tvf syn-cluster-backup-object-dumper.tar.gz
+----
+
+2. Extract required files
+   If all files should be extracted, `path/inside/archive` can be omitted.
+   Files will be put in the directory `restore` within the current working directory.
++
+[source,console]
+----
+mkdir restore
+tar -C restore -xf syn-cluster-backup-object-dumper.tar.gz [path/inside/archive]
+----
+
+3. Prepare files
++
+Depending on the restores requirement, the extracted files need to be altered before they can be applied to the cluster.
+
+== Apply objects
+
+Apply the extracted and prepared objects to the target cluster.
+
+.Apply single file
+[source,console]
+----
+kubectl --as cluster-admin apply -f <path/to/file>
+----
+
+.Apply all files within a directory
+[source,console]
+----
+kubectl --as cluster-admin apply -Rf <path/to/dir>
+----

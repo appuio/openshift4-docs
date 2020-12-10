@@ -86,7 +86,7 @@ export AWS_SECRET_ACCESS_KEY=$(vault kv get -format json "clusters/kv/${SECRET_K
 
 1. List the available snapshots.
    Identify the one you do want to restore.
-   Take note its `ID`.
+   Take note of its `ID`.
 +
 [source,console]
 ----
@@ -110,7 +110,7 @@ restic restore <ID> --target .
 tar tvf syn-cluster-backup-object-dumper.tar.gz
 ----
 
-2. Extract required files
+2. Extract required files.
    If all files should be extracted, `path/inside/archive` can be omitted.
    Files will be put in the directory `restore` within the current working directory.
 +
@@ -122,7 +122,7 @@ tar -C restore -xf syn-cluster-backup-object-dumper.tar.gz [path/inside/archive]
 
 3. Prepare files
 +
-Depending on the restores requirement, the extracted files need to be altered before they can be applied to the cluster.
+Depending on the restore requirements, the extracted files need to be altered before they can be applied to the cluster.
 
 == Apply objects
 

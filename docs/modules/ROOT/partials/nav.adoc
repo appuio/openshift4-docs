@@ -3,6 +3,7 @@
 
 * How-to guides
 ** xref:how-tos/generic-pre-install-checklist.adoc[Generic Pre-Install Checklist]
+** xref:how-tos/recover-from-backup.adoc[Recover objects from backup]
 ** xref:how-tos/update_maintenance.adoc[Update/Maintenance]
 ** Authentication
 *** xref:how-tos/authentication/sudo.adoc[Sudo]

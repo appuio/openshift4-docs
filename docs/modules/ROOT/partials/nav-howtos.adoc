@@ -1,0 +1,23 @@
+* xref:how-tos/generic-pre-install-checklist.adoc[Generic Pre-Install Checklist]
+* xref:how-tos/recover-from-backup.adoc[Recover objects from backup]
+* xref:how-tos/update_maintenance.adoc[Update/Maintenance]
+
+* Authentication
+** xref:how-tos/authentication/sudo.adoc[Sudo]
+
+* cloudscale.ch
+** xref:how-tos/cloudscale/install.adoc[Cluster Setup]
+** xref:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
+
+* Exoscale
+** xref:how-tos/exoscale/install.adoc[Cluster Setup]
+
+* Google Cloud Platform
+** xref:how-tos/gcp/project.adoc[Project Setup]
+** xref:how-tos/gcp/install.adoc[Cluster Setup]
+** xref:how-tos/destroy/gcp.adoc[Cluster Decommissioning]
+** xref:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
+** xref:how-tos/gcp/hive.adoc[Hive]
+
+* VMware vSphere
+** xref:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]

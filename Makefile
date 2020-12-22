@@ -12,6 +12,7 @@ endif
 
 antora_cmd  ?= $(engine_cmd) run $(engine_opts) --volume "$${PWD}":/antora:Z docker.io/vshn/antora:2.3.0
 antora_opts ?= --cache-dir=.cache/antora
+preview_cmd ?= $(engine_cmd) run --rm --publish 35729:35729 --publish 2020:2020 --volume "${PWD}":/preview/antora vshn/antora-preview:2.3.4 --antora=docs --style=vshn
 
 vale_cmd ?= $(engine_cmd) run $(engine_opts) --volume "$${PWD}"/docs/modules:/pages:Z docker.io/vshn/vale:2.1.1 --minAlertLevel=error --config=/pages/ROOT/pages/.vale.ini /pages
 
@@ -47,3 +48,6 @@ $(web_dir)/index.html: playbook.yml $(pages)
 check:
 	$(vale_cmd)
 
+.PHONY: preview
+preview:
+	$(preview_cmd)

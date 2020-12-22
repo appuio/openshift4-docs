@@ -1,40 +1,13 @@
 * xref:index.adoc[Home]
-* Tutorials
 
-* How-to guides
-** xref:how-tos/generic-pre-install-checklist.adoc[Generic Pre-Install Checklist]
-** xref:how-tos/recover-from-backup.adoc[Recover objects from backup]
-** xref:how-tos/update_maintenance.adoc[Update/Maintenance]
-** Authentication
-*** xref:how-tos/authentication/sudo.adoc[Sudo]
-** cloudscale.ch
-*** xref:how-tos/cloudscale/install.adoc[Cluster Setup]
-*** xref:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
-** Exoscale
-*** xref:how-tos/exoscale/install.adoc[Cluster Setup]
-** Google Cloud Platform
-*** xref:how-tos/gcp/project.adoc[Project Setup]
-*** xref:how-tos/gcp/install.adoc[Cluster Setup]
-*** xref:how-tos/destroy/gcp.adoc[Cluster Decommissioning]
-*** xref:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
-*** xref:how-tos/gcp/hive.adoc[Hive]
-** VMware vSphere
-*** xref:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
+.Tutorials
+include::partial$nav-tutorials.adoc[]
 
-* Technical reference
-** xref:references/operators.adoc[Operators]
-** Google Cloud Platform
-*** xref:references/resources/gcp.adoc[Cluster Resources]
-*** xref:references/storage/gcp.adoc[Storage Options]
-** Project Syn
-*** xref:references/projectsyn/developer.adoc[Commodore Component Developer Guidelines]
+.How-to guides
+include::partial$nav-howtos.adoc[]
 
-* Explanation
-** Exoscale
-*** xref:explanations/exoscale/limitations.adoc[Limitations]
-** Google Cloud Platform
-*** xref:explanations/gcp/name_lengths.adoc[Name Lengths]
-** xref:explanations/cluster_monitoring.adoc[Cluster Monitoring]
-** xref:explanations/dns_scheme.adoc[DNS Scheme]
-** xref:explanations/node_groups.adoc[Node Groups]
-** xref:explanations/sudo.adoc[Sudo]
+.Technical reference
+include::partial$nav-reference.adoc[]
+
+.Explanation
+include::partial$nav-explanation.adoc[]

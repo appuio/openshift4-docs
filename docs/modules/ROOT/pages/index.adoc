@@ -1,7 +1,17 @@
-= APPUiO OpenShift 4
+= APPUiO Managed OpenShift 4
 
 image::appuio_logo.png[APPUiO,256,link=https://www.appuio.ch]
 
-Welcome to the OpenShift 4 documentation of https://www.appuio.ch[APPUiO]. This is the place where all the technical details about how we run OpenShift 4 is documented.
+Welcome to the https://www.appuio.ch[APPUiO] Managed OpenShift 4 technical documentation site.
 
-This documentation is a joint effort of the APPUiO team at https://www.puzzle.ch[Puzzle] and https://www.vshn.ch[VSHN].
+Here you’ll find all the technical documentation.
+Use the search field at the top of this page, navigate through topics with the tree on the left or see the links below.
+
+The product documentation can be found under https://products.docs.vshn.ch/products/appuio/managed/ocp4.html[products.docs.vshn.ch].
+
+== Joint Effort
+
+This documentation is a joint effort of the APPUiO team at https://www.vshn.ch[VSHN] and https://www.puzzle.ch[Puzzle].
+
+image::vshn_logo.png[VSHN,link=https://www.vshn.ch]
+image::puzzle_logo.png[VSHN,link=https://www.puzzle.ch]

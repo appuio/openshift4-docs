@@ -1,23 +1,23 @@
-* xref:oc4:ROOT:tutorials/generic-pre-install-checklist.adoc[Generic Pre-Install Checklist]
-* xref:oc4:ROOT:tutorials/recover-from-backup.adoc[Recover objects from backup]
-* xref:oc4:ROOT:tutorials/update_maintenance.adoc[Update/Maintenance]
+* xref:oc4:ROOT:how-tos/generic-pre-install-checklist.adoc[Generic Pre-Install Checklist]
+* xref:oc4:ROOT:how-tos/recover-from-backup.adoc[Recover objects from backup]
+* xref:oc4:ROOT:how-tos/update_maintenance.adoc[Update/Maintenance]
 
 * Authentication
-** xref:oc4:ROOT:tutorials/authentication/sudo.adoc[Sudo]
+** xref:oc4:ROOT:how-tos/authentication/sudo.adoc[Sudo]
 
 * cloudscale.ch
-** xref:oc4:ROOT:tutorials/cloudscale/install.adoc[Cluster Setup]
-** xref:oc4:ROOT:tutorials/cloudscale/decommission.adoc[Cluster Decommission]
+** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Cluster Setup]
+** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
 
 * Exoscale
-** xref:oc4:ROOT:tutorials/exoscale/install.adoc[Cluster Setup]
+** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Cluster Setup]
 
 * Google Cloud Platform
-** xref:oc4:ROOT:tutorials/gcp/project.adoc[Project Setup]
-** xref:oc4:ROOT:tutorials/gcp/install.adoc[Cluster Setup]
-** xref:oc4:ROOT:tutorials/destroy/gcp.adoc[Cluster Decommissioning]
-** xref:oc4:ROOT:tutorials/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
-** xref:oc4:ROOT:tutorials/gcp/hive.adoc[Hive]
+** xref:oc4:ROOT:how-tos/gcp/project.adoc[Project Setup]
+** xref:oc4:ROOT:how-tos/gcp/install.adoc[Cluster Setup]
+** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Cluster Decommissioning]
+** xref:oc4:ROOT:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
+** xref:oc4:ROOT:how-tos/gcp/hive.adoc[Hive]
 
 * VMware vSphere
-** xref:oc4:ROOT:tutorials/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
+** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]

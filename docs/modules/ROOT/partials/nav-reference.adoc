@@ -1,8 +1,8 @@
-* xref:references/operators.adoc[Operators]
+* xref:oc4:ROOT:/operators.adoc[Operators]
 
 * Google Cloud Platform
-** xref:references/resources/gcp.adoc[Cluster Resources]
-** xref:references/storage/gcp.adoc[Storage Options]
+** xref:oc4:ROOT:/resources/gcp.adoc[Cluster Resources]
+** xref:oc4:ROOT:/storage/gcp.adoc[Storage Options]
 
 * Project Syn
-** xref:references/projectsyn/developer.adoc[Commodore Component Developer Guidelines]
+** xref:oc4:ROOT:/projectsyn/developer.adoc[Commodore Component Developer Guidelines]

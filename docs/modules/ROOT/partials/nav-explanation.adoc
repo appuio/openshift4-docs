@@ -1,9 +1,9 @@
 * Exoscale
-** xref:oc4:ROOT:/exoscale/limitations.adoc[Limitations]
+** xref:oc4:ROOT:how-tos/exoscale/limitations.adoc[Limitations]
 
 * Google Cloud Platform
-** xref:oc4:ROOT:/gcp/name_lengths.adoc[Name Lengths]
-* xref:oc4:ROOT:/cluster_monitoring.adoc[Cluster Monitoring]
-* xref:oc4:ROOT:/dns_scheme.adoc[DNS Scheme]
-* xref:oc4:ROOT:/node_groups.adoc[Node Groups]
-* xref:oc4:ROOT:/sudo.adoc[Sudo]
+** xref:oc4:ROOT:how-tos/gcp/name_lengths.adoc[Name Lengths]
+* xref:oc4:ROOT:how-tos/cluster_monitoring.adoc[Cluster Monitoring]
+* xref:oc4:ROOT:how-tos/dns_scheme.adoc[DNS Scheme]
+* xref:oc4:ROOT:how-tos/node_groups.adoc[Node Groups]
+* xref:oc4:ROOT:how-tos/sudo.adoc[Sudo]

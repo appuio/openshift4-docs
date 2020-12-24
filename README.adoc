@@ -1,26 +1,47 @@
-= APPUiO OpenShift 4 documentation
+= APPUiO Managed OpenShift 4 Documentation
 
-This repository contains all the documents of the APPUiO OpenShift 4 documentation hosted on https://openshift.docs.vshn.ch[openshift.docs.vshn.ch].
+This repository contains all the content of the APPUiO Managed OpenShift 4 documentation hosted at https://kb.vshn.ch/oc4/.
 
-== Contributing
-
-To preview your changes locally, follow these steps:
-
-. Make sure you have Docker or Podman installed.
-. Clone this repository.
-. Make your changes in a separate branch.
-. Commit your changes.
-. Type the make command to build the documentation site in your system.
-. The `index.html` page will open automatically when the build process has finished.
-
-When you're satisfied with the result, please open a PR against the master branch.
+The content is written in https://asciidoctor.org/docs/what-is-asciidoc/[AsciiDoc] and rendered using https://docs.antora.org/[Antora].
 
 [TIP]
 ====
-* Writing AsciiDoc is best done using Visual Studio Code with https://github.com/asciidoctor/asciidoctor-vscode[the AsciiDoc addon]
-* For a reference what you can do with AsciiDoc, have a look at https://asciidoctor.org/docs/asciidoc-writers-guide/[AsciiDoc Writer’s Guide]
+* Writing AsciiDoc is best done using Visual Studio Code with https://marketplace.visualstudio.com/items?itemName=asciidoctor.asciidoctor-vscode[the AsciiDoc addon].
+* For a reference what you can do with AsciiDoc, have a look at https://asciidoctor.org/docs/asciidoc-writers-guide/[AsciiDoc Writer’s Guide].
+* Antora is capable of doing many great things with documentation. See https://docs.antora.org/[the Antora docs] to gain insights into the tooling.
 ====
 
 == Documentation structure
 
-This documentation follows the proposal of https://documentation.divio.com/[Divio "The documentation system"].
+The documentation structure is inspired by the https://documentation.divio.com/[Divio's documentation structure]:
+
+Tutorials (Learning-oriented):: A lesson which teaches you something.
+Location: `docs/modules/ROOT/pages/tutorials`.
+
+How-to guides (Problem-oriented):: Step-by-step guides to achieve a goal. Location: `docs/modules/ROOT/pages/how-tos`.
+
+Technical reference (Information-oriented):: Description about the inner ongoings. Location: `docs/modules/ROOT/pages/tutorials`.
+
+Explanation (Understanding-oriented):: Explains the background. Location: `docs/modules/ROOT/pages/explanations`.
+
+== Contributing
+
+Create a new branch to make the changes. After you're satisfied with the changes open a Pull Request against the `master` branch.
+
+=== Previewing Changes
+
+To preview your changes locally, make sure you have Docker or Podman installed.
+
+Just type `make preview` and open your browser at http://localhost:2020. This even provides support for live reload when working on the content. See https://github.com/vshn/antora-preview#livereload[this documentation] for more information about it.
+
+=== Adding a New Page
+
+. Create new AsciiDoc (`.adoc`) file in the best matching folder according to the described structure under `docs/modules/ROOT/pages/`.
+. Add the file to the navigation under `docs/modules/ROOT/partials/`
+
+For removing pages just do the opposite: Remove the file and remove the entry in the navigation.
+
+== Deployment
+
+This repository only holds https://docs.antora.org/antora/2.3/standard-directories/[Antora content], no plumbing and tooling (aka the Antora https://docs.antora.org/antora/2.3/run-antora/[`playbook.yml`] and `Dockerfile`) to build and deploy it.
+All pushes to the `master` branch trigger a GitHub action (`.github/worflows/triggerci.yml`) which in turn triggers the https://git.vshn.net/vshn/docs/kb/-/blob/master/.gitlab-ci.yml[GitLab CI job] to build and deploy the content using Antora.

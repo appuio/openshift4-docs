@@ -12,7 +12,7 @@ This name will be used as identifier or as part of identifiers.
 It also will become a subdomain to the base domain.
 `<project name>`:: The name of the GCP project.
 
-include::../../explanations/gcp/name_length_warning.adoc[]
+include::partial$gcp_name_length_warning.adoc[]
 
 . Create Project
 +

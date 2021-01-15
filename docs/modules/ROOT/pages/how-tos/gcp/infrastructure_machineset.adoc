@@ -183,7 +183,7 @@ When doing so, the resulting node, will come up with both the `node-role.kuberne
 Reason being, the node role isn't only set by the MachineSet but also by the MachineConfig.
 Using the `worker-user-data` user data secret, will result in the MachineConfigs of the `worker` MachineConfigPool to be applied.
 In the MachineConfig `01-worker-kubelet`, the label `node-role.kubernetes.io/worker` is hardcoded into the arguments to the kublets Systemd unit.
-Only when creating a custom MachineConfigPool, the nodes will _not_ receive the worker role.
+Only when creating a custom MachineConfigPool, the nodes _won't_ receive the worker role.
 
 === Who's/what's supposed to create the MachineConfig and MachineConfigPool?
 

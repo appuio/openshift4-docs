@@ -1,0 +1,37 @@
+= Remove alert rules
+
+[abstract]
+Somtimes an alert rule doesn't makes sense.
+Be it that the rule is build on assumptions that don't apply.
+Be it that the rule isn't actionable.
+If that alert is triggered regularly, it generates a lot of noise and drives us towards alert fatigue.
+This how to explains how to get rid of such an alert rule.
+
+1. Identify the name of the alert
+
+   Within Prometheus::
+     On the Alerts list, the name is shown within the colored box.
+     When an alert is expanded, the name is found within the property `alert`.
+
+   Whithin Alertmanager::
+     The alertname is found within the property `alertname`.
+
+2. Add the name to the list of ignored alerts
++
+[source,yaml]
+----
+parameters:
+  openshift4_monitoring:
+    alerts:
+      ignoreNames:
+        - MyAlertName
+----
++
+Do so on what ever hierarchy level is the most apropriate.
++
+[IMPORTANT]
+====
+Some alerts start with the prefix `SYN_`.
+If such an alert must be excluded, omit the prefix when adding it to `ignoreNames`.
+====
+

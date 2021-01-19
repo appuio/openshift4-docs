@@ -1,0 +1,99 @@
+= Self-signed default ingress certificate
+
+[NOTE]
+--
+Steps to implement a self-signed default ingress certificate for the OpenShift Router. This isn't meant to be used in production!
+
+These steps follow the https://docs.openshift.com/container-platform/4.6/security/certificates/replacing-default-ingress-certificate.html#replacing-default-ingress_replacing-default-ingress[Replacing the default ingress certificate] docs to set up a regular commercial certificate.
+--
+
+== Generate a self-signed ingress certificate
+
+A private key and certificate is generated using the https://www.openssl.org[openssl] command line tool. OpenShift requires the configuration of the Subject Alternative Name (SAN). The distinguished name (DN) Common Name (CN) must be equal to the SAN wildcard domain, in example `*.apps.<cluster>.<domain>.<tld>`.
+
+. Create the private key `ingress.key` and the certificate `ingress.crt` in a single step:
++
+[source,console]
+----
+openssl req -x509 -out ingress.crt -keyout ingress.key -config <(
+cat <<-EOF
+[ req ]
+prompt = no
+encrypt_key = no
+default_bits = 4096
+default_md = sha256
+distinguished_name = dn
+x509_extensions = v3_req
+
+[ dn ]
+C = AU
+ST = Some-State
+O = Internet Widgits Pty Ltd
+CN = *.apps.<cluster>.<domain>.<tld>
+
+[ v3_req ]
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+basicConstraints = critical,CA:false
+subjectKeyIdentifier = hash
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = *.apps.<cluster>.<domain>.<tld>
+EOF
+)
+----
+
+. Verify the wildcard certificate has been created in a valid form with a SAN:
++
+[source,console]
+----
+openssl x509 -noout -text -in ingress.crt | grep -A1 'X509v3 Subject Alternative Name'
+----
+
+== Configure the generated self signed ingress certificate in OpenShift
+
+[NOTE]
+--
+Because the self-signed certificate has been created without a CA, the certificate itself is stored in the custom-ca configmap. This ensures the created certificate is accepted as valid.
+--
+
+. Create a custom-ca configmap with the ingress certificate:
++
+[source,console]
+----
+oc create configmap custom-ca \
+   --from-file=ca-bundle.crt=ingress.crt \
+   -n openshift-config
+----
+
+. Update the cluster-wide proxy configuration with the newly created config map:
++
+[source,console]
+----
+oc patch proxy/cluster \
+   --type=merge \
+   --patch='{"spec":{"trustedCA":{"name":"custom-ca"}}}'
+----
+
+. Create the secret with the key and the self-signed certificate:
++
+[source,console]
+----
+oc create secret tls self-signed-wildcard \
+   --cert=ingress.crt \
+   --key=ingress.key \
+   -n openshift-ingress
+----
+
+. Configure the `self-signed-wildcard` secret via the Syn https://github.com/appuio/component-openshift4-ingress[openshift4-ingress component]:
++
+[source,yaml]
+----
+parameters:
+  openshift4_ingress:
+    ingressControllers:
+      default:
+        defaultCertificate:
+          name: self-signed-wildcard
+----

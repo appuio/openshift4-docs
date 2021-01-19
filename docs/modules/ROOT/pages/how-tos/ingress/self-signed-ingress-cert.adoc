@@ -55,10 +55,10 @@ openssl x509 -noout -text -in ingress.crt | grep -A1 'X509v3 Subject Alternative
 
 [NOTE]
 --
-Because the self-signed certificate has been created without a CA, the certificate itself is stored in the custom-ca configmap. This ensures the created certificate is accepted as valid.
+Because the self-signed certificate has been created without a CA, the certificate itself is stored in the `custom-ca` ConfigMap. This ensures the created certificate is accepted as valid.
 --
 
-. Create a custom-ca ConfigMap with the Ingress certificate:
+. Create a ConfigMap `custom-ca` with the Ingress certificate:
 +
 [source,console]
 ----

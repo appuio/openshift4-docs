@@ -18,8 +18,7 @@ The distinguished name (DN) Common Name (CN) must be equal to the SAN wildcard d
 +
 [source,console]
 ----
-openssl req -x509 -out ingress.crt -keyout ingress.key -config <(
-cat <<-EOF | openssl req -x509 -out ingress.crt -keyout ingress.key -config
+cat <<-EOF | openssl req -x509 -out ingress.crt -keyout ingress.key -config -
 [ req ]
 prompt = no
 encrypt_key = no
@@ -44,7 +43,6 @@ subjectAltName = @alt_names
 [ alt_names ]
 DNS.1 = *.apps.<cluster>.<domain>.<tld>
 EOF
-)
 ----
 
 . Verify the wildcard certificate has been created in a valid form with a SAN:

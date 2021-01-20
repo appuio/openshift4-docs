@@ -1,22 +1,25 @@
 = Self-signed default Ingress certificate
 
 [NOTE]
---
-Steps to implement a self-signed default Ingress certificate for the OpenShift Router. This isn't meant to be used in production!
+====
+Steps to implement a self-signed default Ingress certificate for the OpenShift Router.
+This isn't meant to be used in production!
 
 These steps follow the https://docs.openshift.com/container-platform/4.6/security/certificates/replacing-default-ingress-certificate.html#replacing-default-ingress_replacing-default-ingress[Replacing the default ingress certificate] docs to set up a regular commercial certificate.
---
+====
 
 == Generate a self-signed ingress certificate
 
-A private key and certificate is generated using the https://www.openssl.org[openssl] command line tool. OpenShift requires the configuration of the Subject Alternative Name (SAN). The distinguished name (DN) Common Name (CN) must be equal to the SAN wildcard domain, in example `*.apps.<cluster>.<domain>.<tld>`.
+A private key and certificate is generated using the https://www.openssl.org[openssl] command line tool.
+OpenShift requires the configuration of the Subject Alternative Name (SAN).
+The distinguished name (DN) Common Name (CN) must be equal to the SAN wildcard domain, in example `*.apps.<cluster>.<domain>.<tld>`.
 
 . Create the private key `ingress.key` and the certificate `ingress.crt` in a single step:
 +
 [source,console]
 ----
 openssl req -x509 -out ingress.crt -keyout ingress.key -config <(
-cat <<-EOF
+cat <<-EOF | openssl req -x509 -out ingress.crt -keyout ingress.key -config
 [ req ]
 prompt = no
 encrypt_key = no
@@ -55,7 +58,8 @@ openssl x509 -noout -text -in ingress.crt | grep -A1 'X509v3 Subject Alternative
 
 [NOTE]
 --
-Because the self-signed certificate has been created without a CA, the certificate itself is stored in the `custom-ca` ConfigMap. This ensures the created certificate is accepted as valid.
+Because the self-signed certificate has been created without a CA, the certificate itself is stored in the `custom-ca` ConfigMap.
+This ensures the created certificate is accepted as valid.
 --
 
 . Create a ConfigMap `custom-ca` with the Ingress certificate:

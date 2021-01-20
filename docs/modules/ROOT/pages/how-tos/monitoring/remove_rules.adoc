@@ -1,8 +1,8 @@
 = Remove alert rules
 
 [abstract]
-Somtimes an alert rule doesn't makes sense.
-Be it that the rule is build on assumptions that don't apply.
+Sometimes an alert rule doesn't make any sense.
+Be it that the rule is built on assumptions that don't apply.
 Be it that the rule isn't actionable.
 If that alert is triggered regularly, it generates a lot of noise and drives us towards alert fatigue.
 This how to explains how to get rid of such an alert rule.
@@ -27,11 +27,10 @@ parameters:
         - MyAlertName
 ----
 +
-Do so on what ever hierarchy level is the most apropriate.
+Do so on whatever hierarchy level is the most appropriate.
 +
 [IMPORTANT]
 ====
 Some alerts start with the prefix `SYN_`.
 If such an alert must be excluded, omit the prefix when adding it to `ignoreNames`.
 ====
-

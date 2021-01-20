@@ -64,7 +64,7 @@ kubectl --as cluster-admin get clusterversions.config.openshift.io version -o js
 
 [NOTE]
 --
-In general: In the case of a error or warning, try to get more detailed information from the log from the specific operator or controller. Be patient as some warnings are just temporary and the operators might be able to release themself from a degraded state!
+In general: In the case of an error or warning, try to get more detailed information from the log from the specific operator or controller. Be patient as some warnings are just temporary and the operators might be able to relieve themselves from a degraded state!
 --
 
 Follow the log of an operator or controller:

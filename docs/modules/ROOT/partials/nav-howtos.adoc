@@ -5,6 +5,9 @@
 * Authentication
 ** xref:oc4:ROOT:how-tos/authentication/sudo.adoc[Sudo]
 
+* Ingress
+** xref:oc4:ROOT:how-tos/ingress/self-signed-ingress-cert.adoc[Self-signed default ingress certificate]
+
 * cloudscale.ch
 ** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Cluster Setup]
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Cluster Decommission]

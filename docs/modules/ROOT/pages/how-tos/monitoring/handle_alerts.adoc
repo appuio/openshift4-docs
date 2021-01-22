@@ -56,3 +56,63 @@ Have a look at the sources documentation to find details about the time series.
 Should the job name not be enough to identify the source of a time series, you can have a look at the targets to find more details.
 Navigate to _Status_ > _Target_ and search for the job name.
 This will give you details of the scraped Kubernetes endpoint along with the associated service and pod.
+
+== Handle an alert
+
+An alert can be addressed in several ways:
+
+=== Manual intervention
+
+Sometimes, a manual intervention is the only thing required.
+This is fine as long the issue is expected to resurface again.
+Fix the issue using your Kubernetes API client of choice (for example `kubectl`, `oc` or the OpenShift Console).
+
+=== Change of configuration
+
+The system is expected to show up again but can be prevented by tweaking the configuration.
+Giving more resources, fixing a typo, changing a setting are all potential solutions.
+
+[CAUTION]
+====
+Be cautious with throwing resources at a problem.
+Sometimes reducing system load is the better way to go.
+====
+
+Change the configuration within the Sync configuration hierarchy.
+Do so on the Cluster, Tenant or global level as appropriate.
+
+
+=== Change code
+
+Code can behave badly and triggers an alert.
+Identify the circumstances that led to the failure and file a bug report.
+Pull requests with a fix are also welcome.
+
+Other trigger for a change of code are missing features.
+A likely case for this would be a commodore component not allowing to configure certain aspects. 
+File a feature request or better, submit a pull request.
+
+=== Change of alert rule
+
+If the system is working as expected then altering the alert rule might be the answer.
+This most likely results in a change of code.
+
+[NOTE]
+====
+It was discussed to allow altering alert rules via the configuration hierarchy.
+The decision was to not allow this for now.
+This would made it too easy.
+Resolving the issue at the source (`kube-prometheus`) would be preferred.
+If not possible, doing so in Jsonnet allows to work with a scalpel instead of a sledgehammer.
+In Jsonnet, we can make use of variables and or otherwise reuse things.
+Something we would not be able to do in YAML and a lot of duplication would result of it.
+====
+
+=== Dropping the alert
+
+Some alerts aren't actionable and there is no way to improve it by altering the rule.
+In such cases, it's OK to drop the alert.
+You can do so within the configuration hierarchy.
+See xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[Remove alert rules].
+
+This can also be a temporary mitigation while a more lasting solution gets implemented.

@@ -1,0 +1,58 @@
+= Investigating and handling alerts
+
+
+[abstract]
+Looking at an alert can be overwhelming.
+This is specially true when not familiar with how the alert ended up in your inbox.
+This how to provides you some help on where to start.
+
+== Investigat an alert
+
+. Read the message
++
+Reading the message usually should give you a concise statement on what's wrong.
+Most of the time, that message should be enough to grasp what action needs to be taken.
++
+[NOTE]
+====
+There is no standard field defined for alert messages.
+OpenShift 4 alerts build on top of https://github.com/prometheus-operator/kube-prometheus[kube-prometheus].
+There `annotations.message` is used, but `annotations.summary` and `annotations.descriptions` are also used.
+====
+
+. Lookout for labels and annotations
++
+Alerts can have a set labels and annotations attached.
+They contain all sorts of valuable information.
+A lot of them refer to Kubernetes resources.
+Examples are namespace, service, pod and many more.
+Use them to identify the resources through the Kubernetes API and have a look at their states.
+
+. Follow the source URL
++
+Each alert contains a source link.
+Following that link will open the alert expression within the originating Prometheus.
+Looking at the query can give further clues on what's going on.
+The name of the time series are of special interest here.
++
+[NOTE]
+====
+The source link only works when clusters are publicly accessible.
+Check out the cluster specific documentation if the link doesn't work.
+There you should be able to find instructions on how to gain access.
+====
+
+. Understand the source of a time series
++
+Sometimes looking at a time series, it's not obvious what it's all about.
+In those cases, it helps to understand where it's coming from.
+Each time series has a `job` label.
+That label refers to the scrape job that brought that time series into the system.
+Use that name to identify the source.
+Have a look at the sources documentation to find details about the time series.
+
+. Inspect targets
++
+Should the job name not be enough to identify the source of a time series, you can have a look at the targets to find more details.
+Navigate to _Status_ > _Target_ and search for the job name.
+This will give you details of the scraped Kubernetes endpoint along with the associated service and pod.

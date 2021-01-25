@@ -62,11 +62,11 @@ Get some more detailed information about the current state of the upgrade:
 
 [source,console]
 ----
-kubectl --as cluster-admin get clusterversions.config.openshift.io version -o jsonpath={.status.conditions}
+kubectl --as cluster-admin get clusterversions.config.openshift.io version -o jsonpath={.status.conditions}  | jq .
 ----
 
 [NOTE]
---
+====
 In general: In the case of an error or warning, try to get more detailed information from the log from the specific operator or controller.
 Be patient as some warnings are just temporary and the operators might be able to relieve themselves from a degraded state!
 ====

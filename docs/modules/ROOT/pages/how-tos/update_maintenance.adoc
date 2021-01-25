@@ -14,6 +14,13 @@ VERSION IMAGE
 4.5.24  quay.io/openshift-release-dev/ocp-release@sha256:f3ce0aeebb116bbc7d8982cc347ffc68151c92598dfb0cc45aaf3ce03bb09d11
 ----
 
+or
+
+[source,console]
+----
+kubectl --as cluster-admin get clusterversion version -o json | jq '.status.availableUpdates[] | {image: .image, version: .version}'
+----
+
 [NOTE]
 ====
 If you don't get the newest available version, this might be intended.

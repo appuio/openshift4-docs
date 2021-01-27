@@ -5,6 +5,9 @@
 * Authentication
 ** xref:oc4:ROOT:how-tos/authentication/sudo.adoc[Sudo]
 
+* Ingress
+** xref:oc4:ROOT:how-tos/ingress/self-signed-ingress-cert.adoc[Self-signed default ingress certificate]
+
 * cloudscale.ch
 ** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Cluster Setup]
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
@@ -18,6 +21,9 @@
 ** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Cluster Decommissioning]
 ** xref:oc4:ROOT:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
 ** xref:oc4:ROOT:how-tos/gcp/hive.adoc[Hive]
+
+* Monitoring
+** xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[Remove alert rules]
 
 * VMware vSphere
 ** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]

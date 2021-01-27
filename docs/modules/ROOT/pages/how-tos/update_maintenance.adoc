@@ -4,8 +4,29 @@
 +
 [source,console]
 ----
+oc adm upgrade --as cluster-admin
+
+Updates:
+
+VERSION IMAGE
+4.5.19  quay.io/openshift-release-dev/ocp-release@sha256:bae5510f19324d8e9c313aaba767e93c3a311902f5358fe2569e380544d9113e
+4.5.20  quay.io/openshift-release-dev/ocp-release@sha256:78b878986d2d0af6037d637aa63e7b6f80fc8f17d0f0d5b077ac6aca83f792a0
+4.5.24  quay.io/openshift-release-dev/ocp-release@sha256:f3ce0aeebb116bbc7d8982cc347ffc68151c92598dfb0cc45aaf3ce03bb09d11
+----
+
+or
+
+[source,console]
+----
 kubectl --as cluster-admin get clusterversion version -o json | jq '.status.availableUpdates[] | {image: .image, version: .version}'
 ----
+
+[NOTE]
+====
+If you don't get the newest available version, this might be intended.
+Red Hat does release new updates to specific cluster, when they do have no known issues.
+So on a stable channel you need some patience!
+====
        
 . Update the configuration hierarchy
 +
@@ -24,6 +45,16 @@ Let the OpenShift operators do their job.
 ----
 kubectl --as cluster-admin get clusterversion version --watch
 ----
++
+. Check the final state via the `oc` commmand:
+[source,console]
+----
+$ oc adm upgrade --as cluster-admin
+Cluster version is 4.5.24
+
+No updates available.
+You may force an upgrade to a specific release image, but doing so may not be supported and result in downtime or data loss.
+----
 
 So far, that process just worked.
 In consequence we do lack the experience on how to observe and debug.
@@ -31,3 +62,26 @@ Instruction will be added here, as soon as we gained that knowledge.
 As a starting point on the process, checkout https://docs.openshift.com/container-platform/latest/updating/updating-cluster-between-minor.html[Updating a cluster between minor versions] of the OpenShift 4 documentation.
 
 Also have a look at the blog post https://www.openshift.com/blog/the-ultimate-guide-to-openshift-release-and-upgrade-process-for-cluster-administrators[The Ultimate Guide to OpenShift Release and Upgrade Process for Cluster Administrators] which is an excellent source to understand the process.
+
+= Troubleshooting
+
+Get some more detailed information about the current state of the upgrade:
+
+[source,console]
+----
+kubectl --as cluster-admin get clusterversions.config.openshift.io version -o jsonpath={.status.conditions}  | jq .
+----
+
+[NOTE]
+====
+In general: In the case of an error or warning, try to get more detailed information from the log from the specific operator or controller.
+Be patient as some warnings are just temporary and the operators might be able to relieve themselves from a degraded state!
+====
+
+Follow the log of an operator or controller:
+
+[source,console]
+----
+kubectl --as cluster-admin -n openshift-machine-config-operator logs deployment/machine-config-operator -f
+kubectl --as cluster-admin -n openshift-machine-config-operator logs deployment/machine-config-controller -f
+----

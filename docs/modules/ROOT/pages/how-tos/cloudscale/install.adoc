@@ -149,7 +149,11 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
   bindPassword=${LDAP_PASSWORD}
 
-# Generate a master password for backups
+# Generate a master password for K8up backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Generate a password for the cluster object backups
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
   password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
 ----

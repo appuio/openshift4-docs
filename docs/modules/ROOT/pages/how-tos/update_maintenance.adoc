@@ -63,7 +63,7 @@ As a starting point on the process, checkout https://docs.openshift.com/containe
 
 Also have a look at the blog post https://www.openshift.com/blog/the-ultimate-guide-to-openshift-release-and-upgrade-process-for-cluster-administrators[The Ultimate Guide to OpenShift Release and Upgrade Process for Cluster Administrators] which is an excellent source to understand the process.
 
-= Troubleshooting
+== Troubleshooting
 
 Get some more detailed information about the current state of the upgrade:
 

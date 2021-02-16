@@ -6,11 +6,11 @@ Prepare terraform
 ----
 # Set terraform image and tag to be used
 tf_image=$(\
-  yq r dependencies/openshift4-cloudscale/class/defaults.yml \
-  parameters.openshift4_cloudscale.images.terraform.image)
+  yq eval ".parameters.openshift4_cloudscale.images.terraform.image" \
+  dependencies/openshift4-cloudscale/class/defaults.yml)
 tf_tag=$(\
-  yq r dependencies/openshift4-cloudscale/class/defaults.yml \
-  parameters.openshift4_cloudscale.images.terraform.tag)
+  yq eval ".parameters.openshift4_cloudscale.images.terraform.tag" \
+  dependencies/openshift4-cloudscale/class/defaults.yml)
 
 # Generate the terraform alias
 alias terraform='docker run -it --rm \

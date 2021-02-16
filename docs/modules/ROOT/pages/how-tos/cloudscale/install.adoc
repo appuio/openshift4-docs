@@ -246,23 +246,26 @@ CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
 
 pushd "inventory/classes/${TENANT_ID}/"
 
-yq w -i "${CLUSTER_ID}.yml" \
-  "applications[+]" "openshift4-cloudscale"
+yq eval -i ".classes +=  \"${TENANT_ID}.openshift4\"" \
+  ${CLUSTER_ID}.yml
 
-yq w -i "${CLUSTER_ID}.yml" \
-  parameters.openshift.infraID -- "$(jq -r .infraID ../../../target/metadata.json)"
-yq w -i "${CLUSTER_ID}.yml" \
-  parameters.openshift.clusterID -- "$(jq -r .clusterID ../../../target/metadata.json)"
-yq w -i "${CLUSTER_ID}.yml" \
-  parameters.openshift.appsDomain -- "apps.${CLUSTER_ID}.${BASE_DOMAIN}"
+yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID ../../../target/metadata.json)\"" \
+  ${CLUSTER_ID}.yml
 
-yq w -i "${CLUSTER_ID}.yml" \
-  parameters.openshift4_cloudscale.variables.base_domain -- "${BASE_DOMAIN}"
-yq w -i "${CLUSTER_ID}.yml" \
-  parameters.openshift4_cloudscale.variables.ignition_ca -- "${CA_CERT}"
+yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID ../../../target/metadata.json)\"" \
+  ${CLUSTER_ID}.yml
 
-yq w -i "${CLUSTER_ID}.yml" \
-  parameters.vshnLdap.serviceId -- ${LDAP_ID}
+yq eval -i ".parameters.openshift.appsDomain = \"apps.${CLUSTER_ID}.${BASE_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_cloudscale.variables.base_domain = \"${BASE_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_cloudscale.variables.ignition_ca = \"${CA_CERT}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
+  ${CLUSTER_ID}.yml
 
 git commit -a -m "Setup cluster ${CLUSTER_ID}"
 git push

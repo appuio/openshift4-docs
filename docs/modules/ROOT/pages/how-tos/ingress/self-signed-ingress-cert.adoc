@@ -5,7 +5,7 @@
 Steps to implement a self-signed default Ingress certificate for the OpenShift Router.
 This isn't meant to be used in production!
 
-These steps follow the https://docs.openshift.com/container-platform/4.6/security/certificates/replacing-default-ingress-certificate.html#replacing-default-ingress_replacing-default-ingress[Replacing the default ingress certificate] docs to set up a regular commercial certificate.
+These steps follow the https://docs.openshift.com/container-platform/latest/security/certificates/replacing-default-ingress-certificate.html#replacing-default-ingress_replacing-default-ingress[Replacing the default ingress certificate] docs to set up a regular commercial certificate.
 ====
 
 == Generate a self-signed ingress certificate

@@ -34,7 +34,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
-* `openshift-install` https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.6/openshift-install-linux.tar.gz[OpenShift Installer]
+* `openshift-install` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.7/openshift-install-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.7/openshift-install-mac.tar.gz[macOS])
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
 * `rhcos-4.6` image must be present in the cloudscale.ch account where you want to install
 

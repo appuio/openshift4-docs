@@ -34,9 +34,9 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
-* `openshift-install` https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.5/openshift-install-linux.tar.gz[OpenShift Installer]
+* `openshift-install` https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.7/openshift-install-linux.tar.gz[OpenShift Installer]
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `rhcos-4.5` image must be present in the cloudscale.ch account where you want to install
+* `custom:rhcos-4.7` image must be present in the cloudscale.ch account where you want to install.
 
 [WARNING]
 ====
@@ -168,7 +168,7 @@ If you have to recreate the install config or any of the generated manifests you
 [NOTE]
 --
 You can add more options to the `install-config.yaml` file. 
-Have a look at the https://docs.openshift.com/container-platform/4.5/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
+Have a look at the https://docs.openshift.com/container-platform/4.7/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
 
 For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
 --
@@ -407,7 +407,7 @@ kubectl label node -lnode-role.kubernetes.io/infra \
   node-role.kubernetes.io/app-
 ----
 
-. Create secret with S3 credentials https://docs.openshift.com/container-platform/4.5/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry] (will be https://ticket.vshn.net/browse/APPU-2790[automated])
+. Create secret with S3 credentials https://docs.openshift.com/container-platform/4.7/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry] (will be https://ticket.vshn.net/browse/APPU-2790[automated])
 +
 [source,console]
 ----

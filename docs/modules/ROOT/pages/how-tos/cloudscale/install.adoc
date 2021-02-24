@@ -254,9 +254,6 @@ CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
 
 pushd "inventory/classes/${TENANT_ID}/"
 
-yq eval -i ".classes +=  \"${TENANT_ID}.openshift4\"" \
-  ${CLUSTER_ID}.yml
-
 yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID ../../../target/metadata.json)\"" \
   ${CLUSTER_ID}.yml
 

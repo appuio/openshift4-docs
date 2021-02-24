@@ -18,7 +18,6 @@ alias terraform='docker run -it --rm \
   -e TF_VAR_ignition_bootstrap="${TF_VAR_ignition_bootstrap}" \
   -w /tf \
   -v $(pwd):/tf \
-  -v $CLUSTER_ID:/tf/.terraform \
   --ulimit memlock=-1 \
   ${tf_image}:${tf_tag} terraform'
 

@@ -336,12 +336,7 @@ EOF
 terraform apply
 ----
 
-. Add the remaining DNS records to the previous ones.
-+
-[source,console]
-----
-terraform output -json | jq -r ".cluster_dns.value"
-----
+. Add the remaining shown DNS records to the previous ones.
 
 . Wait for bootstrap to complete
 +

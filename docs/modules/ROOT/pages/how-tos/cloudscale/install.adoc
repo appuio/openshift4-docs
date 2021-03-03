@@ -36,7 +36,9 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * `openshift-install` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.7/openshift-install-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-4.7/openshift-install-mac.tar.gz[macOS])
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `custom:rhcos-4.7` image must be present in the cloudscale.ch account where you want to install.
+* `qemu-img`
+* `curl`
+* `gzip`
 
 [WARNING]
 ====
@@ -138,6 +140,74 @@ mc config host add \
 
 mc mb --ignore-existing \
   "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+----
+
+=== Upload Red Hat CoreOS image
+
+. Export the Athorization header for the Cloudscale API.
+
+[source,console]
+----
+export AUTH_HEADER="Authorization: Bearer ${CLOUDSCALE_TOKEN}"
+----
+
+[NOTE]
+====
+The variable `CLOUDSCALE_TOKEN` could be used directly.
+Exporting the variable `AUTH_HEADER` is done to be compatible to the https://www.cloudscale.ch/en/api/[Cloudscale API documentation].
+====
+
+. Check if image already exists
+
+[source,console]
+----
+curl -sH "$AUTH_HEADER" https://api.cloudscale.ch/v1/custom-images | jq -r '.[] | select(.slug == "rhcos-4.7") | .href'
+----
+
+[NOTE]
+====
+If a URL is printed to the output, you can skip the next steps and directly jump to the next section.
+====
+
+. Fetch and convert the latest Red Hat CoreOS image
+
+[source,console]
+----
+curl -sL https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.7/4.7.0/rhcos-4.7.0-x86_64-openstack.x86_64.qcow2.gz | gzip -d > rhcos-4.7.gcow
+qemu-img convert rhcos-4.7.gcow rhcos-4.7.raw
+----
+
+. Upload the image to S3 and make it public
+
+[source,console]
+----
+mc cp rhcos-4.7.raw "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/"
+mc policy set download "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/rhcos-4.7.raw"
+----
+[NOTE]
+====
+The output of the above looks like an error.
+But when checking with the following, the result is as expected.
+[source,console]
+----
+mc policy get "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/rhcos-4.7.raw"
+----
+The output should be `Access permission for `[…]-bootstrap-ignition/rhcos-4.7.raw` is `download``
+
+====
+
+. Import the image to Cloudscale
+
+[source,console]
+----
+curl -i -H "$AUTH_HEADER" \
+  -F url="$(mc share download --json "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/rhcos-4.7" | jq -r .url)" \
+  -F name='RHCOS 4.7' \
+  -F zones=rma1 \
+  -F slug=rhcos-4.7 \
+  -F source_format=raw \
+  -F user_data_handling=pass-through \
+  https://api.cloudscale.ch/v1/custom-images/import
 ----
 
 === Set secrets in Vault

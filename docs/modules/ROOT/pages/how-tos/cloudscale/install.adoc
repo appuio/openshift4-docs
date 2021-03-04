@@ -126,7 +126,7 @@ mc mb --ignore-existing \
 
 === Upload Red Hat CoreOS image
 
-. Export the Athorization header for the Cloudscale API.
+. Export the Authorization header for the Cloudscale API.
 
 [source,console]
 ----
@@ -136,7 +136,7 @@ export AUTH_HEADER="Authorization: Bearer ${CLOUDSCALE_TOKEN}"
 [NOTE]
 ====
 The variable `CLOUDSCALE_TOKEN` could be used directly.
-Exporting the variable `AUTH_HEADER` is done to be compatible to the https://www.cloudscale.ch/en/api/[Cloudscale API documentation].
+Exporting the variable `AUTH_HEADER` is done to be compatible with the https://www.cloudscale.ch/en/api/[Cloudscale API documentation].
 ====
 
 . Check if image already exists

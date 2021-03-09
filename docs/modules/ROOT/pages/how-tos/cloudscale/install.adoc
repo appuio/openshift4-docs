@@ -74,7 +74,6 @@ export LDAP_PASSWORD="Your_LDAP_pw_here"
 ----
 export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
 export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
-export GITLAB_CATALOG_PROJECT_ID=<project-id> # GitLab numerical project ID of the catalog repo
 export REGION=rma # rma or lpg (without the zone number)
 export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<verb>-<noun>-<number>
 export TENANT_ID=<lieutenant-tenant-id> # Looks like: t-<verb>-<noun>-<number>

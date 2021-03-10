@@ -73,10 +73,17 @@ export LDAP_PASSWORD="Your_LDAP_pw_here"
 .Access to various APIs
 [source,console]
 ----
-export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
-export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
-export COMMODORE_API_URL=<lieutenant-api-endpoint> # For example: https://api-int.syn.vshn.net
-export COMMODORE_API_TOKEN=<lieutenant-api-token> # See https://wiki.vshn.net/pages/viewpage.action?pageId=167838622#ClusterRegistryinLieutenantSynfectaCluster(synfection)-Preparation
+# From https://control.cloudscale.ch/user/api-tokens
+export CLOUDSCALE_TOKEN=<cloudscale-api-token>
+
+# From https://git.vshn.net/profile/personal_access_tokens
+export GITLAB_TOKEN=<gitlab-api-token>
+
+# For example: https://api.syn.vshn.net
+# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
+export COMMODORE_API_URL=<lieutenant-api-endpoint>
+# See https://wiki.vshn.net/x/ngMBCg#ClusterRegistryinLieutenantSynthesizeaCluster(synfection)-Preparation
+export COMMODORE_API_TOKEN=<lieutenant-api-token>
 ----
 
 .VSHN sepcific input

@@ -123,7 +123,7 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
 +
 [source,console]
 ----
-export REGION=rma # rma or lpg (without the zone number)
+export REGION=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}clusters/${CLUSTER_ID} | jq -r .facts.region)
 mc config host add \
   "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
   $(echo $response | jq -r '.keys[0].access_key') \

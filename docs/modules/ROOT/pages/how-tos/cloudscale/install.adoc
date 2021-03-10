@@ -70,17 +70,34 @@ export LDAP_PASSWORD="Your_LDAP_pw_here"
 
 === Configure input
 
+.Access to various APIs
 [source,console]
 ----
-export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
-export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
-export REGION=rma # rma or lpg (without the zone number)
+# From https://control.cloudscale.ch/user/api-tokens
+export CLOUDSCALE_TOKEN=<cloudscale-api-token>
+
+# From https://git.vshn.net/profile/personal_access_tokens
+export GITLAB_TOKEN=<gitlab-api-token>
+
+# For example: https://api.syn.vshn.net
+# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
+export COMMODORE_API_URL=<lieutenant-api-endpoint>
+# See https://wiki.vshn.net/x/ngMBCg#ClusterRegistryinLieutenantSynthesizeaCluster(synfection)-Preparation
+export COMMODORE_API_TOKEN=<lieutenant-api-token>
+----
+
+.VSHN sepcific input
+[source,console]
+----
 export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<verb>-<noun>-<number>
-export TENANT_ID=<lieutenant-tenant-id> # Looks like: t-<verb>-<noun>-<number>
+export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+----
+
+.OpenShift configuration
+[source,console]
+----
 export BASE_DOMAIN=appuio-beta.ch
 export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
-export COMMODORE_API_URL=<lieutenant-api-endpoint> # For example: https://api-int.syn.vshn.net
-export COMMODORE_API_TOKEN=<lieutenant-api-token> # See https://wiki.vshn.net/pages/viewpage.action?pageId=167838622#ClusterRegistryinLieutenantSynfectaCluster(synfection)-Preparation
 ----
 
 For `BASE_DOMAIN` explanation, see xref:explanation/dns_scheme.adoc[DNS Scheme].
@@ -113,6 +130,7 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
 +
 [source,console]
 ----
+export REGION=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
 mc config host add \
   "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
   $(echo $response | jq -r '.keys[0].access_key') \

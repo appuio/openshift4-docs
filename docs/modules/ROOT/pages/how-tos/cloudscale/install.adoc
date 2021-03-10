@@ -83,7 +83,7 @@ export COMMODORE_API_TOKEN=<lieutenant-api-token> # See https://wiki.vshn.net/pa
 [source,console]
 ----
 export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<verb>-<noun>-<number>
-export TENANT_ID=<lieutenant-tenant-id> # Looks like: t-<verb>-<noun>-<number>
+export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}clusters/${CLUSTER_ID} | jq -r .tenant)
 ----
 
 .OpenShift configuration

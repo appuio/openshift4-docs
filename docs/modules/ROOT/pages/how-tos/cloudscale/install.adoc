@@ -321,16 +321,10 @@ Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for 
 
 . Prepare Commodore inventory.
 +
-This command will fail due to circular dependencies in the Commodore setup.
-You will see error messages starting with `Cannot resolve ${openshift:*}`.
-As long as all components are cloned for the cluster it's enough to proceed.
-+
-This can be improved once https://github.com/projectsyn/commodore/issues/135[this issue] is solved.
-+
 [source,console]
 ----
-# This will fail
-commodore catalog compile ${CLUSTER_ID}
+mkdir -p inventory/classes/
+git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
 ----
 
 . Prepare Terraform cluster config

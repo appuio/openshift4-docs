@@ -21,7 +21,7 @@ We know from experience with OpenShift 3.11: some tweaking will be required at s
 This includes adding `ServiceMonitor` objects for things not (yet) covered by Cluster Monitoring, adding new rules to cover additional failure scenarios and filtering rules that are noisy or not actionable.
 
 
-== Design Proposal
+== Design
 
 Based on all those restrictions, one could conclude to omit the Cluster Monitoring altogether and do it on your own.
 This would give full control over everything.
@@ -31,20 +31,22 @@ The result of doing everything again, would be a huge waste of resources both in
 
 For that reason we'll make use of Cluster Monitoring as much as possible.
 
-To be able to change the existing alerting rules we'll bring our own set of rules based on the https://github.com/openshift/cluster-monitoring-operator[cluster-monitoring-operator] (which in turn is based on https://github.com/prometheus-operator/kube-prometheus[kube-prometheus]).
+To be able to change the existing alerting rules we bring our own set of rules based on the https://github.com/openshift/cluster-monitoring-operator[cluster-monitoring-operator] (which in turn is based on https://github.com/prometheus-operator/kube-prometheus[kube-prometheus]).
 These rules we can change and adapt to our liking with Jsonnet.
 The current rules are ignored by creating https://prometheus.io/docs/alerting/latest/alertmanager/#silences[silences] in AlertManager.
 
-Additionally we'll use the https://docs.openshift.com/container-platform/latest/monitoring/monitoring-your-own-services.html[user workload monitoring] feature to add new scrape targets and Prometheus alert rules.
-
+image:explanations/cluster_monitoring.svg[]
 
 == Implementation Details
 
-A Commodore component which implements all the alert rules will be written.
+Commodore https://github.com/appuio/component-openshift4-monitoring/[component-openshift4-monitoring] implements all the alert rules.
 This component pulls the rules from all OpenShift repos which define any.
-We then prepend all these rule names with a `SYN_` prefix and add a `syn=true` label to avoid naming collisions.
-The AlertManager silence can select rules based on this label (or rather the non-existence of it): `syn="",alertname=~".+"`
+All these rule names are then prefixed with `SYN_` and have a `syn=true` label to avoid naming collisions.
+The AlertManager silence can select rules based on this label (or rather the non-existence of it): `syn="",alertname=~".+"`.
 
+To automate this, there is a CronJob in place that periodically extends the AlertManager silences.
+
+NOTE: Silenced alerts are hidden in the OpenShift console by default, but users can easily display them again.
 
 == Risks and Mitigations
 

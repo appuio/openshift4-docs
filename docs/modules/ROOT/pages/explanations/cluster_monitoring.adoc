@@ -35,8 +35,6 @@ To be able to change the existing alerting rules we bring our own set of rules b
 These rules we can change and adapt to our liking with Jsonnet.
 The current rules are ignored by creating https://prometheus.io/docs/alerting/latest/alertmanager/#silences[silences] in AlertManager.
 
-Additionally we use the https://docs.openshift.com/container-platform/latest/monitoring/monitoring-your-own-services.html[user workload monitoring] feature to add new scrape targets and Prometheus alert rules.
-
 image:explanations/cluster_monitoring.svg[]
 
 == Implementation Details

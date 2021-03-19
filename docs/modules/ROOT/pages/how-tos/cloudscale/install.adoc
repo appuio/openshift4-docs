@@ -104,7 +104,7 @@ export BASE_DOMAIN=appuio-beta.ch
 export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
 ----
 
-For `BASE_DOMAIN` explanation, see xref:explanation/dns_scheme.adoc[DNS Scheme].
+For `BASE_DOMAIN` explanation, see xref:explanations/dns_scheme.adoc[DNS Scheme].
 
 === Set up S3 bucket
 

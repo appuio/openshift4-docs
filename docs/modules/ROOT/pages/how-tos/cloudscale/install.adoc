@@ -55,7 +55,7 @@ Register the new OpenShift 4 cluster in Lieutenant.
 ****
 Use the following endpoint for Lieutenant:
 
-VSHN:: https://control.vshn.net/syn/lieutenantclusters
+VSHN:: https://api.syn.vshn.net
 ****
 
 === Set up LDAP service

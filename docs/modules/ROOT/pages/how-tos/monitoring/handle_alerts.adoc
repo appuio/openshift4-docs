@@ -23,15 +23,14 @@ There `annotations.message` is used, but `annotations.summary` and `annotations.
 . Look out for labels and annotations
 +
 Alerts can have a set of labels and annotations attached.
-They contain all sorts of valuable information.
-A lot of them refer to Kubernetes resources.
-Examples are namespace, service, pod and many more.
-Use them to identify the resources through the Kubernetes API and have a look at their states.
+The labels and annotations on alerts contain a lot of valuable information.
+Many labels refer to Kubernetes resources, such as the namespace, service, and pod by which the alert was triggered.
+Use that information as a starting point to check the alerting resource on the cluster.
 
 . Follow the source URL
 +
-Each alert contains a source link.
-Following that link will open the alert expression within the originating Prometheus.
+Each alert contains a source link, which is displayed as "Source: ..." in OpsGenie.
+Following that link will open the alert expression within the Prometheus which generated the alert.
 Looking at the query can give further clues on what's going on.
 The name of the time series are of special interest here.
 +
@@ -49,7 +48,7 @@ In those cases, it helps to understand where it's coming from.
 Each time series has a `job` label.
 That label refers to the scrape job that brought that time series into the system.
 Use that name to identify the source.
-Have a look at the sources documentation to find details about the time series.
+Have a look at the source's documentation to find details about the time series.
 
 . Inspect targets
 +
@@ -69,7 +68,7 @@ Fix the issue using your Kubernetes API client of choice (for example `kubectl`,
 
 === Change of configuration
 
-The system is expected to show up again but can be prevented by tweaking the configuration.
+The alert is expected to show up again but can be prevented by tweaking the configuration.
 Giving more resources, fixing a typo, changing a setting are all potential solutions.
 
 [CAUTION]
@@ -88,9 +87,9 @@ Code can behave badly and trigger an alert.
 Identify the circumstances that led to the failure and file a bug report.
 Pull requests with a fix are also welcome.
 
-Other trigger for a change of code are missing features.
-A likely case for this would be a Commodore component not allowing to configure certain aspects. 
-File a feature request or better, submit a pull request.
+Another trigger for a code change are missing features.
+A likely case for this would be a Commodore component not exposing configuration values which could be used to address the alert.
+File a feature request, or better, submit a pull request to the component.
 
 === Change of alert rule
 
@@ -112,6 +111,6 @@ Something we would not be able to do in YAML and a lot of duplication would resu
 Some alerts aren't actionable and there is no way to improve it by altering the rule.
 In such cases, it's OK to drop the alert.
 You can do so within the configuration hierarchy.
-See xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[Remove alert rules].
+See the documentation for xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[removing alert rules].
 
 This can also be a temporary mitigation while a more lasting solution gets implemented.

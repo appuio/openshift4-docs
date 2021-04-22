@@ -1,6 +1,13 @@
 pages   := $(shell find . -type f -name '*.adoc')
 
-ifeq ($(shell command -v podman &> /dev/null; echo $$?),0)
+# Determine whether to use podman
+#
+# podman currently fails when executing in GitHub actions on Ubuntu LTS 20.04,
+# so we never use podman if GITHUB_ACTIONS==true.
+use_podman := $(shell command -v podman 2>&1 >/dev/null; p="$$?"; \
+		if [ "$${GITHUB_ACTIONS}" != "true" ]; then echo "$$p"; else echo 1; fi)
+
+ifeq ($(use_podman),0)
 	engine_cmd  ?= podman
 	engine_opts ?= --rm --tty --userns=keep-id
 else

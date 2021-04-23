@@ -205,9 +205,9 @@ We provision the VMs in this two-step process to avoid VMs getting stuck in a st
 +
 [NOTE]
 ====
-We currently need another call to `terraform apply` after changing the VM state from `Stopped` to `Running`.
-This is necessary because the Exoscale Terraform provider doesn't correctly signal that a VMs IP might change during a state change.
-TODO: link to TF provider issue
+We currently need two runs of `terraform apply -var X_state=Running` when provisioning VMs.
+This is necessary because the Exoscale Terraform provider doesn't correctly signal that a VM's IP can change during a state change.
+See the issue filed against the https://github.com/exoscale/terraform-provider-exoscale/issues/101[Exoscale Terraform provider] for a more detailed explanation.
 ====
 +
 [source,console]

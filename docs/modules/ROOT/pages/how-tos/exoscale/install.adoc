@@ -23,8 +23,8 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `virt-edit`
 * `cpio`
 * Clone of the https://github.com/appuio/terraform-openshift4-exoscale[terraform-openshift4-exoscale] repository
-* A DNS domain configured for https://community.exoscale.com/documentation/dns/configuration-examples/#configuring-the-domain-name-at-the-registrar[Exoscale DNS service]
-
+* https://community.exoscale.com/documentation/dns/quick-start/#subscribing-to-the-service[DNS subscription] activated in the Exoscale organisation
+* A copy of the Ursula Debian package
 
 == Cluster Installation
 
@@ -39,20 +39,27 @@ export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
 export EXOSCALE_REGION=ch-dk-2
 export CLUSTER_ID=<cluster-name>
-export BASE_DOMAIN=ocp4-poc.appuio-beta.ch
+export BASE_DOMAIN=<cluster-base-domain>
 export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshift/install/pull-secret
 
 export AWS_ACCESS_KEY_ID=${EXOSCALE_API_KEY}
 export AWS_SECRET_ACCESS_KEY=${EXOSCALE_API_SECRET}
 export AWS_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
+
+export SSH_PUBLIC_KEY=~/.ssh/id_ed25519.pub
+export SSH_PUBKEY_FINGERPRINT=$(ssh-keygen -E md5 -lf $SSH_PUBLIC_KEY | cut -d' ' -f2 | tail -c+5)
+
+# TODO: generate separate restricted IAM key for Ursula
+export TF_VAR_lb_exoscale_api_key=${EXOSCALE_API_KEY}
+export TF_VAR_lb_exoscale_api_secret=${EXOSCALE_API_SECRET}
 ----
 
 . Prepare Exoscale CLI
 +
 [source,console]
 ----
-mkdir -p ~/.exoscale
-cat <<EOF >> ~/.exoscale/exoscale.toml
+mkdir -p ~/.config/exoscale
+cat <<EOF >> ~/.config/exoscale/exoscale.toml
 
 [[accounts]]
   account = "${EXOSCALE_ACCOUNT}"
@@ -67,8 +74,10 @@ EOF
 +
 [source,console]
 ----
-exo sos create "${CLUSTER_ID}-bootstrap-ignition"
+exo sos create "${CLUSTER_ID}-bootstrap"
 exo sos create "${CLUSTER_ID}-tf-state"
+
+export TF_VAR_bootstrap_bucket="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap/"
 ----
 
 . Prepare `install-config.yaml`
@@ -86,7 +95,7 @@ platform:
   none: {}
 pullSecret: |
   ${PULL_SECRET}
-sshKey: "$(cat ~/.ssh/id_ed25519.pub)"
+sshKey: "$(cat $SSH_PUBLIC_KEY)"
 EOF
 
 ----
@@ -101,66 +110,138 @@ openshift-install --dir ${CLUSTER_ID} \
 openshift-install --dir ${CLUSTER_ID} \
   create ignition-configs
 
-for file in bootstrap master worker; do \
-  exo sos upload "${CLUSTER_ID}-bootstrap-ignition" "${CLUSTER_ID}/${file}.ign" && \
-  exo sos acl add "${CLUSTER_ID}-bootstrap-ignition" "${file}.ign" \
-      --public-read ; \
-done
+exo sos upload "${CLUSTER_ID}-bootstrap" "${CLUSTER_ID}/bootstrap.ign"
+exo sos acl add "${CLUSTER_ID}-bootstrap" "bootstrap.ign" \
+    --public-read
+
+export TF_VAR_ignition_ca=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
+  ${CLUSTER_ID}/master.ign | \
+  awk -F ',' '{ print $2 }' | \
+  base64 --decode)
 ----
 
-. Prepare RHCOS images
+. Prepare RHCOS template
 +
 [source,console]
 ----
-RHCOS_VERSION="4.5.2"
+RHCOS_VERSION="4.7.7"
 
-curl "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.5/latest/rhcos-${RHCOS_VERSION}-x86_64-openstack.x86_64.qcow2.gz" | gunzip > rhcos-${RHCOS_VERSION}.qcow2
+curl "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.7/${RHCOS_VERSION}/rhcos-${RHCOS_VERSION}-x86_64-openstack.x86_64.qcow2.gz" | gunzip > rhcos-${RHCOS_VERSION}.qcow2
 
 virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
-  -m /dev/sda1:/ /loader/entries/ostree-1-rhcos.conf \
-  -e 's/openstack/metal ignition.config.url=http://169.254.169.254/1.0/user-data/'
+  -m /dev/sda3:/ /loader/entries/ostree-1-rhcos.conf \
+  -e 's/openstack/exoscale/'
 
-exo sos upload "${CLUSTER_ID}-bootstrap-ignition" rhcos-${RHCOS_VERSION}.qcow2
-exo sos acl add "${CLUSTER_ID}-bootstrap-ignition" rhcos-${RHCOS_VERSION}.qcow2 --public-read
+exo sos upload "${CLUSTER_ID}-bootstrap" rhcos-${RHCOS_VERSION}.qcow2
+exo sos acl add "${CLUSTER_ID}-bootstrap" rhcos-${RHCOS_VERSION}.qcow2 --public-read
 
-exo vm template register \
+exo vm template register "rhcos-${RHCOS_VERSION}" \
   --checksum $(md5sum rhcos-${RHCOS_VERSION}.qcow2 | awk '{ print $1 }') \
   --boot-mode uefi \
   --disable-password \
   --username core \
   --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}" \
-  --name "rhcos-${RHCOS_VERSION}" \
-  --url "https://${AWS_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap-ignition/rhcos-${RHCOS_VERSION}.qcow2"
+  --url "https://${AWS_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
+
+exo sos remove "${CLUSTER_ID}-bootstrap" rhcos-${RHCOS_VERSION}.qcow2
 
 export TF_VAR_rhcos_template="rhcos-${RHCOS_VERSION}"
 ----
 
+. Upload Ursula Debian package to bootstrap bucket
++
+[source,console]
+----
+exo sos upload "${CLUSTER_ID}-bootstrap" /path/to/ursula.deb
+exo sos acl add "${CLUSTER_ID}-bootstrap" ursula.deb --public-read
+----
+
 . Initialize Terraform
 +
+[NOTE]
+====
+Exoscale doesn't allow uploading the same public key multiple times in a single organisation.
+If the public key in `$SSH_PUBLIC_KEY` already exists in the organisation, we instruct Terraform to use the existing keypair instead of trying to upload the public key under a new name.
+====
++
 [source,console]
 ----
-terraform init \
-  -backend-config "bucket=${CLUSTER_ID}-tf-state"
+cat > backend.tf <<EOF
+terraform {
+  backend "s3" {
+    key                         = "cluster.tfstate"
+    region                      = "us-east-1" # Ignored
+    bucket                      = "${CLUSTER_ID}-tf-state"
+    skip_credentials_validation = true
+    skip_metadata_api_check     = true
+  }
+}
+EOF
+terraform init
 
 export TF_VAR_cluster_id=$CLUSTER_ID
-export TF_VAR_ssh_key="$(cat ~/.ssh/id_rsa.pub)"
+export TF_VAR_base_domain=${BASE_DOMAIN}
+export TF_VAR_ssh_key="$(cut -d' ' -f1,2 <$SSH_PUBLIC_KEY)"
+export TF_VAR_existing_keypair=$(exo sshkey list -Ojson | \
+        jq -r ".[] | select(.fingerprint == \"${SSH_PUBKEY_FINGERPRINT}\") | .name")
 ----
 
-. Set up DNS NS records on parent zone (see Terraform output `ns_records`)
+. Create Exoscale domain
 +
 [source,console]
 ----
-terraform apply \
-  -target exoscale_domain_record.exo_nameservers
+terraform apply -target data.exoscale_domain_record.exo_nameservers
 ----
 
-. Bootstrap cluster
+. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records`
+
+. Deploy LBs and bootstrap node
++
+[NOTE]
+====
+We initially provision VMs in "Stopped" state to ensure the private network interface is attached when the VM powers up.
+We provision the VMs in this two-step process to avoid VMs getting stuck in a state where they're unable to reach the machine config server when deploying the cluster into a private network.
+====
++
+[NOTE]
+====
+We currently need two runs of `terraform apply -var X_state=Running` when provisioning VMs.
+This is necessary because the Exoscale Terraform provider doesn't correctly signal that a VM's IP can change during a state change.
+See the issue filed against the https://github.com/exoscale/terraform-provider-exoscale/issues/101[Exoscale Terraform provider] for a more detailed explanation.
+====
 +
 [source,console]
 ----
-terraform apply \
-  -var bootstrap_count=1 \
-  -var worker_count=0
+for state in "Stopped" "Running" "Running"; do
+  terraform apply \
+    -var bootstrap_count=1 \
+    -var master_count=0 \
+    -var worker_count=0 \
+    -var bootstrap_state=${state}
+done
+----
+
+. Wait for bootstrap API to come up
++
+[source,console]
+----
+API_URL=$(yq e '.clusters[0].cluster.server' ${CLUSTER_ID}/auth/kubeconfig)
+while ! curl --connect-timeout 1 "${API_URL}/healthz" -k &>/dev/null; do
+  echo -n "."
+  sleep 5
+done && echo -e "\nAPI is up"
+----
+
+. Deploy control plane nodes
++
+[source,console]
+----
+for state in "Stopped" "Running" "Running"; do
+  terraform apply \
+    -var bootstrap_count=1 \
+    -var worker_count=0 \
+    -var master_state=${state}
+done
 ----
 
 . Wait for bootstrap to complete
@@ -175,7 +256,9 @@ openshift-install --dir ${CLUSTER_ID} \
 +
 [source,console]
 ----
-terraform apply
+for state in "Stopped" "Running" "Running"; do
+  terraform apply -var worker_state=${state}
+done
 ----
 
 . Approve worker certs
@@ -196,7 +279,7 @@ openshift-install --dir ${CLUSTER_ID} \
   wait-for install-complete
 ----
 
-. Create secret with S3 credentials https://docs.openshift.com/container-platform/4.5/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry] (will be https://ticket.vshn.net/browse/APPU-2790[automated])
+. Create secret with S3 credentials https://docs.openshift.com/container-platform/4.7/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry] (will be https://ticket.vshn.net/browse/APPU-2790[automated])
 +
 [source,console]
 ----

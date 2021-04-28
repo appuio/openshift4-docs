@@ -14,34 +14,100 @@ This how-to guide is still a work in progress and will change.
 It's currently very specific to VSHN and needs further changes to be more generic.
 --
 
+== Starting situation
+
+* You already have a Tenant and its git repository
+* You have a CCSP Red Hat login and are logged into https://cloud.redhat.com/openshift/install/metal/user-provisioned[Red Hat Openshift Cluster Manager]
+* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on Cloudscale
+
 == Prerequisites
+
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
+* `docker`
 * `terraform`
 * `exo` >= v1.14.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * `jq`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * `md5sum`
 * `virt-edit`
 * `cpio`
+* `openshift-install` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-mac.tar.gz[macOS])
 * Clone of the https://github.com/appuio/terraform-openshift4-exoscale[terraform-openshift4-exoscale] repository
 * https://community.exoscale.com/documentation/dns/quick-start/#subscribing-to-the-service[DNS subscription] activated in the Exoscale organisation
+* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
+* `curl`
+* `gzip`
 * A copy of the Ursula Debian package
+
+[WARNING]
+====
+Make sure the version of openshift-install and the rhcos image is the same, otherwise ignition will fail.
+====
 
 == Cluster Installation
 
-. Register the new OpenShift 4 cluster in Lieutenant: https://control.vshn.net/syn/lieutenantclusters
+Register the new OpenShift 4 cluster in Lieutenant.
 
-. Configure input
+.Lietenant API endpoint
+****
+Use the following endpoint for Lieutenant:
+
+VSHN:: https://api.syn.vshn.net
+****
+
+=== Set up LDAP service
+
+. Create an LDAP service
 +
+Use https://control.vshn.net/vshn/services/_create to create a service.
+The name must contain the customer and the cluster name.
+And then put the LDAP service ID in the following variable:
++
+[source,console]
+----
+export LDAP_ID="Your_LDAP_ID_here"
+export LDAP_PASSWORD="Your_LDAP_pw_here"
+----
+
+=== Configure input
+
+.Access to various APIs
 [source,console]
 ----
 export EXOSCALE_ACCOUNT=<exoscale-account>
 export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
-export EXOSCALE_REGION=ch-dk-2
-export CLUSTER_ID=<cluster-name>
-export BASE_DOMAIN=<cluster-base-domain>
-export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshift/install/pull-secret
+export EXOSCALE_REGION=<exoscale-zone>
 
+# From https://git.vshn.net/profile/personal_access_tokens
+export GITLAB_TOKEN=<gitlab-api-token>
+
+# For example: https://api.syn.vshn.net
+# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
+export COMMODORE_API_URL=<lieutenant-api-endpoint>
+# See https://wiki.vshn.net/x/ngMBCg#ClusterRegistryinLieutenantSynthesizeaCluster(synfection)-Preparation
+export COMMODORE_API_TOKEN=<lieutenant-api-token>
+----
+
+.VSHN sepcific input
+[source,console]
+----
+export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
+export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+----
+
+.OpenShift configuration
+[source,console]
+----
+export BASE_DOMAIN=<your-base-domain>
+export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
+----
+
+For `BASE_DOMAIN` explanation, see xref:explanations/dns_scheme.adoc[DNS Scheme].
+
+.Exoscale configuration
+[source,console]
+----
 export AWS_ACCESS_KEY_ID=${EXOSCALE_API_KEY}
 export AWS_SECRET_ACCESS_KEY=${EXOSCALE_API_SECRET}
 export AWS_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
@@ -53,6 +119,8 @@ export SSH_PUBKEY_FINGERPRINT=$(ssh-keygen -E md5 -lf $SSH_PUBLIC_KEY | cut -d' 
 export TF_VAR_lb_exoscale_api_key=${EXOSCALE_API_KEY}
 export TF_VAR_lb_exoscale_api_secret=${EXOSCALE_API_SECRET}
 ----
+
+=== Set up S3 bucket
 
 . Prepare Exoscale CLI
 +
@@ -151,6 +219,48 @@ export TF_VAR_rhcos_template="rhcos-${RHCOS_VERSION}"
 ----
 exo storage upload /path/to/ursula.deb "sos://${CLUSTER_ID}-bootstrap/ursula.deb" --acl public-read
 ----
+
+
+=== Set secrets in Vault
+
+.Connect with Vault
+[source,console]
+----
+export VAULT_ADDR=https://vault-prod.syn.vshn.net
+vault login -method=ldap username=<your.name>
+----
+
+.Store various secrets in vault
+[source,console]
+----
+# Set the exoscale.ch access secrets
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale \
+  api_key=${EXOSCALE_API_KEY} \
+  api_secret=${EXOSCALE_API_SECRET} \
+  s3_access_key=${EXOSCALE_API_KEY} \
+  s3_secret_key=${EXOSCALE_API_SECRET}
+
+# Generate an HTTP secret for the registry
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
+  httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
+
+# Set the LDAP password
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
+  bindPassword=${LDAP_PASSWORD}
+
+# Generate a master password for K8up backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Generate a password for the cluster object backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Copy the Dagobert OpenShift Node Collector Credentials
+vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
+  | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/dagobert" -
+----
+
 
 . Initialize Terraform
 +

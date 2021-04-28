@@ -93,7 +93,7 @@ export COMMODORE_API_TOKEN=<lieutenant-api-token>
 .VSHN sepcific input
 [source,console]
 ----
-export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<verb>-<noun>-<number>
+export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
 export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
 ----
 
@@ -262,7 +262,7 @@ If you have to recreate the install config or any of the generated manifests you
 
 [NOTE]
 --
-You can add more options to the `install-config.yaml` file. 
+You can add more options to the `install-config.yaml` file.
 Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
 
 For example, you could change the SDN from a default value to something a customer requests due to some network requirements.

@@ -148,44 +148,6 @@ exo storage create "sos://${CLUSTER_ID}-tf-state"
 export TF_VAR_bootstrap_bucket="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap/"
 ----
 
-. Prepare `install-config.yaml`
-+
-[source,console]
-----
-mkdir ${CLUSTER_ID}
-
-cat > "${CLUSTER_ID}/install-config.yaml" <<EOF
-apiVersion: v1
-metadata:
-  name: ${CLUSTER_ID}
-baseDomain: ${BASE_DOMAIN}
-platform:
-  none: {}
-pullSecret: |
-  ${PULL_SECRET}
-sshKey: "$(cat $SSH_PUBLIC_KEY)"
-EOF
-
-----
-
-. Prepare install manifests and ignition config
-+
-[source,console]
-----
-openshift-install --dir ${CLUSTER_ID} \
-  create manifests
-
-openshift-install --dir ${CLUSTER_ID} \
-  create ignition-configs
-
-exo storage upload "${CLUSTER_ID}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
-
-export TF_VAR_ignition_ca=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
-  ${CLUSTER_ID}/master.ign | \
-  awk -F ',' '{ print $2 }' | \
-  base64 --decode)
-----
-
 . Prepare RHCOS template
 +
 [source,console]
@@ -261,6 +223,71 @@ vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
   | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/dagobert" -
 ----
 
+=== OpenShift Installer Setup
+
+For the following steps, change into a clean directory (for example a directory in your home).
+
+[CAUTION]
+These are the only steps which aren't idempotent and have to be completed uninterrupted in one go.
+If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
+
+[NOTE]
+--
+You can add more options to the `install-config.yaml` file.
+Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
+
+For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
+--
+
+. Prepare `install-config.yaml`
++
+[source,console]
+----
+mkdir ${CLUSTER_ID}
+
+cat > "${CLUSTER_ID}/install-config.yaml" <<EOF
+apiVersion: v1
+metadata:
+  name: ${CLUSTER_ID}
+baseDomain: ${BASE_DOMAIN}
+platform:
+  none: {}
+pullSecret: |
+  ${PULL_SECRET}
+sshKey: "$(cat $SSH_PUBLIC_KEY)"
+EOF
+----
+
+. Render install manifests (this will consume the `install-config.yaml`)
++
+[source,console]
+----
+openshift-install --dir target \
+  create manifests
+----
+
+.. If you want to change the default "apps" domain for the cluster:
++
+[source,console]
+----
+yq w -i target/manifests/cluster-ingress-02-config.yml \
+  spec.domain apps.example.com
+----
+
+. Prepare install manifests and ignition config
++
+[source,console]
+----
+openshift-install --dir ${CLUSTER_ID} \
+  create ignition-configs
+
+exo storage upload "${CLUSTER_ID}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
+
+export TF_VAR_ignition_ca=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
+  ${CLUSTER_ID}/master.ign | \
+  awk -F ',' '{ print $2 }' | \
+  base64 --decode)
+----
 
 . Initialize Terraform
 +

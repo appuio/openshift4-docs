@@ -78,8 +78,8 @@ cat <<EOF >> ~/.config/exoscale/exoscale.toml
   name = "${CLUSTER_ID}"
 EOF
 
-exo sos delete -r "${CLUSTER_ID}-bootstrap"
-exo sos delete -r "${CLUSTER_ID}-tf-state"
+exo storage delete -r -f "sos://${CLUSTER_ID}-bootstrap/"
+exo storage delete -r -f "sos://${CLUSTER_ID}-tf-state/"
 ----
 
 [NOTE]

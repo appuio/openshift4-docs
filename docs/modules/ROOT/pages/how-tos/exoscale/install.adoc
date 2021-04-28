@@ -74,8 +74,8 @@ EOF
 +
 [source,console]
 ----
-exo sos create "${CLUSTER_ID}-bootstrap"
-exo sos create "${CLUSTER_ID}-tf-state"
+exo storage create "sos://${CLUSTER_ID}-bootstrap"
+exo storage create "sos://${CLUSTER_ID}-tf-state"
 
 export TF_VAR_bootstrap_bucket="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap/"
 ----
@@ -110,9 +110,7 @@ openshift-install --dir ${CLUSTER_ID} \
 openshift-install --dir ${CLUSTER_ID} \
   create ignition-configs
 
-exo sos upload "${CLUSTER_ID}-bootstrap" "${CLUSTER_ID}/bootstrap.ign"
-exo sos acl add "${CLUSTER_ID}-bootstrap" "bootstrap.ign" \
-    --public-read
+exo storage upload "${CLUSTER_ID}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
 
 export TF_VAR_ignition_ca=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
   ${CLUSTER_ID}/master.ign | \
@@ -132,8 +130,7 @@ virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
   -m /dev/sda3:/ /loader/entries/ostree-1-rhcos.conf \
   -e 's/openstack/exoscale/'
 
-exo sos upload "${CLUSTER_ID}-bootstrap" rhcos-${RHCOS_VERSION}.qcow2
-exo sos acl add "${CLUSTER_ID}-bootstrap" rhcos-${RHCOS_VERSION}.qcow2 --public-read
+exo storage upload rhcos-${RHCOS_VERSION}.qcow2 "sos://${CLUSTER_ID}-bootstrap" --acl public-read
 
 exo vm template register "rhcos-${RHCOS_VERSION}" \
   --checksum $(md5sum rhcos-${RHCOS_VERSION}.qcow2 | awk '{ print $1 }') \
@@ -143,7 +140,7 @@ exo vm template register "rhcos-${RHCOS_VERSION}" \
   --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}" \
   --url "https://${AWS_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
 
-exo sos remove "${CLUSTER_ID}-bootstrap" rhcos-${RHCOS_VERSION}.qcow2
+exo storage delete "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
 
 export TF_VAR_rhcos_template="rhcos-${RHCOS_VERSION}"
 ----
@@ -152,8 +149,7 @@ export TF_VAR_rhcos_template="rhcos-${RHCOS_VERSION}"
 +
 [source,console]
 ----
-exo sos upload "${CLUSTER_ID}-bootstrap" /path/to/ursula.deb
-exo sos acl add "${CLUSTER_ID}-bootstrap" ursula.deb --public-read
+exo storage upload /path/to/ursula.deb "sos://${CLUSTER_ID}-bootstrap/ursula.deb" --acl public-read
 ----
 
 . Initialize Terraform

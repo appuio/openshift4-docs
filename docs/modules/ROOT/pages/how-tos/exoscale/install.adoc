@@ -291,6 +291,77 @@ export TF_VAR_ignition_ca=$(jq -r '.ignition.security.tls.certificateAuthorities
   base64 --decode)
 ----
 
+=== Terraform Cluster Config
+
+[NOTE]
+====
+Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for details on how to run commodore.
+====
+
+. Prepare Commodore inventory.
++
+[source,console]
+----
+mkdir -p inventory/classes/
+git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
+----
+
+. Prepare Terraform cluster config
++
+[source,console]
+----
+CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
+  target/master.ign | \
+  awk -F ',' '{ print $2 }' | \
+  base64 --decode)
+
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i '.applications += ["openshift4-terraform"]' ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID ../../../target/metadata.json)\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID ../../../target/metadata.json)\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.appsDomain = \"apps.${CLUSTER_ID}.${BASE_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \"${BASE_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${CA_CERT}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhocs_template = \"${TF_VAR_rhcos_template}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
+  ${CLUSTER_ID}.yml
+
+
+# Have a look at the file ${CLUSTER_ID}.yml.
+# Override any default parameters or add more component configuration.
+
+git commit -a -m "Setup cluster ${CLUSTER_ID}"
+git push
+
+popd
+----
+
+. Compile and push Terraform setup
++
+[source,console]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i
+----
+
+=== Provision Infrastructure
+
+include::partial$setup_terraform_exoscale.adoc[]
+
+
 . Initialize Terraform
 +
 [NOTE]

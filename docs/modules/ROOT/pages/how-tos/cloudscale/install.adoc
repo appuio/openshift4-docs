@@ -222,7 +222,7 @@ export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=ldap username=<your.name>
 ----
 
-.Store various secrets in vault
+.Store various secrets in Vault
 [source,console]
 ----
 # Set the cloudscale.ch access secrets

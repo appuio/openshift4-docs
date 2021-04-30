@@ -24,7 +24,6 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
 * `docker`
-* `terraform`
 * `exo` >= v1.14.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
@@ -334,7 +333,10 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${CA_CERT}\"" \
   ${CLUSTER_ID}.yml
 
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhocs_template = \"${TF_VAR_rhcos_template}\"" \
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${TF_VAR_rhcos_template}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
@@ -419,12 +421,16 @@ See the issue filed against the https://github.com/exoscale/terraform-provider-e
 [source,console]
 ----
 for state in "Stopped" "Running" "Running"; do
-  terraform apply \
-    -var bootstrap_count=1 \
-    -var master_count=0 \
-    -var worker_count=0 \
-    -var infra_count=0 \
-    -var bootstrap_state=${state}
+  cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 1
+  master_count    = 0
+  infra_count     = 0
+  worker_count    = 0
+  bootstrap_state = "${state}"
+}
+EOF
+  terraform apply
 done
 ----
 
@@ -444,11 +450,15 @@ done && echo -e "\nAPI is up"
 [source,console]
 ----
 for state in "Stopped" "Running" "Running"; do
-  terraform apply \
-    -var bootstrap_count=1 \
-    -var worker_count=0 \
-    -var infra_count=0 \
-    -var master_state=${state}
+  cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 1
+  infra_count     = 0
+  worker_count    = 0
+  master_state = "${state}"
+}
+EOF
+  terraform apply
 done
 ----
 
@@ -465,9 +475,13 @@ openshift-install --dir ../../../target \
 [source,console]
 ----
 for state in "Stopped" "Running" "Running"; do
-  terraform apply \
-    -var worker_count=0 \
-    -var infra_state=${state}
+  cat > override.tf <<EOF
+module "cluster" {
+  worker_count    = 0
+  infra_state = "${state}"
+}
+EOF
+  terraform apply
 done
 ----
 
@@ -498,7 +512,12 @@ openshift-install --dir ../../../target \
 [source,console]
 ----
 for state in "Stopped" "Running" "Running"; do
-  terraform apply -var worker_state=${state}
+  cat > override.tf <<EOF
+module "cluster" {
+  worker_state = "${state}"
+}
+EOF
+  terraform apply
 done
 ----
 

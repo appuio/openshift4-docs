@@ -283,10 +283,10 @@ yq w -i target/manifests/cluster-ingress-02-config.yml \
 openshift-install --dir target \
   create ignition-configs
 
-exo storage upload "${CLUSTER_ID}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
+exo storage upload "target/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
 
 export TF_VAR_ignition_ca=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
-  ${CLUSTER_ID}/master.ign | \
+  target/master.ign | \
   awk -F ',' '{ print $2 }' | \
   base64 --decode)
 ----
@@ -432,7 +432,7 @@ done
 +
 [source,console]
 ----
-API_URL=$(yq e '.clusters[0].cluster.server' ${CLUSTER_ID}/auth/kubeconfig)
+API_URL=$(yq e '.clusters[0].cluster.server' $(pwd)/../../../target/auth/kubeconfig)
 while ! curl --connect-timeout 1 "${API_URL}/healthz" -k &>/dev/null; do
   echo -n "."
   sleep 5

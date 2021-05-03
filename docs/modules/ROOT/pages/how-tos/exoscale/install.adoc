@@ -244,9 +244,10 @@ For example, you could change the SDN from a default value to something a custom
 +
 [source,console]
 ----
-mkdir -p target
+export INSTALLER_DIR="$(pwd)/target"
+mkdir -p "${INSTALLER_DIR}"
 
-cat > "target/install-config.yaml" <<EOF
+cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
 apiVersion: v1
 metadata:
   name: ${CLUSTER_ID}
@@ -263,7 +264,7 @@ EOF
 +
 [source,console]
 ----
-openshift-install --dir target \
+openshift-install --dir "${INSTALLER_DIR}" \
   create manifests
 ----
 
@@ -271,7 +272,7 @@ openshift-install --dir target \
 +
 [source,console]
 ----
-yq w -i target/manifests/cluster-ingress-02-config.yml \
+yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
   spec.domain apps.example.com
 ----
 
@@ -279,13 +280,13 @@ yq w -i target/manifests/cluster-ingress-02-config.yml \
 +
 [source,console]
 ----
-openshift-install --dir target \
+openshift-install --dir "${INSTALLER_DIR}" \
   create ignition-configs
 
-exo storage upload "target/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
+exo storage upload "${INSTALLER_DIR}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
 
 export TF_VAR_ignition_ca=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
-  target/master.ign | \
+  "${INSTALLER_DIR}/master.ign" | \
   awk -F ',' '{ print $2 }' | \
   base64 --decode)
 ----
@@ -310,7 +311,7 @@ git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_
 [source,console]
 ----
 CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
-  target/master.ign | \
+  "${INSTALLER_DIR}/master.ign" | \
   awk -F ',' '{ print $2 }' | \
   base64 --decode)
 
@@ -318,10 +319,10 @@ pushd "inventory/classes/${TENANT_ID}/"
 
 yq eval -i '.applications += ["openshift4-terraform"]' ${CLUSTER_ID}.yml
 
-yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID ../../../target/metadata.json)\"" \
+yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")\"" \
   ${CLUSTER_ID}.yml
 
-yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID ../../../target/metadata.json)\"" \
+yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID "${INSTALLER_DIR}/metadata.json")\"" \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.openshift.appsDomain = \"apps.${CLUSTER_ID}.${BASE_DOMAIN}\"" \
@@ -438,7 +439,7 @@ done
 +
 [source,console]
 ----
-API_URL=$(yq e '.clusters[0].cluster.server' $(pwd)/../../../target/auth/kubeconfig)
+API_URL=$(yq e '.clusters[0].cluster.server' "${INSTALLER_DIR}/auth/kubeconfig")
 while ! curl --connect-timeout 1 "${API_URL}/healthz" -k &>/dev/null; do
   echo -n "."
   sleep 5
@@ -466,7 +467,7 @@ done
 +
 [source,console]
 ----
-openshift-install --dir ../../../target \
+openshift-install --dir "${INSTALLER_DIR}" \
   wait-for bootstrap-complete
 ----
 
@@ -489,7 +490,7 @@ done
 +
 [source,console]
 ----
-export KUBECONFIG="$(pwd)/../../../target/auth/kubeconfig"
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
 
 # Once CSRs in state Pending show up, approve them
 # Needs to be run twice, two CSRs for each node need to be approved
@@ -503,7 +504,7 @@ kubectl get nodes -l node-role.kubernetes.io/worker
 kubectl label node -l node-role.kubernetes.io/worker \
   node-role.kubernetes.io/infra=""
 
-openshift-install --dir ../../../target \
+openshift-install --dir "${INSTALLER_DIR}" \
   wait-for install-complete
 ----
 

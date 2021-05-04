@@ -14,7 +14,9 @@ Steps to remove an OpenShift 4 cluster from https://exoscale.com[Exoscale].
 == Prerequisites
 
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
-* `terraform` >= 0.14
+* `docker`
+* `jq`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * `exo` >= v1.14.0, https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 
 == Cluster Decommission
@@ -45,22 +47,12 @@ export TF_VAR_base_domain=${BASE_DOMAIN}
 export TF_VAR_ssh_key="$(cut -d' ' -f1,2 <$SSH_PUBLIC_KEY)"
 ----
 
-. Delete resources from clouscale.ch using Terraform
+include::partial$setup_terraform_exoscale.adoc[]
+
+. Delete resources using Terraform
 +
 [source,console]
 ----
-cat > backend.tf <<EOF
-terraform {
-  backend "s3" {
-    key                         = "cluster.tfstate"
-    region                      = "us-east-1" # Ignored
-    bucket                      = "${CLUSTER_ID}-tf-state"
-    skip_credentials_validation = true
-    skip_metadata_api_check     = true
-  }
-}
-EOF
-terraform init
 terraform destroy
 ----
 
@@ -79,13 +71,13 @@ cat <<EOF >> ~/.config/exoscale/exoscale.toml
 EOF
 
 exo storage delete -r -f "sos://${CLUSTER_ID}-bootstrap/"
-exo storage delete -r -f "sos://${CLUSTER_ID}-tf-state/"
 ----
 
 [NOTE]
 --
 This how-to currently doesn't contain instructions to decommission the cluster in Project Syn.
 If you registered the cluster in Project Syn, the places to look for data to decommission are:
+
 * Vault
 * Lieutenant
 * Syn Tenant Repo

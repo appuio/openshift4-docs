@@ -137,12 +137,11 @@ EOF
 
 ----
 
-. Create S3 buckets
+. Create S3 bucket
 +
 [source,console]
 ----
 exo storage create "sos://${CLUSTER_ID}-bootstrap"
-exo storage create "sos://${CLUSTER_ID}-tf-state"
 
 export TF_VAR_bootstrap_bucket="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap/"
 ----
@@ -375,19 +374,6 @@ If the public key in `$SSH_PUBLIC_KEY` already exists in the organisation, we in
 +
 [source,console]
 ----
-cat > backend.tf <<EOF
-terraform {
-  backend "s3" {
-    key                         = "cluster.tfstate"
-    region                      = "us-east-1" # Ignored
-    bucket                      = "${CLUSTER_ID}-tf-state"
-    skip_credentials_validation = true
-    skip_metadata_api_check     = true
-  }
-}
-EOF
-terraform init
-
 export TF_VAR_cluster_id=$CLUSTER_ID
 export TF_VAR_base_domain=${BASE_DOMAIN}
 export TF_VAR_ssh_key="$(cut -d' ' -f1,2 <$SSH_PUBLIC_KEY)"

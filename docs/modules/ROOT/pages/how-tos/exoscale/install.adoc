@@ -395,16 +395,24 @@ export TF_VAR_existing_keypair=$(exo sshkey list -Ojson | \
         jq -r ".[] | select(.fingerprint == \"${SSH_PUBKEY_FINGERPRINT}\") | .name")
 ----
 
-. Create Exoscale domain
+. Provision Domain and LoadBalancer
 +
 [source,console]
 ----
-terraform apply -target data.exoscale_domain_record.exo_nameservers
+cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 0
+  master_count    = 0
+  infra_count     = 0
+  worker_count    = 0
+}
+EOF
+terraform apply
 ----
 
-. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records`
+. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
 
-. Deploy LBs and bootstrap node
+. Deploy bootstrap node
 +
 [NOTE]
 ====
@@ -414,7 +422,7 @@ We provision the VMs in this two-step process to avoid VMs getting stuck in a st
 +
 [NOTE]
 ====
-We currently need two runs of `terraform apply -var X_state=Running` when provisioning VMs.
+We currently need two runs of `terraform apply` with the state "Running" when provisioning VMs.
 This is necessary because the Exoscale Terraform provider doesn't correctly signal that a VM's IP can change during a state change.
 See the issue filed against the https://github.com/exoscale/terraform-provider-exoscale/issues/101[Exoscale Terraform provider] for a more detailed explanation.
 ====
@@ -503,9 +511,6 @@ kubectl get nodes
 kubectl get nodes -l node-role.kubernetes.io/worker
 kubectl label node -l node-role.kubernetes.io/worker \
   node-role.kubernetes.io/infra=""
-
-openshift-install --dir "${INSTALLER_DIR}" \
-  wait-for install-complete
 ----
 
 . Provision worker nodes
@@ -556,16 +561,25 @@ oc create secret generic image-registry-private-configuration-user \
 ----
 kubectl get secret router-certs-default \
   -n openshift-ingress \
-  -ojson --export | \
+  -o json | \
     jq 'del(.metadata.ownerReferences) | .metadata.name = "router-certs-snakeoil"' | \
   kubectl -n openshift-ingress apply -f -
 ----
 
-. Make the cluster Project Syn enabled
-+
-Install Steward on the cluster according to https://wiki.vshn.net/x/ngMBCg
+. Save the admin credentials in the https://password.vshn.net[password manager].
+You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
 +
 [source,console]
 ----
-cat ${CLUSTER_ID}/metadata.json
+popd
+ls -l ${INSTALLER_DIR}/auth/
+----
+
+. https://kb.vshn.ch/vshnsyn/how-tos/synthesize.html[Make the cluster Project Syn enabled]
+
+. Delete local config files
++
+[source,console]
+----
+rm -r ${INSTALLER_DIR}/
 ----

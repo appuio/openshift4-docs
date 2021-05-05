@@ -29,3 +29,4 @@
 
 * VMware vSphere
 ** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
+** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-creds.adoc[Change vSphere Credentials]

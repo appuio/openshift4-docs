@@ -1,0 +1,5 @@
+= Change vSphere Credentials
+
+In order to rotate vSphere credentials, the `vsphere-creds` secret in namespace `kube-system` must be updated. The `openshift-cloud-credential-operator` will then distribute the credentials to the required places.
+
+If the *vSphere CSI controller* is used, also update the `vsphere-config-secret` in the `kube-system` namespace (if the same account is used for both).

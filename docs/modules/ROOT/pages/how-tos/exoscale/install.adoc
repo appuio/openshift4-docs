@@ -140,8 +140,6 @@ EOF
 [source,console]
 ----
 exo storage create "sos://${CLUSTER_ID}-bootstrap"
-
-export BOOTSTRAP_BUCKET="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap"
 ----
 
 === Upload Red Hat CoreOS image
@@ -342,9 +340,6 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${RHCOS_TEMPLATE}\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.bootstrap_bucket = \"${BOOTSTRAP_BUCKET}\"" \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \

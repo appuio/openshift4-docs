@@ -17,7 +17,7 @@ Steps to remove an OpenShift 4 cluster from https://exoscale.com[Exoscale].
 * `docker`
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
-* `exo` >= v1.14.0, https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `exo` >= v1.28.0, https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 
 == Cluster Decommission
 

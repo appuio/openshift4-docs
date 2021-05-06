@@ -24,7 +24,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
 * `docker`
-* `exo` >= v1.14.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `exo` >= v1.28.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * `md5sum`

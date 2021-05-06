@@ -28,17 +28,39 @@ Steps to remove an OpenShift 4 cluster from https://exoscale.com[Exoscale].
 export EXOSCALE_ACCOUNT=<exoscale-account>
 export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
-export CLUSTER_ID=<cluster-name>
-export BASE_DOMAIN=<cluster-base-domain>
 export EXOSCALE_REGION=<cluster-region>
+
+export CLUSTER_ID=<cluster-name>
+
+# From https://git.vshn.net/profile/personal_access_tokens
+export GITLAB_TOKEN=<gitlab-api-token>
+
+# For example: https://api.syn.vshn.net
+# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
+export COMMODORE_API_URL=<lieutenant-api-endpoint>
+export COMMODORE_API_TOKEN=<lieutenant-api-token>
 
 export TF_VAR_lb_exoscale_api_key=irrelevant
 export TF_VAR_lb_exoscale_api_secret=irrelevant
-export TF_VAR_ignition_ca=''
-export TF_VAR_rhcos_template=irrelevant
-export TF_VAR_cluster_id=$CLUSTER_ID
-export TF_VAR_base_domain=${BASE_DOMAIN}
-export TF_VAR_ssh_key=irrelevant
+----
+
+. Compile cluster catalog to get input variables
++
+[source,console]
+----
+commodore catalog compile ${CLUSTER_ID}
+----
+
+. Configure Terraform secrets
++
+[source,console]
+----
+cat <<EOF > catalog/manifests/openshift4-terraform/.env
+EXOSCALE_API_KEY
+EXOSCALE_API_SECRET
+TF_VAR_lb_exoscale_api_key
+TF_VAR_lb_exoscale_api_secret
+EOF
 ----
 
 include::partial$setup_terraform_exoscale.adoc[]

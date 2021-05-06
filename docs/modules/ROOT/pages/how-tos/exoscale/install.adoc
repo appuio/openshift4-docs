@@ -1,4 +1,6 @@
 = Installation on Exoscale
+:ocp-minor-version: 4.7
+:ocp-patch-version: {ocp-minor-version}.7
 
 [abstract]
 --
@@ -14,45 +16,108 @@ This how-to guide is still a work in progress and will change.
 It's currently very specific to VSHN and needs further changes to be more generic.
 --
 
+== Starting situation
+
+* You already have a Tenant and its git repository
+* You have a CCSP Red Hat login and are logged into https://cloud.redhat.com/openshift/install/metal/user-provisioned[Red Hat Openshift Cluster Manager]
+* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on Cloudscale
+
 == Prerequisites
+
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
-* `terraform`
-* `exo` >= v1.14.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `docker`
+* `exo` >= v1.28.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * `jq`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * `md5sum`
 * `virt-edit`
 * `cpio`
+* `openshift-install` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-mac.tar.gz[macOS])
 * Clone of the https://github.com/appuio/terraform-openshift4-exoscale[terraform-openshift4-exoscale] repository
 * https://community.exoscale.com/documentation/dns/quick-start/#subscribing-to-the-service[DNS subscription] activated in the Exoscale organisation
+* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
+* `curl`
+* `gzip`
 * A copy of the Ursula Debian package
+
+[WARNING]
+====
+Make sure the version of openshift-install and the rhcos image is the same, otherwise ignition will fail.
+====
 
 == Cluster Installation
 
-. Register the new OpenShift 4 cluster in Lieutenant: https://control.vshn.net/syn/lieutenantclusters
+Register the new OpenShift 4 cluster in Lieutenant.
 
-. Configure input
+.Lieutenant API endpoint
+****
+Use the following endpoint for Lieutenant:
+
+VSHN:: https://api.syn.vshn.net
+****
+
+=== Set up LDAP service
+
+. Create an LDAP service
 +
+Use https://control.vshn.net/vshn/services/_create to create a service.
+The name must contain the customer and the cluster name.
+And then put the LDAP service ID in the following variable:
++
+[source,console]
+----
+export LDAP_ID="Your_LDAP_ID_here"
+export LDAP_PASSWORD="Your_LDAP_pw_here"
+----
+
+=== Configure input
+
+.Access to various APIs
 [source,console]
 ----
 export EXOSCALE_ACCOUNT=<exoscale-account>
 export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
-export EXOSCALE_REGION=ch-dk-2
-export CLUSTER_ID=<cluster-name>
-export BASE_DOMAIN=<cluster-base-domain>
-export PULL_SECRET=<redhat-pull-secret> # From https://cloud.redhat.com/openshift/install/pull-secret
+export EXOSCALE_REGION=<exoscale-zone>
 
-export AWS_ACCESS_KEY_ID=${EXOSCALE_API_KEY}
-export AWS_SECRET_ACCESS_KEY=${EXOSCALE_API_SECRET}
+# From https://git.vshn.net/profile/personal_access_tokens
+export GITLAB_TOKEN=<gitlab-api-token>
+
+# For example: https://api.syn.vshn.net
+# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
+export COMMODORE_API_URL=<lieutenant-api-endpoint>
+export COMMODORE_API_TOKEN=<lieutenant-api-token>
+----
+
+.VSHN-sepcific input
+[source,console]
+----
+export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
+export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+----
+
+.OpenShift configuration
+[source,console]
+----
+export BASE_DOMAIN=<your-base-domain>
+export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
+----
+
+For `BASE_DOMAIN` explanation, see xref:explanations/dns_scheme.adoc[DNS Scheme].
+
+.Exoscale configuration
+[source,console]
+----
+export AWS_ACCESS_KEY_ID=<exoscale-key-for-S3>
+export AWS_SECRET_ACCESS_KEY=<exoscale-key-for-S3>
 export AWS_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
 
-export SSH_PUBLIC_KEY=~/.ssh/id_ed25519.pub
-export SSH_PUBKEY_FINGERPRINT=$(ssh-keygen -E md5 -lf $SSH_PUBLIC_KEY | cut -d' ' -f2 | tail -c+5)
-
 # TODO: generate separate restricted IAM key for Ursula
-export TF_VAR_lb_exoscale_api_key=${EXOSCALE_API_KEY}
-export TF_VAR_lb_exoscale_api_secret=${EXOSCALE_API_SECRET}
+export TF_VAR_lb_exoscale_api_key=<exoscale-key-for-lb>
+export TF_VAR_lb_exoscale_api_secret=<exoscale-secret-for-lb>
 ----
+
+=== Set up S3 bucket for cluster bootstrap
 
 . Prepare Exoscale CLI
 +
@@ -70,23 +135,131 @@ EOF
 
 ----
 
-. Create S3 buckets
+. Create S3 bucket
 +
 [source,console]
 ----
-exo sos create "${CLUSTER_ID}-bootstrap"
-exo sos create "${CLUSTER_ID}-tf-state"
+exo storage create "sos://${CLUSTER_ID}-bootstrap"
 
-export TF_VAR_bootstrap_bucket="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap/"
+export BOOTSTRAP_BUCKET="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap"
+----
+
+=== Upload Red Hat CoreOS image
+
+. Fetch and convert the latest Red Hat CoreOS image
++
+[source,console,subs="attributes+"]
+----
+RHCOS_VERSION="{ocp-patch-version}"
+
+curl "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/${RHCOS_VERSION}/rhcos-${RHCOS_VERSION}-x86_64-openstack.x86_64.qcow2.gz" | gunzip > rhcos-${RHCOS_VERSION}.qcow2
+
+virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
+  -m /dev/sda3:/ /loader/entries/ostree-1-rhcos.conf \
+  -e 's/openstack/exoscale/'
+
+exo storage upload rhcos-${RHCOS_VERSION}.qcow2 "sos://${CLUSTER_ID}-bootstrap" --acl public-read
+
+exo vm template register "rhcos-${RHCOS_VERSION}" \
+  --checksum $(md5sum rhcos-${RHCOS_VERSION}.qcow2 | awk '{ print $1 }') \
+  --boot-mode uefi \
+  --disable-password \
+  --username core \
+  --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}" \
+  --url "https://${AWS_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
+
+exo storage delete "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
+
+export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
+----
+
+. Upload Ursula Debian package to bootstrap bucket
++
+[source,console]
+----
+exo storage upload /path/to/ursula.deb "sos://${CLUSTER_ID}-bootstrap/ursula.deb" --acl public-read
+----
+
+
+=== Set secrets in Vault
+
+.Connect with Vault
+[source,console]
+----
+export VAULT_ADDR=https://vault-prod.syn.vshn.net
+vault login -method=ldap username=<your.name>
+----
+
+.Store various secrets in Vault
+[source,console]
+----
+# Set the exoscale.ch S3 secret
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale \
+  s3_access_key=${AWS_ACCESS_KEY_ID} \
+  s3_secret_key=${AWS_SECRET_ACCESS_KEY}
+
+# Generate an HTTP secret for the registry
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
+  httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
+
+# Set the LDAP password
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
+  bindPassword=${LDAP_PASSWORD}
+
+# Generate a master password for K8up backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Generate a password for the cluster object backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Copy the Dagobert OpenShift Node Collector Credentials
+vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
+  | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/dagobert" -
+----
+
+=== OpenShift Installer Setup
+
+For the following steps, change into a clean directory (for example a directory in your home).
+
+[CAUTION]
+These are the only steps which aren't idempotent and have to be completed uninterrupted in one go.
+If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
+
+[NOTE]
+--
+You can add more options to the `install-config.yaml` file.
+Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
+
+For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
+--
+
+. Prepare SSH key
++
+NOTE: We generate a unique SSH key pair for the cluster, because Exoscale doesn't support configuring multiple public keys for a VM.
++
+[source,console]
+----
+SSH_PRIVATE_KEY="$(pwd)/ssh_$CLUSTER_ID"
+export SSH_PUBLIC_KEY="${SSH_PRIVATE_KEY}.pub"
+
+ssh-keygen -C "vault@$CLUSTER_ID" -t ed25519 -f $SSH_PRIVATE_KEY -N ''
+
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/ssh \
+  private_key=$(cat $SSH_PRIVATE_KEY | base64 --wrap 0)
+
+ssh-add $SSH_PRIVATE_KEY
 ----
 
 . Prepare `install-config.yaml`
 +
 [source,console]
 ----
-mkdir ${CLUSTER_ID}
+export INSTALLER_DIR="$(pwd)/target"
+mkdir -p "${INSTALLER_DIR}"
 
-cat > "${CLUSTER_ID}/install-config.yaml" <<EOF
+cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
 apiVersion: v1
 metadata:
   name: ${CLUSTER_ID}
@@ -97,105 +270,140 @@ pullSecret: |
   ${PULL_SECRET}
 sshKey: "$(cat $SSH_PUBLIC_KEY)"
 EOF
+----
 
+. Render install manifests (this will consume the `install-config.yaml`)
++
+[source,console]
+----
+openshift-install --dir "${INSTALLER_DIR}" \
+  create manifests
+----
+
+.. If you want to change the default "apps" domain for the cluster:
++
+[source,console]
+----
+yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
+  spec.domain apps.example.com
 ----
 
 . Prepare install manifests and ignition config
 +
 [source,console]
 ----
-openshift-install --dir ${CLUSTER_ID} \
-  create manifests
-
-openshift-install --dir ${CLUSTER_ID} \
+openshift-install --dir "${INSTALLER_DIR}" \
   create ignition-configs
 
-exo sos upload "${CLUSTER_ID}-bootstrap" "${CLUSTER_ID}/bootstrap.ign"
-exo sos acl add "${CLUSTER_ID}-bootstrap" "bootstrap.ign" \
-    --public-read
-
-export TF_VAR_ignition_ca=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
-  ${CLUSTER_ID}/master.ign | \
-  awk -F ',' '{ print $2 }' | \
-  base64 --decode)
+exo storage upload "${INSTALLER_DIR}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
 ----
 
-. Prepare RHCOS template
-+
-[source,console]
-----
-RHCOS_VERSION="4.7.7"
+=== Terraform Cluster Config
 
-curl "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.7/${RHCOS_VERSION}/rhcos-${RHCOS_VERSION}-x86_64-openstack.x86_64.qcow2.gz" | gunzip > rhcos-${RHCOS_VERSION}.qcow2
-
-virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
-  -m /dev/sda3:/ /loader/entries/ostree-1-rhcos.conf \
-  -e 's/openstack/exoscale/'
-
-exo sos upload "${CLUSTER_ID}-bootstrap" rhcos-${RHCOS_VERSION}.qcow2
-exo sos acl add "${CLUSTER_ID}-bootstrap" rhcos-${RHCOS_VERSION}.qcow2 --public-read
-
-exo vm template register "rhcos-${RHCOS_VERSION}" \
-  --checksum $(md5sum rhcos-${RHCOS_VERSION}.qcow2 | awk '{ print $1 }') \
-  --boot-mode uefi \
-  --disable-password \
-  --username core \
-  --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}" \
-  --url "https://${AWS_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
-
-exo sos remove "${CLUSTER_ID}-bootstrap" rhcos-${RHCOS_VERSION}.qcow2
-
-export TF_VAR_rhcos_template="rhcos-${RHCOS_VERSION}"
-----
-
-. Upload Ursula Debian package to bootstrap bucket
-+
-[source,console]
-----
-exo sos upload "${CLUSTER_ID}-bootstrap" /path/to/ursula.deb
-exo sos acl add "${CLUSTER_ID}-bootstrap" ursula.deb --public-read
-----
-
-. Initialize Terraform
-+
 [NOTE]
 ====
-Exoscale doesn't allow uploading the same public key multiple times in a single organisation.
-If the public key in `$SSH_PUBLIC_KEY` already exists in the organisation, we instruct Terraform to use the existing keypair instead of trying to upload the public key under a new name.
+Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for details on how to run commodore.
 ====
+
+. Prepare Commodore inventory.
 +
 [source,console]
 ----
-cat > backend.tf <<EOF
-terraform {
-  backend "s3" {
-    key                         = "cluster.tfstate"
-    region                      = "us-east-1" # Ignored
-    bucket                      = "${CLUSTER_ID}-tf-state"
-    skip_credentials_validation = true
-    skip_metadata_api_check     = true
-  }
+mkdir -p inventory/classes/
+git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
+----
+
+. Prepare Terraform cluster config
++
+[source,console]
+----
+CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
+  "${INSTALLER_DIR}/master.ign" | \
+  awk -F ',' '{ print $2 }' | \
+  base64 --decode)
+
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i '.applications += ["openshift4-terraform"]' ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID "${INSTALLER_DIR}/metadata.json")\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.appsDomain = \"apps.${CLUSTER_ID}.${BASE_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \"${BASE_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${CA_CERT}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${RHCOS_TEMPLATE}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.bootstrap_bucket = \"${BOOTSTRAP_BUCKET}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
+  ${CLUSTER_ID}.yml
+
+
+# Have a look at the file ${CLUSTER_ID}.yml.
+# Override any default parameters or add more component configuration.
+
+git commit -a -m "Setup cluster ${CLUSTER_ID}"
+git push
+
+popd
+----
+
+. Compile and push Terraform setup
++
+[source,console]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i
+----
+
+=== Provision Infrastructure
+
+. Configure Terraform secrets
++
+[source,console]
+----
+cat <<EOF > catalog/manifests/openshift4-terraform/.env
+EXOSCALE_API_KEY
+EXOSCALE_API_SECRET
+TF_VAR_lb_exoscale_api_key
+TF_VAR_lb_exoscale_api_secret
+EOF
+----
+
+include::partial$setup_terraform_exoscale.adoc[]
+
+. Provision Domain and LoadBalancer
++
+[source,console]
+----
+cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 0
+  master_count    = 0
+  infra_count     = 0
+  worker_count    = 0
 }
 EOF
-terraform init
-
-export TF_VAR_cluster_id=$CLUSTER_ID
-export TF_VAR_base_domain=${BASE_DOMAIN}
-export TF_VAR_ssh_key="$(cut -d' ' -f1,2 <$SSH_PUBLIC_KEY)"
-export TF_VAR_existing_keypair=$(exo sshkey list -Ojson | \
-        jq -r ".[] | select(.fingerprint == \"${SSH_PUBKEY_FINGERPRINT}\") | .name")
+terraform apply
 ----
 
-. Create Exoscale domain
-+
-[source,console]
-----
-terraform apply -target data.exoscale_domain_record.exo_nameservers
-----
+. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
 
-. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records`
-
-. Deploy LBs and bootstrap node
+. Deploy bootstrap node
 +
 [NOTE]
 ====
@@ -205,7 +413,7 @@ We provision the VMs in this two-step process to avoid VMs getting stuck in a st
 +
 [NOTE]
 ====
-We currently need two runs of `terraform apply -var X_state=Running` when provisioning VMs.
+We currently need two runs of `terraform apply` with state "Running" when provisioning VMs.
 This is necessary because the Exoscale Terraform provider doesn't correctly signal that a VM's IP can change during a state change.
 See the issue filed against the https://github.com/exoscale/terraform-provider-exoscale/issues/101[Exoscale Terraform provider] for a more detailed explanation.
 ====
@@ -213,11 +421,16 @@ See the issue filed against the https://github.com/exoscale/terraform-provider-e
 [source,console]
 ----
 for state in "Stopped" "Running" "Running"; do
-  terraform apply \
-    -var bootstrap_count=1 \
-    -var master_count=0 \
-    -var worker_count=0 \
-    -var bootstrap_state=${state}
+  cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 1
+  master_count    = 0
+  infra_count     = 0
+  worker_count    = 0
+  bootstrap_state = "${state}"
+}
+EOF
+  terraform apply
 done
 ----
 
@@ -225,7 +438,7 @@ done
 +
 [source,console]
 ----
-API_URL=$(yq e '.clusters[0].cluster.server' ${CLUSTER_ID}/auth/kubeconfig)
+API_URL=$(yq e '.clusters[0].cluster.server' "${INSTALLER_DIR}/auth/kubeconfig")
 while ! curl --connect-timeout 1 "${API_URL}/healthz" -k &>/dev/null; do
   echo -n "."
   sleep 5
@@ -237,10 +450,15 @@ done && echo -e "\nAPI is up"
 [source,console]
 ----
 for state in "Stopped" "Running" "Running"; do
-  terraform apply \
-    -var bootstrap_count=1 \
-    -var worker_count=0 \
-    -var master_state=${state}
+  cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 1
+  infra_count     = 0
+  worker_count    = 0
+  master_state = "${state}"
+}
+EOF
+  terraform apply
 done
 ----
 
@@ -248,24 +466,30 @@ done
 +
 [source,console]
 ----
-openshift-install --dir ${CLUSTER_ID} \
+openshift-install --dir "${INSTALLER_DIR}" \
   wait-for bootstrap-complete
 ----
 
-. Remove bootstrap node and provision worker nodes
+. Remove bootstrap node and provision infra nodes
 +
 [source,console]
 ----
 for state in "Stopped" "Running" "Running"; do
-  terraform apply -var worker_state=${state}
+  cat > override.tf <<EOF
+module "cluster" {
+  worker_count    = 0
+  infra_state = "${state}"
+}
+EOF
+  terraform apply
 done
 ----
 
-. Approve worker certs
+. Approve infra certs
 +
 [source,console]
 ----
-export KUBECONFIG=${CLUSTER_ID}/auth/kubeconfig
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
 
 # Once CSRs in state Pending show up, approve them
 # Needs to be run twice, two CSRs for each node need to be approved
@@ -275,11 +499,52 @@ oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{
 
 kubectl get nodes
 
-openshift-install --dir ${CLUSTER_ID} \
+kubectl get nodes -l node-role.kubernetes.io/worker
+kubectl label node -l node-role.kubernetes.io/worker \
+  node-role.kubernetes.io/infra=""
+----
+
+. Wait for installation to complete
++
+[source,console]
+----
+openshift-install --dir ${INSTALLER_DIR} \
   wait-for install-complete
 ----
 
-. Create secret with S3 credentials https://docs.openshift.com/container-platform/4.7/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry] (will be https://ticket.vshn.net/browse/APPU-2790[automated])
+. Provision worker nodes
++
+[source,console]
+----
+for state in "Stopped" "Running" "Running"; do
+  cat > override.tf <<EOF
+module "cluster" {
+  worker_state = "${state}"
+}
+EOF
+  terraform apply
+done
+----
+
+. Approve worker certs
++
+[source,console]
+----
+# Once CSRs in state Pending show up, approve them
+# Needs to be run twice, two CSRs for each node need to be approved
+kubectl get csr -w
+oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc adm certificate approve
+
+kubectl get nodes
+
+kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
+  node-role.kubernetes.io/app=""
+kubectl label node -lnode-role.kubernetes.io/infra \
+  node-role.kubernetes.io/app-
+----
+
+. Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
 +
 [source,console]
 ----
@@ -295,16 +560,25 @@ oc create secret generic image-registry-private-configuration-user \
 ----
 kubectl get secret router-certs-default \
   -n openshift-ingress \
-  -ojson --export | \
+  -o json | \
     jq 'del(.metadata.ownerReferences) | .metadata.name = "router-certs-snakeoil"' | \
   kubectl -n openshift-ingress apply -f -
 ----
 
-. Make the cluster Project Syn enabled
-+
-Install Steward on the cluster according to https://wiki.vshn.net/x/ngMBCg
+. Save the admin credentials in the https://password.vshn.net[password manager].
+You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
 +
 [source,console]
 ----
-cat ${CLUSTER_ID}/metadata.json
+popd
+ls -l ${INSTALLER_DIR}/auth/
+----
+
+. https://kb.vshn.ch/vshnsyn/how-tos/synthesize.html[Make the cluster Project Syn enabled]
+
+. Delete local config files
++
+[source,console]
+----
+rm -r ${INSTALLER_DIR}/
 ----

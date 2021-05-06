@@ -14,8 +14,10 @@ Steps to remove an OpenShift 4 cluster from https://exoscale.com[Exoscale].
 == Prerequisites
 
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
-* `terraform` >= 0.14
-* `exo` >= v1.14.0, https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `docker`
+* `jq`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+* `exo` >= v1.28.0, https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 
 == Cluster Decommission
 
@@ -26,41 +28,47 @@ Steps to remove an OpenShift 4 cluster from https://exoscale.com[Exoscale].
 export EXOSCALE_ACCOUNT=<exoscale-account>
 export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
-export CLUSTER_ID=<cluster-name>
-export BASE_DOMAIN=<cluster-base-domain>
 export EXOSCALE_REGION=<cluster-region>
 
-export SSH_PUBLIC_KEY=~/.ssh/id_ed25519.pub
+export CLUSTER_ID=<cluster-name>
 
-export AWS_ACCESS_KEY_ID=${EXOSCALE_API_KEY}
-export AWS_SECRET_ACCESS_KEY=${EXOSCALE_API_SECRET}
-export AWS_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
-export TF_VAR_lb_exoscale_api_key=${EXOSCALE_API_KEY}
-export TF_VAR_lb_exoscale_api_secret=${EXOSCALE_API_SECRET}
-export TF_VAR_bootstrap_bucket="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap/"
-export TF_VAR_ignition_ca=''
-export TF_VAR_rhcos_template="rhcos-4.7.7"
-export TF_VAR_cluster_id=$CLUSTER_ID
-export TF_VAR_base_domain=${BASE_DOMAIN}
-export TF_VAR_ssh_key="$(cut -d' ' -f1,2 <$SSH_PUBLIC_KEY)"
+# From https://git.vshn.net/profile/personal_access_tokens
+export GITLAB_TOKEN=<gitlab-api-token>
+
+# For example: https://api.syn.vshn.net
+# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
+export COMMODORE_API_URL=<lieutenant-api-endpoint>
+export COMMODORE_API_TOKEN=<lieutenant-api-token>
+
+export TF_VAR_lb_exoscale_api_key=irrelevant
+export TF_VAR_lb_exoscale_api_secret=irrelevant
 ----
 
-. Delete resources from clouscale.ch using Terraform
+. Compile cluster catalog to get input variables
 +
 [source,console]
 ----
-cat > backend.tf <<EOF
-terraform {
-  backend "s3" {
-    key                         = "cluster.tfstate"
-    region                      = "us-east-1" # Ignored
-    bucket                      = "${CLUSTER_ID}-tf-state"
-    skip_credentials_validation = true
-    skip_metadata_api_check     = true
-  }
-}
+commodore catalog compile ${CLUSTER_ID}
+----
+
+. Configure Terraform secrets
++
+[source,console]
+----
+cat <<EOF > catalog/manifests/openshift4-terraform/.env
+EXOSCALE_API_KEY
+EXOSCALE_API_SECRET
+TF_VAR_lb_exoscale_api_key
+TF_VAR_lb_exoscale_api_secret
 EOF
-terraform init
+----
+
+include::partial$setup_terraform_exoscale.adoc[]
+
+. Delete resources using Terraform
++
+[source,console]
+----
 terraform destroy
 ----
 
@@ -78,14 +86,14 @@ cat <<EOF >> ~/.config/exoscale/exoscale.toml
   name = "${CLUSTER_ID}"
 EOF
 
-exo sos delete -r "${CLUSTER_ID}-bootstrap"
-exo sos delete -r "${CLUSTER_ID}-tf-state"
+exo storage delete -r -f "sos://${CLUSTER_ID}-bootstrap/"
 ----
 
 [NOTE]
 --
 This how-to currently doesn't contain instructions to decommission the cluster in Project Syn.
 If you registered the cluster in Project Syn, the places to look for data to decommission are:
+
 * Vault
 * Lieutenant
 * Syn Tenant Repo

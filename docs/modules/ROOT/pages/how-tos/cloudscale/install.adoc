@@ -86,11 +86,10 @@ export GITLAB_TOKEN=<gitlab-api-token>
 # For example: https://api.syn.vshn.net
 # IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
 export COMMODORE_API_URL=<lieutenant-api-endpoint>
-# See https://wiki.vshn.net/x/ngMBCg#ClusterRegistryinLieutenantSynthesizeaCluster(synfection)-Preparation
 export COMMODORE_API_TOKEN=<lieutenant-api-token>
 ----
 
-.VSHN sepcific input
+.VSHN-sepcific input
 [source,console]
 ----
 export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
@@ -106,7 +105,7 @@ export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.
 
 For `BASE_DOMAIN` explanation, see xref:explanations/dns_scheme.adoc[DNS Scheme].
 
-=== Set up S3 bucket
+=== Set up S3 bucket for cluster bootstrap
 
 . Create S3 bucket
 

@@ -1,4 +1,6 @@
 = Installation on Exoscale
+:ocp-minor-version: 4.7
+:ocp-patch-version: {ocp-minor-version}.7
 
 [abstract]
 --
@@ -84,11 +86,10 @@ export GITLAB_TOKEN=<gitlab-api-token>
 # For example: https://api.syn.vshn.net
 # IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
 export COMMODORE_API_URL=<lieutenant-api-endpoint>
-# See https://wiki.vshn.net/x/ngMBCg#ClusterRegistryinLieutenantSynthesizeaCluster(synfection)-Preparation
 export COMMODORE_API_TOKEN=<lieutenant-api-token>
 ----
 
-.VSHN sepcific input
+.VSHN-sepcific input
 [source,console]
 ----
 export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
@@ -116,7 +117,7 @@ export TF_VAR_lb_exoscale_api_key=<exoscale-key-for-lb>
 export TF_VAR_lb_exoscale_api_secret=<exoscale-secret-for-lb>
 ----
 
-=== Set up S3 bucket
+=== Set up S3 bucket for cluster bootstrap
 
 . Prepare Exoscale CLI
 +
@@ -147,11 +148,11 @@ export BOOTSTRAP_BUCKET="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-boo
 
 . Fetch and convert the latest Red Hat CoreOS image
 +
-[source,console]
+[source,console,subs="attributes+"]
 ----
-RHCOS_VERSION="4.7.7"
+RHCOS_VERSION="{ocp-patch-version}"
 
-curl "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/4.7/${RHCOS_VERSION}/rhcos-${RHCOS_VERSION}-x86_64-openstack.x86_64.qcow2.gz" | gunzip > rhcos-${RHCOS_VERSION}.qcow2
+curl "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/${RHCOS_VERSION}/rhcos-${RHCOS_VERSION}-x86_64-openstack.x86_64.qcow2.gz" | gunzip > rhcos-${RHCOS_VERSION}.qcow2
 
 virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
   -m /dev/sda3:/ /loader/entries/ostree-1-rhcos.conf \
@@ -235,6 +236,8 @@ For example, you could change the SDN from a default value to something a custom
 --
 
 . Prepare SSH key
++
+NOTE: We generate a unique SSH key pair for the cluster, because Exoscale doesn't support configuring multiple public keys for a VM.
 +
 [source,console]
 ----
@@ -499,7 +502,12 @@ kubectl get nodes
 kubectl get nodes -l node-role.kubernetes.io/worker
 kubectl label node -l node-role.kubernetes.io/worker \
   node-role.kubernetes.io/infra=""
+----
 
+. Wait for installation to complete
++
+[source,console]
+----
 openshift-install --dir ${INSTALLER_DIR} \
   wait-for install-complete
 ----
@@ -536,7 +544,7 @@ kubectl label node -lnode-role.kubernetes.io/infra \
   node-role.kubernetes.io/app-
 ----
 
-. Create secret with S3 credentials https://docs.openshift.com/container-platform/4.7/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
+. Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
 +
 [source,console]
 ----

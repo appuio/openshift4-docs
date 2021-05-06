@@ -111,9 +111,6 @@ export AWS_ACCESS_KEY_ID=<exoscale-key-for-S3>
 export AWS_SECRET_ACCESS_KEY=<exoscale-key-for-S3>
 export AWS_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
 
-export SSH_PUBLIC_KEY=~/.ssh/id_ed25519.pub
-export SSH_PUBKEY_FINGERPRINT=$(ssh-keygen -E md5 -lf $SSH_PUBLIC_KEY | cut -d' ' -f2 | tail -c+5)
-
 # TODO: generate separate restricted IAM key for Ursula
 export TF_VAR_lb_exoscale_api_key=<exoscale-key-for-lb>
 export TF_VAR_lb_exoscale_api_secret=<exoscale-secret-for-lb>
@@ -236,6 +233,21 @@ Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-vers
 
 For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
 --
+
+. Prepare SSH key
++
+[source,console]
+----
+SSH_PRIVATE_KEY="$(pwd)/ssh_$CLUSTER_ID"
+export SSH_PUBLIC_KEY="${SSH_PRIVATE_KEY}.pub"
+
+ssh-keygen -C "vault@$CLUSTER_ID" -t ed25519 -f $SSH_PRIVATE_KEY -N ''
+
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/ssh \
+  private_key=$(cat $SSH_PRIVATE_KEY)
+
+ssh-add $SSH_PRIVATE_KEY
+----
 
 . Prepare `install-config.yaml`
 +

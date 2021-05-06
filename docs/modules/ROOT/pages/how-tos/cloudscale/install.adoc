@@ -51,7 +51,7 @@ Make sure the version of openshift-install and the rhcos image is the same, othe
 
 Register the new OpenShift 4 cluster in Lieutenant.
 
-.Lietenant API endpoint
+.Lieutenant API endpoint
 ****
 Use the following endpoint for Lieutenant:
 

@@ -143,7 +143,7 @@ EOF
 ----
 exo storage create "sos://${CLUSTER_ID}-bootstrap"
 
-export TF_VAR_bootstrap_bucket="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap/"
+export BOOTSTRAP_BUCKET="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap/"
 ----
 
 === Upload Red Hat CoreOS image
@@ -283,11 +283,6 @@ openshift-install --dir "${INSTALLER_DIR}" \
   create ignition-configs
 
 exo storage upload "${INSTALLER_DIR}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
-
-export TF_VAR_ignition_ca=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
-  "${INSTALLER_DIR}/master.ign" | \
-  awk -F ',' '{ print $2 }' | \
-  base64 --decode)
 ----
 
 === Terraform Cluster Config
@@ -334,6 +329,9 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${TF_VAR_rhcos_template}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.bootstrap_bucket = \"${BOOTSTRAP_BUCKET}\"" \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
@@ -383,15 +381,6 @@ include::partial$setup_terraform_exoscale.adoc[]
 Exoscale doesn't allow uploading the same public key multiple times in a single organisation.
 If the public key in `$SSH_PUBLIC_KEY` already exists in the organisation, we instruct Terraform to use the existing keypair instead of trying to upload the public key under a new name.
 ====
-+
-[source,console]
-----
-export TF_VAR_cluster_id=$CLUSTER_ID
-export TF_VAR_base_domain=${BASE_DOMAIN}
-export TF_VAR_ssh_key="$(cut -d' ' -f1,2 <$SSH_PUBLIC_KEY)"
-export TF_VAR_existing_keypair=$(exo sshkey list -Ojson | \
-        jq -r ".[] | select(.fingerprint == \"${SSH_PUBKEY_FINGERPRINT}\") | .name")
-----
 
 . Provision Domain and LoadBalancer
 +

@@ -107,8 +107,8 @@ For `BASE_DOMAIN` explanation, see xref:explanations/dns_scheme.adoc[DNS Scheme]
 .Exoscale configuration
 [source,console]
 ----
-export AWS_ACCESS_KEY_ID=${EXOSCALE_API_KEY}
-export AWS_SECRET_ACCESS_KEY=${EXOSCALE_API_SECRET}
+export AWS_ACCESS_KEY_ID=<exoscale-key-for-S3>
+export AWS_SECRET_ACCESS_KEY=<exoscale-key-for-S3>
 export AWS_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
 
 export SSH_PUBLIC_KEY=~/.ssh/id_ed25519.pub
@@ -195,12 +195,10 @@ vault login -method=ldap username=<your.name>
 .Store various secrets in Vault
 [source,console]
 ----
-# Set the exoscale.ch access secrets
+# Set the exoscale.ch S3 secret
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale \
-  api_key=${EXOSCALE_API_KEY} \
-  api_secret=${EXOSCALE_API_SECRET} \
-  s3_access_key=${EXOSCALE_API_KEY} \
-  s3_secret_key=${EXOSCALE_API_SECRET}
+  s3_access_key=${AWS_ACCESS_KEY_ID} \
+  s3_secret_key=${AWS_SECRET_ACCESS_KEY}
 
 # Generate an HTTP secret for the registry
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
@@ -498,6 +496,9 @@ kubectl get nodes
 kubectl get nodes -l node-role.kubernetes.io/worker
 kubectl label node -l node-role.kubernetes.io/worker \
   node-role.kubernetes.io/infra=""
+
+openshift-install --dir ${CLUSTER_ID} \
+  wait-for install-complete
 ----
 
 . Provision worker nodes

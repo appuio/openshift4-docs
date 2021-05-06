@@ -15,13 +15,7 @@ tf_tag=$(\
 # Generate the terraform alias
 alias terraform='docker run -it --rm \
   -u $(id -u) \
-  -e EXOSCALE_API_KEY \
-  -e EXOSCALE_API_SECRET \
-  -e TF_VAR_lb_exoscale_api_key \
-  -e TF_VAR_lb_exoscale_api_secret \
-  -e AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY \
-  -e AWS_S3_ENDPOINT \
+  --env-file .env \
   -w /tf \
   -v $(pwd):/tf \
   --ulimit memlock=-1 \

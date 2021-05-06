@@ -381,6 +381,15 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 
 === Provision Infrastructure
 
+. Configure Terraform secrets
++
+[source,console]
+----
+cat <<EOF > .env
+CLOUDSCALE_TOKEN
+TF_VAR_ignition_bootstrap
+EOF
+----
 
 include::partial$setup_terraform.adoc[]
 

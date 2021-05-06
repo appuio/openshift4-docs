@@ -14,8 +14,8 @@ tf_tag=$(\
 
 # Generate the terraform alias
 alias terraform='docker run -it --rm \
-  -e CLOUDSCALE_TOKEN="${CLOUDSCALE_TOKEN}" \
-  -e TF_VAR_ignition_bootstrap="${TF_VAR_ignition_bootstrap}" \
+  -u $(id -u) \
+  --env-file .env \
   -w /tf \
   -v $(pwd):/tf \
   --ulimit memlock=-1 \

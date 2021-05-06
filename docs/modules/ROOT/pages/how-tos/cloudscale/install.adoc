@@ -385,7 +385,7 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 +
 [source,console]
 ----
-cat <<EOF > .env
+cat <<EOF > catalog/manifests/openshift4-cloudscale/.env
 CLOUDSCALE_TOKEN
 TF_VAR_ignition_bootstrap
 EOF

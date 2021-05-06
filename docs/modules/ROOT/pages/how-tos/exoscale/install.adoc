@@ -140,7 +140,7 @@ EOF
 ----
 exo storage create "sos://${CLUSTER_ID}-bootstrap"
 
-export BOOTSTRAP_BUCKET="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap/"
+export BOOTSTRAP_BUCKET="https://sos-${EXOSCALE_REGION}.exo.io/${CLUSTER_ID}-bootstrap"
 ----
 
 === Upload Red Hat CoreOS image
@@ -169,7 +169,7 @@ exo vm template register "rhcos-${RHCOS_VERSION}" \
 
 exo storage delete "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
 
-export TF_VAR_rhcos_template="rhcos-${RHCOS_VERSION}"
+export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
 ----
 
 . Upload Ursula Debian package to bootstrap bucket
@@ -244,7 +244,7 @@ export SSH_PUBLIC_KEY="${SSH_PRIVATE_KEY}.pub"
 ssh-keygen -C "vault@$CLUSTER_ID" -t ed25519 -f $SSH_PRIVATE_KEY -N ''
 
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/ssh \
-  private_key=$(cat $SSH_PRIVATE_KEY)
+  private_key=$(cat $SSH_PRIVATE_KEY | base64 --wrap 0)
 
 ssh-add $SSH_PRIVATE_KEY
 ----
@@ -338,7 +338,7 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${CA_CERT}\"" \
   ${CLUSTER_ID}.yml
 
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${TF_VAR_rhcos_template}\"" \
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${RHCOS_TEMPLATE}\"" \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.bootstrap_bucket = \"${BOOTSTRAP_BUCKET}\"" \
@@ -373,7 +373,7 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 +
 [source,console]
 ----
-cat <<EOF > .env
+cat <<EOF > catalog/manifests/openshift4-terraform/.env
 EXOSCALE_API_KEY
 EXOSCALE_API_SECRET
 TF_VAR_lb_exoscale_api_key
@@ -382,15 +382,6 @@ EOF
 ----
 
 include::partial$setup_terraform_exoscale.adoc[]
-
-
-. Initialize Terraform
-+
-[NOTE]
-====
-Exoscale doesn't allow uploading the same public key multiple times in a single organisation.
-If the public key in `$SSH_PUBLIC_KEY` already exists in the organisation, we instruct Terraform to use the existing keypair instead of trying to upload the public key under a new name.
-====
 
 . Provision Domain and LoadBalancer
 +
@@ -509,7 +500,7 @@ kubectl get nodes -l node-role.kubernetes.io/worker
 kubectl label node -l node-role.kubernetes.io/worker \
   node-role.kubernetes.io/infra=""
 
-openshift-install --dir ${CLUSTER_ID} \
+openshift-install --dir ${INSTALLER_DIR} \
   wait-for install-complete
 ----
 

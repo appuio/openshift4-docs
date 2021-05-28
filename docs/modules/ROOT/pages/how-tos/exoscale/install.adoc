@@ -38,7 +38,6 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
 * `curl`
 * `gzip`
-* A copy of the Ursula Debian package
 
 [WARNING]
 ====
@@ -113,7 +112,7 @@ export AWS_ACCESS_KEY_ID=<exoscale-key-for-S3>
 export AWS_SECRET_ACCESS_KEY=<exoscale-key-for-S3>
 export AWS_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
 
-# TODO: generate separate restricted IAM key for Ursula
+# TODO: generate separate restricted IAM key for Floaty
 export TF_VAR_lb_exoscale_api_key=<exoscale-key-for-lb>
 export TF_VAR_lb_exoscale_api_secret=<exoscale-secret-for-lb>
 ----
@@ -170,13 +169,6 @@ exo vm template register "rhcos-${RHCOS_VERSION}" \
 exo storage delete "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
 
 export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
-----
-
-. Upload Ursula Debian package to bootstrap bucket
-+
-[source,console]
-----
-exo storage upload /path/to/ursula.deb "sos://${CLUSTER_ID}-bootstrap/ursula.deb" --acl public-read
 ----
 
 

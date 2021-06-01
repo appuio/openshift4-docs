@@ -27,7 +27,7 @@ If you don't get the newest available version, this might be intended.
 Red Hat does release new updates to specific cluster, when they do have no known issues.
 So on a stable channel you need some patience!
 ====
-       
+
 . Update the configuration hierarchy
 +
 Set the following parameters to the values retrieved in the previous step:
@@ -46,7 +46,8 @@ Let the OpenShift operators do their job.
 kubectl --as cluster-admin get clusterversion version --watch
 ----
 +
-. Check the final state via the `oc` commmand:
+. Check the final state via the `oc` command:
++
 [source,console]
 ----
 $ oc adm upgrade --as cluster-admin

@@ -46,7 +46,7 @@ Let the OpenShift operators do their job.
 kubectl --as cluster-admin get clusterversion version --watch
 ----
 +
-. Check the final state via the `oc` command:
+. Check the upgrade state via the `oc` command:
 +
 [source,console]
 ----
@@ -56,11 +56,36 @@ Cluster version is 4.5.24
 No updates available.
 You may force an upgrade to a specific release image, but doing so may not be supported and result in downtime or data loss.
 ----
++
+NOTE: Even if `oc adm upgrade` shows that the upgrade has completed, it's possible that nodes are still being upgraded.
 
-So far, that process just worked.
-In consequence we do lack the experience on how to observe and debug.
-Instruction will be added here, as soon as we gained that knowledge.
-As a starting point on the process, checkout https://docs.openshift.com/container-platform/latest/updating/updating-cluster-between-minor.html[Updating a cluster between minor versions] of the OpenShift 4 documentation.
+. Check node upgrade status by checking the status of the `MachineConfigPool` resources:
++
+[source,console]
+----
+$ oc --as=cluster-admin -n openshift-machine-config-operator get machineconfigpool
+NAME     CONFIG                                             UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
+master   rendered-master-92e100dc64d7c9ecf669b1f69cdb5dca   True      False      False      3              3                   3                     0                      19d
+worker   rendered-worker-4648c4badfb057c7e3e9f1030fa42507   True      False      False      6              6                   6                     0                      19d
+----
++
+[IMPORTANT]
+====
+Applications on the cluster may get rescheduled without prior notice as long as the worker `MachineConfigPool` doesn't show `Updated=True`.
+
+You can observe the progress of the node upgrades with
+
+[source,console]
+----
+oc --as=cluster-admin get mcp -w
+----
+====
+
+So far, the upgrade process mostly just worked.
+Nevertheless, we've started documenting how to observe the upgrade process in the following section.
+More troubleshooting instructions will be added there as we gain experience.
+
+For general information about the upgrade process, check out https://docs.openshift.com/container-platform/latest/updating/updating-cluster-between-minor.html[Updating a cluster between minor versions] of the OpenShift 4 documentation.
 
 Also have a look at the blog post https://www.openshift.com/blog/the-ultimate-guide-to-openshift-release-and-upgrade-process-for-cluster-administrators[The Ultimate Guide to OpenShift Release and Upgrade Process for Cluster Administrators] which is an excellent source to understand the process.
 

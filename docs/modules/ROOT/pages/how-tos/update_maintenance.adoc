@@ -27,7 +27,7 @@ If you don't get the newest available version, this might be intended.
 Red Hat does release new updates to specific cluster, when they do have no known issues.
 So on a stable channel you need some patience!
 ====
-       
+
 . Update the configuration hierarchy
 +
 Set the following parameters to the values retrieved in the previous step:
@@ -46,7 +46,8 @@ Let the OpenShift operators do their job.
 kubectl --as cluster-admin get clusterversion version --watch
 ----
 +
-. Check the final state via the `oc` commmand:
+. Check the upgrade state via the `oc` command:
++
 [source,console]
 ----
 $ oc adm upgrade --as cluster-admin
@@ -55,15 +56,42 @@ Cluster version is 4.5.24
 No updates available.
 You may force an upgrade to a specific release image, but doing so may not be supported and result in downtime or data loss.
 ----
++
+NOTE: Even if `oc adm upgrade` shows that the upgrade has completed, it's possible that nodes are still being upgraded.
 
-So far, that process just worked.
-In consequence we do lack the experience on how to observe and debug.
-Instruction will be added here, as soon as we gained that knowledge.
-As a starting point on the process, checkout https://docs.openshift.com/container-platform/latest/updating/updating-cluster-between-minor.html[Updating a cluster between minor versions] of the OpenShift 4 documentation.
+. Check node upgrade status by checking the status of the `MachineConfigPool` resources:
++
+[source,console]
+----
+$ oc --as=cluster-admin -n openshift-machine-config-operator get machineconfigpool
+NAME     CONFIG                                             UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
+master   rendered-master-92e100dc64d7c9ecf669b1f69cdb5dca   True      False      False      3              3                   3                     0                      19d
+worker   rendered-worker-4648c4badfb057c7e3e9f1030fa42507   True      False      False      6              6                   6                     0                      19d
+----
++
+[IMPORTANT]
+====
+Applications on the cluster may get rescheduled without prior notice as long as the worker `MachineConfigPool` doesn't show `Updated=True`.
+
+You can observe the progress of the node upgrades with
+
+[source,console]
+----
+oc --as=cluster-admin get mcp -w
+----
+====
+
+So far, the upgrade process mostly just worked.
+Nevertheless, we've started documenting how to observe the upgrade process in the following section.
+More troubleshooting instructions will be added there as we gain experience.
+
+For general information about the upgrade process, check out https://docs.openshift.com/container-platform/latest/updating/updating-cluster-between-minor.html[Updating a cluster between minor versions] of the OpenShift 4 documentation.
 
 Also have a look at the blog post https://www.openshift.com/blog/the-ultimate-guide-to-openshift-release-and-upgrade-process-for-cluster-administrators[The Ultimate Guide to OpenShift Release and Upgrade Process for Cluster Administrators] which is an excellent source to understand the process.
 
 == Troubleshooting
+
+=== General troubleshooting
 
 Get some more detailed information about the current state of the upgrade:
 
@@ -85,3 +113,43 @@ Follow the log of an operator or controller:
 kubectl --as cluster-admin -n openshift-machine-config-operator logs deployment/machine-config-operator -f
 kubectl --as cluster-admin -n openshift-machine-config-operator logs deployment/machine-config-controller -f
 ----
+
+=== Troubleshooting node upgrades
+
+* List latest `MachineConfig` object for each machine pool:
++
+[source,console]
+----
+POOL_COUNT=$(kubectl --as=cluster-admin -n openshift-machine-config-operator get machineconfigpool --no-headers | wc -l)
+kubectl --as=cluster-admin -n openshift-machine-config-operator get machineconfig \
+  --sort-by=".metadata.creationTimestamp" | grep "^rendered-" | tail -n "${POOL_COUNT}"
+----
+
+* List nodes with their current and desired `MachineConfig` objects:
++
+[source,console]
+----
+kubectl --as=cluster-admin get nodes -ocustom-columns="NAME:.metadata.name,Current Config:.metadata.annotations.machineconfiguration\.openshift\.io/currentConfig,Desired Config:.metadata.annotations.machineconfiguration\.openshift\.io/desiredConfig"
+----
+
+* Check `machine-config-daemon` pod logs on the node(s) for which current and desired `MachineConfig` objects don't match.
++
+The `machine-config-daemon` logs contain the `kubectl drain` logs for the node among other things.
++
+[source,console]
+----
+NODE=<node-name>
+POD=$(kubectl --as=cluster-admin -o jsonpath='{.items[0].metadata.name}' \
+  -n openshift-machine-config-operator get pods \
+  --field-selector="spec.nodeName=${NODE}" -l k8s-app=machine-config-daemon)
+kubectl --as=cluster-admin -n openshift-machine-config-operator \
+  logs -c machine-config-daemon -f "${POD}"
+----
+
+* If nodes get stuck in `NotReady` during the upgrade process, check whether the VM got stuck trying to reboot itself into the new image:
+. Login to the cloud provider's web console
+. Check the VM's VNC (or equivalent) console
+. If the VM is unresponsive on the VNC console, a reboot via the cloud provider's web interface should resolve the issue.
+
++
+NOTE: We've not investigated in depth why VMs sometimes get stuck trying to reboot themselves and haven't observed this problem on OCP 4.7 until now.

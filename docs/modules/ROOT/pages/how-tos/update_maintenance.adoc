@@ -91,6 +91,8 @@ Also have a look at the blog post https://www.openshift.com/blog/the-ultimate-gu
 
 == Troubleshooting
 
+=== General troubleshooting
+
 Get some more detailed information about the current state of the upgrade:
 
 [source,console]
@@ -111,3 +113,43 @@ Follow the log of an operator or controller:
 kubectl --as cluster-admin -n openshift-machine-config-operator logs deployment/machine-config-operator -f
 kubectl --as cluster-admin -n openshift-machine-config-operator logs deployment/machine-config-controller -f
 ----
+
+=== Troubleshooting node upgrades
+
+* List latest `MachineConfig` object for each machine pool:
++
+[source,console]
+----
+POOL_COUNT=$(kubectl --as=cluster-admin -n openshift-machine-config-operator get machineconfigpool --no-headers | wc -l)
+kubectl --as=cluster-admin -n openshift-machine-config-operator get machineconfig \
+  --sort-by=".metadata.creationTimestamp" | grep "^rendered-" | tail -n "${POOL_COUNT}"
+----
+
+* List nodes with their current and desired `MachineConfig` objects:
++
+[source,console]
+----
+kubectl --as=cluster-admin get nodes -ocustom-columns="NAME:.metadata.name,Current Config:.metadata.annotations.machineconfiguration\.openshift\.io/currentConfig,Desired Config:.metadata.annotations.machineconfiguration\.openshift\.io/desiredConfig"
+----
+
+* Check `machine-config-daemon` pod logs on the node(s) for which current and desired `MachineConfig` objects don't match.
++
+The `machine-config-daemon` logs contain the `kubectl drain` logs for the node among other things.
++
+[source,console]
+----
+NODE=<node-name>
+POD=$(kubectl --as=cluster-admin -o jsonpath='{.items[0].metadata.name}' \
+  -n openshift-machine-config-operator get pods \
+  --field-selector="spec.nodeName=${NODE}" -l k8s-app=machine-config-daemon)
+kubectl --as=cluster-admin -n openshift-machine-config-operator \
+  logs -c machine-config-daemon -f "${POD}"
+----
+
+* If nodes get stuck in `NotReady` during the upgrade process, check whether the VM got stuck trying to reboot itself into the new image:
+. Login to the cloud provider's web console
+. Check the VM's VNC (or equivalent) console
+. If the VM is unresponsive on the VNC console, a reboot via the cloud provider's web interface should resolve the issue.
+
++
+NOTE: We've not investigated in depth why VMs sometimes get stuck trying to reboot themselves and haven't observed this problem on OCP 4.7 until now.

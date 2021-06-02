@@ -30,6 +30,7 @@ export CLUSTER_ID=<lieutenant-cluster-id>
 export TENANT_ID=<lieutenant-tenant-id>
 export REGION=<region> # rma or lpg (without the zone number)
 export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/profile/personal_access_tokens
+export GITLAB_USER=<gitlab-user-name>
 ----
 
 include::partial$setup_terraform.adoc[]

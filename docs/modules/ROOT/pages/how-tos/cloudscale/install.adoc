@@ -82,6 +82,7 @@ export CLOUDSCALE_TOKEN=<cloudscale-api-token>
 
 # From https://git.vshn.net/profile/personal_access_tokens
 export GITLAB_TOKEN=<gitlab-api-token>
+export GITLAB_USER=<gitlab-user-name>
 
 # For example: https://api.syn.vshn.net
 # IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
@@ -158,11 +159,11 @@ The variable `CLOUDSCALE_TOKEN` could be used directly.
 Exporting the variable `AUTH_HEADER` is done to be compatible with the https://www.cloudscale.ch/en/api/[Cloudscale API documentation].
 ====
 
-. Check if image already exists
+. Check if image already exists in the correct zone
 +
 [source,console,subs="attributes+"]
 ----
-curl -sH "$AUTH_HEADER" https://api.cloudscale.ch/v1/custom-images | jq -r '.[] | select(.slug == "rhcos-{ocp-minor-version}") | .href'
+curl -sH "$AUTH_HEADER" https://api.cloudscale.ch/v1/custom-images | jq -r '.[] | select(.slug == "rhcos-{ocp-minor-version}") | .zones[].slug'
 ----
 +
 [NOTE]
@@ -203,7 +204,7 @@ The output should be `Access permission for `[…]-bootstrap-ignition/rhcos-{ocp
 [source,console,subs="attributes+"]
 ----
 curl -i -H "$AUTH_HEADER" \
-  -F url="$(mc share download --json "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}" | jq -r .url)" \
+  -F url="$(mc share download --json "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw" | jq -r .url)" \
   -F name='RHCOS {ocp-minor-version}' \
   -F zones=rma1 \
   -F slug=rhcos-{ocp-minor-version} \
@@ -525,7 +526,7 @@ curl \
   -d '[{ "op": "remove", "path": "/status/bootstrapToken" }]' \
   "https://rancher.vshn.net/k8s/clusters/c-c6j2w/apis/syn.tools/v1alpha1/namespaces/${LIEUTENANT_NS}/clusters/${CLUSTER_ID}/status"
 
-kubectl --kubeconfig target/auth/kubeconfig apply -f $(curl -sH "${LIEUTENANT_AUTH}" "https://${COMMODORE_API_URL}/clusters/${CLUSTER_ID}" | jq -r ".installURL")
+kubectl apply -f $(curl -sH "${LIEUTENANT_AUTH}" "${COMMODORE_API_URL}/clusters/${CLUSTER_ID}" | jq -r ".installURL")
 ----
 
 . Save the admin credentials in the https://password.vshn.net[password manager].

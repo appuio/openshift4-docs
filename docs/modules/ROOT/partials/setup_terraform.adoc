@@ -37,7 +37,7 @@ terraform init \
   "-backend-config=address=${GITLAB_STATE_URL}" \
   "-backend-config=lock_address=${GITLAB_STATE_URL}/lock" \
   "-backend-config=unlock_address=${GITLAB_STATE_URL}/lock" \
-  "-backend-config=username=$(whoami)" \
+  "-backend-config=username=${GITLAB_USER}" \
   "-backend-config=password=${GITLAB_TOKEN}" \
   "-backend-config=lock_method=POST" \
   "-backend-config=unlock_method=DELETE" \

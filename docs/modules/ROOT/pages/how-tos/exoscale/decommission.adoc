@@ -34,6 +34,7 @@ export CLUSTER_ID=<cluster-name>
 
 # From https://git.vshn.net/profile/personal_access_tokens
 export GITLAB_TOKEN=<gitlab-api-token>
+export GITLAB_USER=<gitlab-user-name>
 
 # For example: https://api.syn.vshn.net
 # IMPORTANT: do NOT add a trailing `/`. Commands below will fail.

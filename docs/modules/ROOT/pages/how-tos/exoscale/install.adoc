@@ -1,6 +1,6 @@
 = Installation on Exoscale
 :ocp-minor-version: 4.7
-:ocp-patch-version: {ocp-minor-version}.7
+:ocp-patch-version: {ocp-minor-version}.13
 
 [abstract]
 --
@@ -245,7 +245,7 @@ ssh-add $SSH_PRIVATE_KEY
 
 . Prepare `install-config.yaml`
 +
-[source,console]
+[source,shell]
 ----
 export INSTALLER_DIR="$(pwd)/target"
 mkdir -p "${INSTALLER_DIR}"
@@ -306,7 +306,7 @@ git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_
 
 . Prepare Terraform cluster config
 +
-[source,console]
+[source,shell]
 ----
 CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
   "${INSTALLER_DIR}/master.ign" | \

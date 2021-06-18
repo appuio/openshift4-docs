@@ -73,7 +73,7 @@ include::partial$setup_terraform_exoscale.adoc[]
 terraform destroy
 ----
 
-. Use Exoscale CLI tool to remove buckets
+. Use Exoscale CLI tool to empty and remove buckets
 +
 [source,console]
 ----
@@ -88,6 +88,7 @@ cat <<EOF >> ~/.config/exoscale/exoscale.toml
 EOF
 
 exo storage delete -r -f "sos://${CLUSTER_ID}-bootstrap/"
+exo storage rb "${CLUSTER_ID}-bootstrap"
 ----
 
 [NOTE]

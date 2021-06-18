@@ -29,7 +29,7 @@ export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/${GITLAB_CATALOG_P
 pushd catalog/manifests/openshift4-terraform/
 ----
 +
-Initiate terraform
+Initialize terraform
 +
 [source,console]
 ----

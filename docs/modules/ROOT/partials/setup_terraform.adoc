@@ -19,7 +19,7 @@ alias terraform='docker run -it --rm \
   -w /tf \
   -v $(pwd):/tf \
   --ulimit memlock=-1 \
-  ${tf_image}:${tf_tag} terraform'
+  "${tf_image}:${tf_tag}" terraform'
 
 export GITLAB_REPOSITORY_URL=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
 export GITLAB_REPOSITORY_NAME=${GITLAB_REPOSITORY_URL##*/}

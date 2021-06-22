@@ -94,6 +94,9 @@ export COMMODORE_API_TOKEN=<lieutenant-api-token>
 ----
 export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
 export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+# For LB hieradata commits
+export GIT_AUTHOR_NAME=$(git config --global user.name)
+export GIT_AUTHOR_EMAIL=$(git config --global user.email)
 ----
 
 .OpenShift configuration
@@ -208,6 +211,15 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
 # Copy the Dagobert OpenShift Node Collector Credentials
 vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
   | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/dagobert" -
+----
+
+.(VSHN-managed LBs) Grab the hieradata repo token from Vault
+[source,shell]
+----
+export HIERADATA_REPO_SECRET=$(vault kv get \
+  -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq '.data.data')
+export HIERADATA_REPO_USER=$(echo "${HIERADATA_REPO_SECRET}" | jq -r '.user')
+export HIERADATA_REPO_TOKEN=$(echo "${HIERADATA_REPO_SECRET}" | jq -r '.token')
 ----
 
 === OpenShift Installer Setup
@@ -338,9 +350,17 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
   ${CLUSTER_ID}.yml
 
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_user = \"${HIERADATA_REPO_USER}\"" \
+  ${CLUSTER_ID}.yml
+
 yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
   ${CLUSTER_ID}.yml
 
+# Configure Git author information for the CI pipeline
+yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.username = \"GitLab CI\"" \
+  ${CLUSTER_ID}.yml
+yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.email = \"tech+${CLUSTER_ID}@vshn.ch\"" \
+  ${CLUSTER_ID}.yml
 
 # Have a look at the file ${CLUSTER_ID}.yml.
 # Override any default parameters or add more component configuration.
@@ -364,11 +384,14 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 +
 [source,console]
 ----
-cat <<EOF > catalog/manifests/openshift4-terraform/.env
+cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
 EXOSCALE_API_KEY
 EXOSCALE_API_SECRET
 TF_VAR_lb_exoscale_api_key
 TF_VAR_lb_exoscale_api_secret
+GIT_AUTHOR_NAME
+GIT_AUTHOR_EMAIL
+HIERADATA_REPO_TOKEN
 EOF
 ----
 
@@ -390,6 +413,9 @@ terraform apply
 ----
 
 . Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
+
+. (VSHN-managed LBs)
+Review and merge the hieradata MR listed in the Terraform output variable `hieradata_mr` from the previous `terraform apply` step
 
 . Deploy bootstrap node
 +
@@ -422,6 +448,48 @@ EOF
 done
 ----
 
+. Make LB FQDNs available for later steps
++
+.Update local config and store LB FQDNS in environment
+[source,shell]
+----
+sshop_update
+declare -a LB_FQDNS
+for id in 0 1; do
+  LB_FQDNS[$id]=$(terraform state show module.cluster.exoscale_domain_record.lb[$id] | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
+done
+----
++
+.Check LB connectivity
+[source,shell]
+----
+for lb in "${LB_FQDNS[*]}"; do
+  ssh "${lb}" hostname -f
+done
+----
++
+[NOTE]
+====
+If ssh with your regular config fails at this point, you can try to connect to the LB as user `ubuntu` to check that cloud-init is still running.
+
+[source,shell]
+----
+ssh ubuntu@"${LB_FQDNS[0]}" tail -f /var/log/cloud-init-output.log
+ssh ubuntu@"${LB_FQDNS[1]}" tail -f /var/log/cloud-init-output.log
+----
+
+If you need to use the information in this note, repeat the instructions in this step after the LBs reboot to ensure your regular SSH config has been updated to include the LBs.
+====
+
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
++
+[source,shell]
+----
+for fqdn in ${LB_FQDNS[*]}; do
+  ssh "${fqdn}" sudo puppetctl run
+done
+----
+
 . Wait for bootstrap API to come up
 +
 [source,console]
@@ -447,6 +515,15 @@ module "cluster" {
 }
 EOF
   terraform apply
+done
+----
+
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
++
+[source,shell]
+----
+for fqdn in ${LB_FQDNS[*]}; do
+  ssh "${fqdn}" sudo puppetctl run
 done
 ----
 
@@ -490,6 +567,15 @@ kubectl get nodes
 kubectl get nodes -l node-role.kubernetes.io/worker
 kubectl label node -l node-role.kubernetes.io/worker \
   node-role.kubernetes.io/infra=""
+----
+
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
++
+[source,shell]
+----
+for fqdn in ${LB_FQDNS[*]}; do
+  ssh "${fqdn}" sudo puppetctl run
+done
 ----
 
 . Wait for installation to complete

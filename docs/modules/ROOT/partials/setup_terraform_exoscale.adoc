@@ -1,7 +1,6 @@
 . Setup Terraform
 +
-Prepare terraform
-+
+.Prepare Terraform execution environment
 [source,console]
 ----
 # Set terraform image and tag to be used
@@ -13,13 +12,14 @@ tf_tag=$(\
   dependencies/openshift4-terraform/class/defaults.yml)
 
 # Generate the terraform alias
+base_dir=$(pwd)
 alias terraform='docker run -it --rm \
-  -u $(id -u) \
-  --env-file .env \
+  -e REAL_UID=$(id -u) \
+  --env-file ${base_dir}/terraform.env \
   -w /tf \
   -v $(pwd):/tf \
   --ulimit memlock=-1 \
-  "${tf_image}:${tf_tag}" terraform'
+  "${tf_image}:${tf_tag}" /tf/terraform.sh'
 
 export GITLAB_REPOSITORY_URL=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
 export GITLAB_REPOSITORY_NAME=${GITLAB_REPOSITORY_URL##*/}
@@ -29,8 +29,7 @@ export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/${GITLAB_CATALOG_P
 pushd catalog/manifests/openshift4-terraform/
 ----
 +
-Initialize terraform
-+
+.Initialize Terraform
 [source,console]
 ----
 terraform init \

@@ -419,33 +419,17 @@ Review and merge the hieradata MR listed in the Terraform output variable `hiera
 
 . Deploy bootstrap node
 +
-[NOTE]
-====
-We initially provision VMs in "Stopped" state to ensure the private network interface is attached when the VM powers up.
-We provision the VMs in this two-step process to avoid VMs getting stuck in a state where they're unable to reach the machine config server when deploying the cluster into a private network.
-====
-+
-[NOTE]
-====
-We currently need two runs of `terraform apply` with state "Running" when provisioning VMs.
-This is necessary because the Exoscale Terraform provider doesn't correctly signal that a VM's IP can change during a state change.
-See the issue filed against the https://github.com/exoscale/terraform-provider-exoscale/issues/101[Exoscale Terraform provider] for a more detailed explanation.
-====
-+
 [source,console]
 ----
-for state in "Stopped" "Running" "Running"; do
-  cat > override.tf <<EOF
+cat > override.tf <<EOF
 module "cluster" {
   bootstrap_count = 1
   master_count    = 0
   infra_count     = 0
   worker_count    = 0
-  bootstrap_state = "${state}"
 }
 EOF
-  terraform apply
-done
+terraform apply
 ----
 
 . Make LB FQDNs available for later steps
@@ -505,17 +489,14 @@ done && echo -e "\nAPI is up"
 +
 [source,console]
 ----
-for state in "Stopped" "Running" "Running"; do
-  cat > override.tf <<EOF
+cat > override.tf <<EOF
 module "cluster" {
   bootstrap_count = 1
   infra_count     = 0
   worker_count    = 0
-  master_state = "${state}"
 }
 EOF
-  terraform apply
-done
+terraform apply
 ----
 
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
@@ -539,14 +520,12 @@ openshift-install --dir "${INSTALLER_DIR}" \
 +
 [source,console]
 ----
-for state in "Stopped" "Running" "Running"; do
-  cat > override.tf <<EOF
+cat > override.tf <<EOF
 module "cluster" {
   worker_count    = 0
-  infra_state = "${state}"
 }
 EOF
-  terraform apply
+terraform apply
 done
 ----
 
@@ -590,14 +569,7 @@ openshift-install --dir ${INSTALLER_DIR} \
 +
 [source,console]
 ----
-for state in "Stopped" "Running" "Running"; do
-  cat > override.tf <<EOF
-module "cluster" {
-  worker_state = "${state}"
-}
-EOF
-  terraform apply
-done
+terraform apply
 ----
 
 . Approve worker certs

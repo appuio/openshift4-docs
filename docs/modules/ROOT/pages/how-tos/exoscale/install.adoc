@@ -213,7 +213,7 @@ vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
   | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/dagobert" -
 ----
 
-.(VSHN-managed LBs) Grab the hieradata repo token from Vault
+.Grab the LB hieradata repo token from Vault
 [source,shell]
 ----
 export HIERADATA_REPO_SECRET=$(vault kv get \
@@ -397,7 +397,7 @@ EOF
 
 include::partial$setup_terraform_exoscale.adoc[]
 
-. Provision Domain and LoadBalancer
+. Provision Domain and LBs
 +
 [source,console]
 ----
@@ -414,30 +414,11 @@ terraform apply
 
 . Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
 
-. (VSHN-managed LBs)
-Review and merge the hieradata MR listed in the Terraform output variable `hieradata_mr` from the previous `terraform apply` step
-
-. Deploy bootstrap node
-+
-[source,console]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  bootstrap_count = 1
-  master_count    = 0
-  infra_count     = 0
-  worker_count    = 0
-}
-EOF
-terraform apply
-----
-
 . Make LB FQDNs available for later steps
 +
 .Update local config and store LB FQDNS in environment
 [source,shell]
 ----
-sshop_update
 declare -a LB_FQDNS
 for id in 0 1; do
   LB_FQDNS[$id]=$(terraform state show module.cluster.exoscale_domain_record.lb[$id] | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
@@ -447,6 +428,7 @@ done
 .Check LB connectivity
 [source,shell]
 ----
+sshop_update
 for lb in "${LB_FQDNS[*]}"; do
   ssh "${lb}" hostname -f
 done
@@ -464,6 +446,30 @@ ssh ubuntu@"${LB_FQDNS[1]}" tail -f /var/log/cloud-init-output.log
 
 If you need to use the information in this note, repeat the instructions in this step after the LBs reboot to ensure your regular SSH config has been updated to include the LBs.
 ====
+
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
++
+[source,shell]
+----
+for fqdn in ${LB_FQDNS[*]}; do
+  ssh "${fqdn}" sudo puppetctl run
+done
+----
+
+. Deploy bootstrap node
++
+[source,console]
+----
+cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 1
+  master_count    = 0
+  infra_count     = 0
+  worker_count    = 0
+}
+EOF
+terraform apply
+----
 
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +

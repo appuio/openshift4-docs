@@ -456,6 +456,8 @@ for fqdn in ${LB_FQDNS[*]}; do
 done
 ----
 
+. Check the https://ticket.vshn.net/issues/?jql=project%20%3D%20APPU%20AND%20status%20%3D%20New%20AND%20text%20~%20%22server%20created%22["Server created" tickets] for the LBs and link them to the cluster setup ticket.
+
 . Deploy bootstrap node
 +
 [source,console]

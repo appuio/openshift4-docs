@@ -11,6 +11,11 @@ Steps to remove an OpenShift 4 cluster from https://exoscale.com[Exoscale].
 - In the future, this procedure will be mostly automated
 --
 
+[IMPORTANT]
+--
+Always follow the https://wiki.vshn.net/display/VINT/4-eye+data+deletion[4-eye data deletion] (Internal link) principle when decommissioning productive clusters.
+--
+
 == Prerequisites
 
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
@@ -64,7 +69,35 @@ TF_VAR_lb_exoscale_api_secret
 EOF
 ----
 
+. Set downtimes in https://monitoring.vshn.net[Icinga2] for both LBs
+
 include::partial$setup_terraform_exoscale.adoc[]
+
+. Grab location of LB backups and potential Icinga2 satellite host before decommissioning VMs.
++
+[source,shell]
+----
+export VAULT_ADDR=https://vault-prod.syn.vshn.net
+vault login -method=ldap username=<your.name>
+declare -a LB_FQDNS
+for id in 0 1; do
+  LB_FQDNS[$id]=$(terraform state show module.cluster.exoscale_domain_record.lb[$id] | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
+done
+for lb in ${LB_FQDNS[*]}; do
+  ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf"
+done
+----
+
+. Set downtimes for LBs in https://monitoring.vshn.net[Icinga2].
+
+. Remove APPUiO hieradata Git repository resource from Terraform state
++
+[source,console]
+----
+terraform state rm module.cluster.gitfile_checkout.appuio_hieradata
+----
++
+NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.
 
 . Delete resources using Terraform
 +
@@ -87,19 +120,20 @@ cat <<EOF >> ~/.config/exoscale/exoscale.toml
   name = "${CLUSTER_ID}"
 EOF
 
+# Bootstrap bucket
 exo storage delete -r -f "sos://${CLUSTER_ID}-bootstrap/"
-exo storage rb "${CLUSTER_ID}-bootstrap"
+exo storage rb -f "${CLUSTER_ID}-bootstrap"
+# OpenShift Image Registry bucket
+exo storage delete -r -f "sos://${CLUSTER_ID}-image-registry/"
+exo storage rb -f "${CLUSTER_ID}-image-registry"
 ----
 
-[NOTE]
---
-This how-to currently doesn't contain instructions to decommission the cluster in Project Syn.
-If you registered the cluster in Project Syn, the places to look for data to decommission are:
+. Decommission Puppet-managed LBs according to the https://wiki.vshn.net/display/VT/How+To%3A+Decommission+a+VM[VSHN documentation] (Internal link).
++
+NOTE: Don't forget to remove the LB configuration in the https://git.vshn.net/appuio/appuio_hieradata/-/tree/master/lbaas[APPUiO hieradata] and the https://git.vshn.net/vshn-puppet/nodes_hieradata[nodes hieradata].
 
-* Vault
-* Lieutenant
-* Syn Tenant Repo
-* VSHN LDAP
-* LDAP IP allowlist
-* Any DNS records created in VSHN DNS
---
+. Remove cluster DNS records from VSHN DNS
+
+. Remove cluster IPs from LDAP allowlist, if applicable
+
+. https://kb.vshn.ch/vshnsyn/how-tos/decommission.html[Decommission cluster in Project Syn]

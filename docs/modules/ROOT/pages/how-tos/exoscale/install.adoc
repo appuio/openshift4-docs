@@ -89,7 +89,7 @@ export COMMODORE_API_URL=<lieutenant-api-endpoint>
 export COMMODORE_API_TOKEN=<lieutenant-api-token>
 ----
 
-.VSHN-sepcific input
+.VSHN-specific input
 [source,console]
 ----
 export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
@@ -97,6 +97,9 @@ export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COM
 # For LB hieradata commits
 export GIT_AUTHOR_NAME=$(git config --global user.name)
 export GIT_AUTHOR_EMAIL=$(git config --global user.email)
+
+# From https://control.vshn.net/tokens/_create/servers
+export TF_VAR_control_vshn_net_token=<control-vshn-net-token>
 ----
 
 .OpenShift configuration
@@ -389,6 +392,7 @@ EXOSCALE_API_KEY
 EXOSCALE_API_SECRET
 TF_VAR_lb_exoscale_api_key
 TF_VAR_lb_exoscale_api_secret
+TF_VAR_control_vshn_net_token
 GIT_AUTHOR_NAME
 GIT_AUTHOR_EMAIL
 HIERADATA_REPO_TOKEN
@@ -397,7 +401,25 @@ EOF
 
 include::partial$setup_terraform_exoscale.adoc[]
 
-. Provision Domain and LBs
+. Provision Domain and security groups
++
+[source,console]
+----
+cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 0
+  lb_count        = 0
+  master_count    = 0
+  infra_count     = 0
+  worker_count    = 0
+}
+EOF
+terraform apply
+----
+
+. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
+
+. Create LB hieradata
 +
 [source,console]
 ----
@@ -409,14 +431,22 @@ module "cluster" {
   worker_count    = 0
 }
 EOF
+terraform apply -target module.cluster.local_file.lb_hieradata[0]
+----
+
+
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and wait until the deploy pipeline after the merge is completed.
+
+. Create LBs
++
+[source,console]
+----
 terraform apply
 ----
 
-. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
-
 . Make LB FQDNs available for later steps
 +
-.Update local config and store LB FQDNS in environment
+.Store LB FQDNs in environment
 [source,shell]
 ----
 declare -a LB_FQDNS
@@ -425,36 +455,54 @@ for id in 0 1; do
 done
 ----
 +
-.Check LB connectivity
+.Verify FQDNs
 [source,shell]
 ----
+echo "${LB_FQDNS[*]}"
+----
+
+. Check LB connectivity
++
+[source,shell]
+----
+for lb in ${LB_FQDNS[*]}; do
+  ping -c1 "${lb}"
+done
+----
+
+. Wait until LBs are fully initialized by Puppet
++
+[source,shell]
+----
+# Wait for Puppet provisioning to complete
+while true; do
+  curl --connect-timeout 1 "http://api.${CLUSTER_ID}.${BASE_DOMAIN}:6443"
+  if [ $? -eq 52 ]; then
+    echo -e "\nHAproxy up"
+    break
+  else
+    echo -n "."
+    sleep 5
+  fi
+done
+# Update sshop config, see https://wiki.vshn.net/pages/viewpage.action?pageId=40108094
 sshop_update
-for lb in "${LB_FQDNS[*]}"; do
+# Check that you can access the LBs using your usual SSH config
+for lb in ${LB_FQDNS[*]}; do
   ssh "${lb}" hostname -f
 done
 ----
 +
 [NOTE]
 ====
-If ssh with your regular config fails at this point, you can try to connect to the LB as user `ubuntu` to check that cloud-init is still running.
+While you're waiting for the LBs to be provisioned, you can check the cloud-init logs with the following SSH commands
 
 [source,shell]
 ----
 ssh ubuntu@"${LB_FQDNS[0]}" tail -f /var/log/cloud-init-output.log
 ssh ubuntu@"${LB_FQDNS[1]}" tail -f /var/log/cloud-init-output.log
 ----
-
-If you need to use the information in this note, repeat the instructions in this step after the LBs reboot to ensure your regular SSH config has been updated to include the LBs.
 ====
-
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
-+
-[source,shell]
-----
-for fqdn in ${LB_FQDNS[*]}; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
 
 . Check the https://ticket.vshn.net/issues/?jql=project%20%3D%20APPU%20AND%20status%20%3D%20New%20AND%20text%20~%20%22server%20created%22["Server created" tickets] for the LBs and link them to the cluster setup ticket.
 

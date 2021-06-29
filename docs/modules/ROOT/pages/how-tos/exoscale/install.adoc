@@ -629,6 +629,7 @@ openshift-install --dir ${INSTALLER_DIR} \
 +
 [source,console]
 ----
+rm override.tf
 terraform apply
 ----
 

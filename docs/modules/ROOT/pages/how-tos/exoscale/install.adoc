@@ -356,6 +356,11 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(c
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_user = \"${HIERADATA_REPO_USER}\"" \
   ${CLUSTER_ID}.yml
 
+# Configure default ingress controller with 3 replicas, so that the
+# VSHN-managed LB HAproxy health check isn't complaining about a missing backend
+yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.replicas = 3" \
+  ${CLUSTER_ID}.yml
+
 yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
   ${CLUSTER_ID}.yml
 

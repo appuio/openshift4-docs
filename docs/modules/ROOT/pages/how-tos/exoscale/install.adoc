@@ -18,13 +18,13 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 == Starting situation
 
-* You already have a Tenant and its git repository
+* You already have a Tenant and its Git repository
 * You have a CCSP Red Hat login and are logged into https://cloud.redhat.com/openshift/install/metal/user-provisioned[Red Hat Openshift Cluster Manager]
 * You want to register a new cluster in Lieutenant and are about to install Openshift 4 on Cloudscale
 
 == Prerequisites
 
-* Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
+* An unrestricted Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
 * `docker`
 * `exo` >= v1.28.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * `jq`
@@ -78,6 +78,7 @@ export EXOSCALE_ACCOUNT=<exoscale-account>
 export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
 export EXOSCALE_REGION=<exoscale-zone>
+export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
 
 # From https://git.vshn.net/profile/personal_access_tokens
 export GITLAB_TOKEN=<gitlab-api-token>
@@ -111,19 +112,7 @@ export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.
 
 For `BASE_DOMAIN` explanation, see xref:explanations/dns_scheme.adoc[DNS Scheme].
 
-.Exoscale configuration
-[source,console]
-----
-export AWS_ACCESS_KEY_ID=<exoscale-key-for-S3>
-export AWS_SECRET_ACCESS_KEY=<exoscale-key-for-S3>
-export AWS_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
-
-# TODO: generate separate restricted IAM key for Floaty
-export TF_VAR_lb_exoscale_api_key=<exoscale-key-for-lb>
-export TF_VAR_lb_exoscale_api_secret=<exoscale-secret-for-lb>
-----
-
-=== Set up S3 bucket for cluster bootstrap
+=== Create restricted Exoscale IAM keys for the LBs and object storage
 
 . Prepare Exoscale CLI
 +
@@ -138,8 +127,35 @@ cat <<EOF >> ~/.config/exoscale/exoscale.toml
   endpoint = "https://api.exoscale.ch/v1"
   name = "${CLUSTER_ID}"
 EOF
-
 ----
+
+. Create restricted API keys
++
+.Restricted API key for object storage
+[source,shell]
+----
+export EXOSCALE_S3_SECRETKEY=$(exo iam apikey create "${CLUSTER_ID}_object_storage" \
+  -o 'sos/*' -O json | jq -r '.secret')
+export EXOSCALE_S3_ACCESSKEY=$(exo iam apikey show "${CLUSTER_ID}_object_storage" \
+  -O json | jq -r '.key')
+----
++
+.Restricted API key for the LBs
+[source,console]
+----
+export TF_VAR_lb_exoscale_api_secret=$(exo iam apikey create "${CLUSTER_ID}_floaty" \
+  -o 'compute/addIpToNic' \
+  -o 'compute/listNics' \
+  -o 'compute/listResourceDetails' \
+  -o 'compute/listVirtualMachines' \
+  -o 'compute/queryAsyncJobResult' \
+  -o 'compute/removeIpFromNic' \
+  -O json | jq -r '.secret')
+export TF_VAR_lb_exoscale_api_key=$(exo iam apikey show "${CLUSTER_ID}_floaty" \
+  -O json | jq -r '.key')
+----
+
+=== Set up S3 bucket for cluster bootstrap
 
 . Create S3 bucket
 +
@@ -170,7 +186,7 @@ exo vm template register "rhcos-${RHCOS_VERSION}" \
   --disable-password \
   --username core \
   --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}" \
-  --url "https://${AWS_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
+  --url "https://${EXOSCALE_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
 
 exo storage delete "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
 
@@ -190,10 +206,15 @@ vault login -method=ldap username=<your.name>
 .Store various secrets in Vault
 [source,console]
 ----
-# Set the exoscale.ch S3 secret
-vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale \
-  s3_access_key=${AWS_ACCESS_KEY_ID} \
-  s3_secret_key=${AWS_SECRET_ACCESS_KEY}
+# Set the Exoscale object storage API key
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/storage_iam \
+  s3_access_key=${EXOSCALE_S3_ACCESSKEY} \
+  s3_secret_key=${EXOSCALE_S3_SECRETKEY}
+
+# Put LB API key in Vault
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty \
+  iam_key=${TF_VAR_lb_exoscale_api_key} \
+  iam_secret=${TF_VAR_lb_exoscale_api_secret}
 
 # Generate an HTTP secret for the registry
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
@@ -657,8 +678,8 @@ kubectl label node -lnode-role.kubernetes.io/infra \
 ----
 oc create secret generic image-registry-private-configuration-user \
 --namespace openshift-image-registry \
---from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=${AWS_ACCESS_KEY_ID} \
---from-literal=REGISTRY_STORAGE_S3_SECRETKEY=${AWS_SECRET_ACCESS_KEY}
+--from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=${EXOSCALE_S3_ACCESSKEY} \
+--from-literal=REGISTRY_STORAGE_S3_SECRETKEY=${EXOSCALE_S3_SECRETKEY}
 ----
 
 . Create wildcard cert for router

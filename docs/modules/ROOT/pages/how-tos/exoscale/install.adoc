@@ -519,7 +519,7 @@ for lb in ${LB_FQDNS[*]}; do
 done
 ----
 +
-[NOTE]
+[TIP]
 ====
 While you're waiting for the LBs to be provisioned, you can check the cloud-init logs with the following SSH commands
 

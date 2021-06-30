@@ -69,8 +69,6 @@ TF_VAR_lb_exoscale_api_secret
 EOF
 ----
 
-. Set downtimes in https://monitoring.vshn.net[Icinga2] for both LBs
-
 include::partial$setup_terraform_exoscale.adoc[]
 
 . Grab location of LB backups and potential Icinga2 satellite host before decommissioning VMs.
@@ -88,7 +86,7 @@ for lb in ${LB_FQDNS[*]}; do
 done
 ----
 
-. Set downtimes for LBs in https://monitoring.vshn.net[Icinga2].
+. Set downtimes for both LBs in https://monitoring.vshn.net[Icinga2].
 
 . Remove APPUiO hieradata Git repository resource from Terraform state
 +

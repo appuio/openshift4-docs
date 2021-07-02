@@ -1,0 +1,73 @@
+= Change LUKS Key on an Encrypted Rook Managed Ceph OSD
+
+This page describes how to change the LUKS encryption key of an OSD backing storage when using Rook to manage the Ceph cluster.
+
+== Information Gathering
+
+. Export namespace of Ceph cluster, we'll use this in later steps
++
+----
+export CEPHCLUSTER_NAMESPACE=rook-ceph
+export OSDID=X # select which OSD you want to operate on
+export OSD_POD=$(kubectl -n "${CEPHCLUSTER_NAMESPACE}" get pods -l ceph-osd-id="${OSDID}" -o jsonpath='{.items[0].metadata.name}')
+----
+. Figure out the LUKS device which we'll be working with by looking into the Pod spec to figure out the name of the PVC used
++
+----
+kubectl -n ${CEPHCLUSTER_NAMESPACE} describe pod ${OSD_POD} | grep ClaimName
+----
++
+The path on the node will then be:
++
+----
+/var/lib/rook/${CEPHCLUSTER_NAMESPACE}/${PVCNAME}/ceph-${OSDID}/block-tmp
+----
+. Figure out the node the OSD Pod is running on
++
+----
+kubectl -n ${CEPHCLUSTER_NAMESPACE} describe pod ${OSD_POD} | grep Node
+----
+. Get the current LUKS key
++
+----
+kubectl -n ${CEPHCLUSTER_NAMESPACE} get secrets rook-ceph-osd-encryption-key-$PVCNAME -o jsonpath="{.data.dmcrypt-key}" | base64 -d
+----
+
+== Change Key
+
+. Login (SSH) to the node where the backing storage is located (check the OSD Pod spec)
+. Add a new LUKS key, this needs the current key figured out above
++
+----
+export LUKSDEV=/var/lib/rook/${CEPHCLUSTER_NAMESPACE}/${PVCNAME}/ceph-${OSDID}/block-tmp
+cryptsetup luksAddKey $LUKSDEV
+----
+. Verify that the new key really works
++
+----
+printf "THENEWKEY" | sudo cryptsetup luksOpen --test-passphrase $LUKSDEV && echo "There is a key available with this passphrase."
+----
+. Store the new key in the corresponding secret
++
+----
+kubectl -n rook-ceph patch secret rook-ceph-osd-encryption-key-$PVCNAME -p='{"stringData":{"dmcrypt-key": "THENEWKEY"}}'
+----
+. Restart the OSD Pod to verify the change. It should come up as usual.
++
+----
+kubectl -n ${CEPHCLUSTER_NAMESPACE} rollout restart deploy/ceph-osd-${OSDID}
+----
+. Figure out the Key slot of the old key
++
+----
+cryptsetup -v luksOpen --test-passphrase $LUKSDEV
+----
++
+It should print out `Key slot X unlocked.`
+. Remove the old key
++
+----
+cryptsetup -v luksKillSlot $LUKSDEV X
+----
++
+For `Enter any remaining passphrase` enter the new key

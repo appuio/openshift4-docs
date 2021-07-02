@@ -30,3 +30,6 @@
 * VMware vSphere
 ** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
 ** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-creds.adoc[Change vSphere Credentials]
+
+* Storage
+** xref:oc4:ROOT:how-tos/storage/change-luks-key.adoc[Change LUKS Key]

@@ -437,6 +437,7 @@ module "cluster" {
   lb_count        = 0
   master_count    = 0
   infra_count     = 0
+  storage_count   = 0
   worker_count    = 0
 }
 EOF
@@ -454,6 +455,7 @@ module "cluster" {
   bootstrap_count = 0
   master_count    = 0
   infra_count     = 0
+  storage_count   = 0
   worker_count    = 0
 }
 EOF
@@ -541,6 +543,7 @@ module "cluster" {
   bootstrap_count = 1
   master_count    = 0
   infra_count     = 0
+  storage_count   = 0
   worker_count    = 0
 }
 EOF
@@ -575,6 +578,7 @@ cat > override.tf <<EOF
 module "cluster" {
   bootstrap_count = 1
   infra_count     = 0
+  storage_count   = 0
   worker_count    = 0
 }
 EOF
@@ -604,7 +608,8 @@ openshift-install --dir "${INSTALLER_DIR}" \
 ----
 cat > override.tf <<EOF
 module "cluster" {
-  worker_count    = 0
+  storage_count = 0
+  worker_count  = 0
 }
 EOF
 terraform apply
@@ -623,7 +628,12 @@ oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{
   xargs oc adm certificate approve
 
 kubectl get nodes
+----
 
+. Label infra nodes
++
+[source,console]
+----
 kubectl get nodes -l node-role.kubernetes.io/worker
 kubectl label node -l node-role.kubernetes.io/worker \
   node-role.kubernetes.io/infra=""
@@ -646,6 +656,46 @@ openshift-install --dir ${INSTALLER_DIR} \
   wait-for install-complete
 ----
 
+. Provision storage nodes
++
+[source,console]
+----
+cat > override.tf <<EOF
+module "cluster" {
+  worker_count  = 0
+}
+EOF
+terraform apply
+----
+
+. Approve storage certs
++
+[source,console]
+----
+# Once CSRs in state Pending show up, approve them
+# Needs to be run twice, two CSRs for each node need to be approved
+kubectl get csr -w
+oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc adm certificate approve
+
+kubectl get nodes
+----
+
+. Label and taint storage nodes
++
+[source,console]
+----
+kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
+  node-role.kubernetes.io/storage=""
+kubectl label node -lnode-role.kubernetes.io/infra \
+  node-role.kubernetes.io/storage-
+kubectl taint node -lnode-role.kubernetes.io/storage \
+  storagenode=True:NoSchedule
+
+# This should show the storage nodes only
+kubectl get nodes -l node-role.kubernetes.io/storage
+----
+
 . Provision worker nodes
 +
 [source,console]
@@ -665,11 +715,21 @@ oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{
   xargs oc adm certificate approve
 
 kubectl get nodes
+----
 
+. Label worker nodes
++
+[source,console]
+----
 kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
   node-role.kubernetes.io/app=""
 kubectl label node -lnode-role.kubernetes.io/infra \
   node-role.kubernetes.io/app-
+kubectl label node -lnode-role.kubernetes.io/storage \
+  node-role.kubernetes.io/app-
+
+# This should show the worker nodes only
+kubectl get nodes -l node-role.kubernetes.io/app
 ----
 
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]

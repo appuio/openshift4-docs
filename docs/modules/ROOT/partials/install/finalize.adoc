@@ -9,6 +9,8 @@ kubectl get secret router-certs-default \
   kubectl -n openshift-ingress apply -f -
 ----
 
+=== Enable Project Syn
+
 . Save the admin credentials in the https://password.vshn.net[password manager].
 You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
 +
@@ -19,6 +21,8 @@ ls -l ${INSTALLER_DIR}/auth/
 ----
 
 . https://kb.vshn.ch/vshnsyn/how-tos/synthesize.html[Make the cluster Project Syn enabled]
+
+=== Finalize installation
 
 . Configure the apt-dater groups for the LBs.
 +

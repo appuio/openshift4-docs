@@ -1,0 +1,13 @@
+For the following steps, change into a clean directory (for example a directory in your home).
+
+[CAUTION]
+These are the only steps which aren't idempotent and have to be completed uninterrupted in one go.
+If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
+
+[NOTE]
+--
+You can add more options to the `install-config.yaml` file.
+Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
+
+For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
+--

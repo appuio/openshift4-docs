@@ -1,0 +1,22 @@
+Register the new OpenShift 4 cluster in Lieutenant.
+
+.Lieutenant API endpoint
+****
+Use the following endpoint for Lieutenant:
+
+VSHN:: https://api.syn.vshn.net
+****
+
+=== Set up LDAP service
+
+. Create an LDAP service
++
+Use https://control.vshn.net/vshn/services/_create to create a service.
+The name must contain the customer and the cluster name.
+And then put the LDAP service ID in the following variable:
++
+[source,console]
+----
+export LDAP_ID="Your_LDAP_ID_here"
+export LDAP_PASSWORD="Your_LDAP_pw_here"
+----

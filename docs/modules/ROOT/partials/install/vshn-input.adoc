@@ -1,0 +1,21 @@
+.VSHN-specific input
+[source,console]
+----
+export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
+export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+# For LB hieradata commits
+export GIT_AUTHOR_NAME=$(git config --global user.name)
+export GIT_AUTHOR_EMAIL=$(git config --global user.email)
+
+# From https://control.vshn.net/tokens/_create/servers
+export TF_VAR_control_vshn_net_token=<control-vshn-net-token>
+----
+
+.OpenShift configuration
+[source,console]
+----
+export BASE_DOMAIN=<your-base-domain>
+export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
+----
+
+For `BASE_DOMAIN` explanation, see xref:explanations/dns_scheme.adoc[DNS Scheme].

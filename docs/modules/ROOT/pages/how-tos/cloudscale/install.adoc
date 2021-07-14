@@ -49,28 +49,7 @@ Make sure the version of openshift-install and the rhcos image is the same, othe
 
 == Cluster Installation
 
-Register the new OpenShift 4 cluster in Lieutenant.
-
-.Lieutenant API endpoint
-****
-Use the following endpoint for Lieutenant:
-
-VSHN:: https://api.syn.vshn.net
-****
-
-=== Set up LDAP service
-
-. Create an LDAP service
-+
-Use https://control.vshn.net/vshn/services/_create to create a service.
-The name must contain the customer and the cluster name.
-And then put the LDAP service ID in the following variable:
-+
-[source,console]
-----
-export LDAP_ID="Your_LDAP_ID_here"
-export LDAP_PASSWORD="Your_LDAP_pw_here"
-----
+include::partial$install/register.adoc[]
 
 === Configure input
 
@@ -90,27 +69,7 @@ export COMMODORE_API_URL=<lieutenant-api-endpoint>
 export COMMODORE_API_TOKEN=<lieutenant-api-token>
 ----
 
-.VSHN-sepcific input
-[source,console]
-----
-export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
-export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
-# For LB hieradata commits
-export GIT_AUTHOR_NAME=$(git config --global user.name)
-export GIT_AUTHOR_EMAIL=$(git config --global user.email)
-
-# From https://control.vshn.net/tokens/_create/servers
-export TF_VAR_control_vshn_net_token=<control-vshn-net-token>
-----
-
-.OpenShift configuration
-[source,console]
-----
-export BASE_DOMAIN=appuio-beta.ch
-export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
-----
-
-For `BASE_DOMAIN` explanation, see xref:explanations/dns_scheme.adoc[DNS Scheme].
+include::partial$install/vshn-input.adoc[]
 
 === Set up S3 bucket for cluster bootstrap
 
@@ -228,9 +187,6 @@ export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=ldap username=<your.name>
 ----
 
-##########################
-TODO: fix tf var exo
-##########################
 .Store various secrets in Vault
 [source,console]
 ----
@@ -242,8 +198,8 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
 
 # Put LB API key in Vault
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty \
-  iam_key=${TF_VAR_lb_exoscale_api_key} \
-  iam_secret=${TF_VAR_lb_exoscale_api_secret}
+  iam_key=${TF_VAR_lb_cloudscale_api_key} \
+  iam_secret=${TF_VAR_lb_cloudscale_api_secret}
 
 # Generate an HTTP secret for the registry
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
@@ -277,19 +233,7 @@ export HIERADATA_REPO_TOKEN=$(echo "${HIERADATA_REPO_SECRET}" | jq -r '.token')
 
 === OpenShift Installer Setup
 
-For the following steps, change into a clean directory (for example a directory in your home).
-
-[CAUTION]
-These are the only steps which aren't idempotent and have to be completed uninterrupted in one go.
-If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
-
-[NOTE]
---
-You can add more options to the `install-config.yaml` file.
-Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
-
-For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
---
+include::partial$install/installer-notes.adoc[]
 
 . Prepare `install-config.yaml`
 +
@@ -418,19 +362,15 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 
 === Provision Infrastructure
 
-
-##########################
-TODO: fix tf var
-##########################
 . Configure Terraform secrets
 +
 [source,console]
 ----
-cat <<EOF > catalog/manifests/openshift4-cloudscale/.env
+cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
 CLOUDSCALE_TOKEN
 TF_VAR_ignition_bootstrap
-TF_VAR_lb_exoscale_api_key
-TF_VAR_lb_exoscale_api_secret
+TF_VAR_lb_cloudscale_api_key
+TF_VAR_lb_cloudscale_api_secret
 TF_VAR_control_vshn_net_token
 GIT_AUTHOR_NAME
 GIT_AUTHOR_EMAIL
@@ -484,9 +424,11 @@ terraform apply
 ----
 
 
-#############################
+////
+########################
 TODO fix command below
-#############################
+########################
+////
 . Make LB FQDNs available for later steps
 +
 .Store LB FQDNs in environment
@@ -549,203 +491,7 @@ ssh ubuntu@"${LB_FQDNS[1]}" tail -f /var/log/cloud-init-output.log
 
 . Check the https://ticket.vshn.net/issues/?jql=project%20%3D%20APPU%20AND%20status%20%3D%20New%20AND%20text%20~%20%22server%20created%22["Server created" tickets] for the LBs and link them to the cluster setup ticket.
 
-. Deploy bootstrap node
-+
-[source,console]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  bootstrap_count = 1
-  master_count    = 0
-  infra_count     = 0
-  storage_count   = 0
-  worker_count    = 0
-}
-EOF
-terraform apply
-----
-
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
-+
-[source,shell]
-----
-for fqdn in ${LB_FQDNS[*]}; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
-. Wait for bootstrap API to come up
-+
-[source,console]
-----
-API_URL=$(yq e '.clusters[0].cluster.server' "${INSTALLER_DIR}/auth/kubeconfig")
-while ! curl --connect-timeout 1 "${API_URL}/healthz" -k &>/dev/null; do
-  echo -n "."
-  sleep 5
-done && echo -e "\nAPI is up"
-----
-
-. Deploy control plane nodes
-+
-[source,console]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  bootstrap_count = 1
-  infra_count     = 0
-  storage_count   = 0
-  worker_count    = 0
-}
-EOF
-terraform apply
-----
-
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
-+
-[source,shell]
-----
-for fqdn in ${LB_FQDNS[*]}; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
-. Wait for bootstrap to complete
-+
-[source,console]
-----
-openshift-install --dir "${INSTALLER_DIR}" \
-  wait-for bootstrap-complete
-----
-
-. Remove bootstrap node and provision infra nodes
-+
-[source,console]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  storage_count = 0
-  worker_count  = 0
-}
-EOF
-terraform apply
-----
-
-. Approve infra certs
-+
-[source,console]
-----
-export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
-
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl get csr -w
-oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc adm certificate approve
-
-kubectl get nodes
-----
-
-. Label infra nodes
-+
-[source,console]
-----
-kubectl get nodes -lnode-role.kubernetes.io/worker
-kubectl label node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/infra=""
-----
-
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
-+
-[source,shell]
-----
-for fqdn in ${LB_FQDNS[*]}; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
-. Wait for installation to complete
-+
-[source,console]
-----
-openshift-install --dir ${INSTALLER_DIR} \
-  wait-for install-complete
-----
-
-. Provision storage nodes
-+
-[source,console]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  worker_count  = 0
-}
-EOF
-terraform apply
-----
-
-. Approve storage certs
-+
-[source,console]
-----
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl get csr -w
-oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc adm certificate approve
-
-kubectl get nodes
-----
-
-. Label and taint storage nodes
-+
-[source,console]
-----
-kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/storage=""
-kubectl label node -lnode-role.kubernetes.io/infra \
-  node-role.kubernetes.io/storage-
-kubectl taint node -lnode-role.kubernetes.io/storage \
-  storagenode=True:NoSchedule
-
-# This should show the storage nodes only
-kubectl get nodes -l node-role.kubernetes.io/storage
-----
-
-. Provision worker nodes
-+
-[source,console]
-----
-rm override.tf
-terraform apply
-----
-
-. Approve worker certs
-+
-[source,console]
-----
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl get csr -w
-oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc adm certificate approve
-
-kubectl get nodes
-----
-
-. Label worker nodes
-+
-[source,console]
-----
-kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/app=""
-kubectl label node -lnode-role.kubernetes.io/infra \
-  node-role.kubernetes.io/app-
-kubectl label node -lnode-role.kubernetes.io/storage \
-  node-role.kubernetes.io/app-
-
-# This should show the worker nodes only
-kubectl get nodes -l node-role.kubernetes.io/app
-----
+include::partial$install/bootstrap-nodes.adoc[]
 
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
 +
@@ -757,66 +503,4 @@ oc create secret generic image-registry-private-configuration-user \
 --from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
 ----
 
-. Create wildcard cert for router
-+
-[source,console]
-----
-kubectl get secret router-certs-default \
-  -n openshift-ingress \
-  -o json | \
-    jq 'del(.metadata.ownerReferences) | .metadata.name = "router-certs-snakeoil"' | \
-  kubectl -n openshift-ingress apply -f -
-----
-
-. Save the admin credentials in the https://password.vshn.net[password manager].
-You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
-+
-[source,console]
-----
-popd
-ls -l ${INSTALLER_DIR}/auth/
-----
-
-. https://kb.vshn.ch/vshnsyn/how-tos/synthesize.html[Make the cluster Project Syn enabled]
-
-. Configure the apt-dater groups for the LBs.
-+
-[source,shell]
-----
-git clone git@git.vshn.net:vshn-puppet/nodes_hieradata.git
-pushd nodes_hieradata
-cat >"${LB_FQDNS[0]}.yaml" <<EOF
----
-s_apt_dater::host::group: '2200_20_night_main'
-EOF
-cat >"${LB_FQDNS[1]}.yaml" <<EOF
----
-s_apt_dater::host::group: '2200_40_night_second'
-EOF
-git add *.yaml
-git commit -m"Configure apt-dater groups for LBs for OCP4 cluster ${CLUSTER_ID}"
-git push origin master
-popd
-----
-+
-[NOTE]
-====
-This how-to defaults to the night maintenance window on Tuesday at 22:00.
-Adjust the apt-dater groups according to the https://wiki.vshn.net/display/VT/Available+apt-dater+Groups[documented groups] (VSHN-internal only) if the cluster requires a different maintenance window.
-====
-
-. Wait for deploy job on nodes hieradata to complete and run Puppet on the LBs to update the apt-dater groups.
-+
-[source,shell]
-----
-for fqdn in ${LB_FQDNS[*]}; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
-. Delete local config files
-+
-[source,console]
-----
-rm -r ${INSTALLER_DIR}/
-----
+include::partial$install/finalize.adoc[]

@@ -1,0 +1,63 @@
+. Create wildcard cert for router
++
+[source,console]
+----
+kubectl get secret router-certs-default \
+  -n openshift-ingress \
+  -o json | \
+    jq 'del(.metadata.ownerReferences) | .metadata.name = "router-certs-snakeoil"' | \
+  kubectl -n openshift-ingress apply -f -
+----
+
+. Save the admin credentials in the https://password.vshn.net[password manager].
+You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
++
+[source,console]
+----
+popd
+ls -l ${INSTALLER_DIR}/auth/
+----
+
+. https://kb.vshn.ch/vshnsyn/how-tos/synthesize.html[Make the cluster Project Syn enabled]
+
+. Configure the apt-dater groups for the LBs.
++
+[source,shell]
+----
+git clone git@git.vshn.net:vshn-puppet/nodes_hieradata.git
+pushd nodes_hieradata
+cat >"${LB_FQDNS[0]}.yaml" <<EOF
+---
+s_apt_dater::host::group: '2200_20_night_main'
+EOF
+cat >"${LB_FQDNS[1]}.yaml" <<EOF
+---
+s_apt_dater::host::group: '2200_40_night_second'
+EOF
+git add *.yaml
+git commit -m"Configure apt-dater groups for LBs for OCP4 cluster ${CLUSTER_ID}"
+git push origin master
+popd
+----
++
+[NOTE]
+====
+This how-to defaults to the night maintenance window on Tuesday at 22:00.
+Adjust the apt-dater groups according to the https://wiki.vshn.net/display/VT/Available+apt-dater+Groups[documented groups] (VSHN-internal only) if the cluster requires a different maintenance window.
+====
+
+. Wait for deploy job on nodes hieradata to complete and run Puppet on the LBs to update the apt-dater groups.
++
+[source,shell]
+----
+for fqdn in ${LB_FQDNS[*]}; do
+  ssh "${fqdn}" sudo puppetctl run
+done
+----
+
+. Delete local config files
++
+[source,console]
+----
+rm -r ${INSTALLER_DIR}/
+----

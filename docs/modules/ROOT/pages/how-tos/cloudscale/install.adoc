@@ -54,7 +54,7 @@ include::partial$install/register.adoc[]
 === Configure input
 
 .Access to various APIs
-[source,console]
+[source,bash]
 ----
 # From https://control.cloudscale.ch/user/api-tokens
 export CLOUDSCALE_TOKEN=<cloudscale-api-token>
@@ -77,7 +77,7 @@ include::partial$install/vshn-input.adoc[]
 
 .. If a bucket user already exists for this cluster:
 +
-[source,console]
+[source,bash]
 ----
 # Use already existing bucket user
 response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
@@ -87,7 +87,7 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
 
 .. To create a new bucket user:
 +
-[source,console]
+[source,bash]
 ----
 # Create a new user
 response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
@@ -97,7 +97,7 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
 
 . Configure the Minio client
 +
-[source,console]
+[source,bash]
 ----
 export REGION=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
 mc config host add \
@@ -113,7 +113,7 @@ mc mb --ignore-existing \
 
 . Export the Authorization header for the Cloudscale API.
 +
-[source,console]
+[source,bash]
 ----
 export AUTH_HEADER="Authorization: Bearer ${CLOUDSCALE_TOKEN}"
 ----
@@ -126,7 +126,7 @@ Exporting the variable `AUTH_HEADER` is done to be compatible with the https://w
 
 . Check if image already exists in the correct zone
 +
-[source,console,subs="attributes+"]
+[source,bash,subs="attributes+"]
 ----
 curl -sH "$AUTH_HEADER" https://api.cloudscale.ch/v1/custom-images | jq -r '.[] | select(.slug == "rhcos-{ocp-minor-version}") | .zones[].slug'
 ----
@@ -138,7 +138,7 @@ If a URL is printed to the output, you can skip the next steps and directly jump
 
 . Fetch and convert the latest Red Hat CoreOS image
 +
-[source,console,subs="attributes+"]
+[source,bash,subs="attributes+"]
 ----
 curl -sL https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/{ocp-patch-version}/rhcos-{ocp-patch-version}-x86_64-openstack.x86_64.qcow2.gz | gzip -d > rhcos-{ocp-minor-version}.gcow
 qemu-img convert rhcos-{ocp-minor-version}.gcow rhcos-{ocp-minor-version}.raw
@@ -146,7 +146,7 @@ qemu-img convert rhcos-{ocp-minor-version}.gcow rhcos-{ocp-minor-version}.raw
 
 . Upload the image to S3 and make it public
 +
-[source,console,subs="attributes+"]
+[source,bash,subs="attributes+"]
 ----
 mc cp rhcos-{ocp-minor-version}.raw "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/"
 mc policy set download "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw"
@@ -156,7 +156,7 @@ mc policy set download "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos
 ====
 The output of the above looks like an error.
 But when checking with the following, the result is as expected.
-[source,console,subs="attributes+"]
+[source,bash,subs="attributes+"]
 ----
 mc policy get "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw"
 ----
@@ -166,7 +166,7 @@ The output should be `Access permission for `[…]-bootstrap-ignition/rhcos-{ocp
 
 . Import the image to Cloudscale
 +
-[source,console,subs="attributes+"]
+[source,bash,subs="attributes+"]
 ----
 curl -i -H "$AUTH_HEADER" \
   -F url="$(mc share download --json "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw" | jq -r .url)" \
@@ -181,14 +181,14 @@ curl -i -H "$AUTH_HEADER" \
 === Set secrets in Vault
 
 .Connect with Vault
-[source,console]
+[source,bash]
 ----
 export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=ldap username=<your.name>
 ----
 
 .Store various secrets in Vault
-[source,console]
+[source,bash]
 ----
 # Set the cloudscale.ch access secrets
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
@@ -223,7 +223,7 @@ vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
 ----
 
 .Grab the LB hieradata repo token from Vault
-[source,shell]
+[source,bash]
 ----
 export HIERADATA_REPO_SECRET=$(vault kv get \
   -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq '.data.data')
@@ -237,7 +237,7 @@ include::partial$install/installer-notes.adoc[]
 
 . Prepare `install-config.yaml`
 +
-[source,console]
+[source,bash]
 ----
 export INSTALLER_DIR="$(pwd)/target"
 mkdir -p "${INSTALLER_DIR}"
@@ -256,7 +256,7 @@ EOF
 
 . Render install manifests (this will consume the `install-config.yaml`)
 +
-[source,console]
+[source,bash]
 ----
 openshift-install --dir "${INSTALLER_DIR}" \
   create manifests
@@ -264,7 +264,7 @@ openshift-install --dir "${INSTALLER_DIR}" \
 
 .. If you want to change the default "apps" domain for the cluster:
 +
-[source,console]
+[source,bash]
 ----
 yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
   spec.domain apps.example.com
@@ -272,7 +272,7 @@ yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
 
 . Render and upload ignition config (this will consume all the manifests)
 +
-[source,console]
+[source,bash]
 ----
 openshift-install --dir "${INSTALLER_DIR}" \
   create ignition-configs
@@ -293,7 +293,7 @@ Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for 
 
 . Prepare Commodore inventory.
 +
-[source,console]
+[source,bash]
 ----
 mkdir -p inventory/classes/
 git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
@@ -301,7 +301,7 @@ git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_
 
 . Prepare Terraform cluster config
 +
-[source,console]
+[source,bash]
 ----
 CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
   "${INSTALLER_DIR}/master.ign" | \
@@ -355,7 +355,7 @@ popd
 
 . Compile and push Terraform setup
 +
-[source,console]
+[source,bash]
 ----
 commodore catalog compile ${CLUSTER_ID} --push -i
 ----
@@ -364,7 +364,7 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 
 . Configure Terraform secrets
 +
-[source,console]
+[source,bash]
 ----
 cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
 CLOUDSCALE_TOKEN
@@ -382,7 +382,7 @@ include::partial$setup_terraform.adoc[]
 
 . Provision bootstrap node
 +
-[source,console]
+[source,bash]
 ----
 cat > override.tf <<EOF
 module "cluster" {
@@ -400,7 +400,7 @@ terraform apply
 
 . Create LB hieradata
 +
-[source,console]
+[source,bash]
 ----
 cat > override.tf <<EOF
 module "cluster" {
@@ -418,7 +418,7 @@ terraform apply -target module.cluster.local_file.lb_hieradata[0]
 
 . Create LBs
 +
-[source,console]
+[source,bash]
 ----
 terraform apply
 ----
@@ -432,7 +432,7 @@ TODO fix command below
 . Make LB FQDNs available for later steps
 +
 .Store LB FQDNs in environment
-[source,shell]
+[source,bash]
 ----
 declare -a LB_FQDNS
 for id in 0 1; do
@@ -441,23 +441,29 @@ done
 ----
 +
 .Verify FQDNs
-[source,shell]
+[source,bash]
 ----
 echo "${LB_FQDNS[*]}"
 ----
 
 . Check LB connectivity
 +
-[source,shell]
+[source,bash]
 ----
 for lb in ${LB_FQDNS[*]}; do
   ping -c1 "${lb}"
 done
 ----
 
+////
+########################
+TODO fix command below
+########################
+////
+
 . Wait until LBs are fully initialized by Puppet
 +
-[source,shell]
+[source,bash]
 ----
 # Wait for Puppet provisioning to complete
 while true; do
@@ -482,7 +488,7 @@ done
 ====
 While you're waiting for the LBs to be provisioned, you can check the cloud-init logs with the following SSH commands
 
-[source,shell]
+[source,bash]
 ----
 ssh ubuntu@"${LB_FQDNS[0]}" tail -f /var/log/cloud-init-output.log
 ssh ubuntu@"${LB_FQDNS[1]}" tail -f /var/log/cloud-init-output.log
@@ -495,7 +501,7 @@ include::partial$install/bootstrap-nodes.adoc[]
 
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
 +
-[source,console]
+[source,bash]
 ----
 oc create secret generic image-registry-private-configuration-user \
 --namespace openshift-image-registry \

@@ -1,6 +1,6 @@
 . Create wildcard cert for router
 +
-[source,console]
+[source,bash]
 ----
 kubectl get secret router-certs-default \
   -n openshift-ingress \
@@ -12,7 +12,7 @@ kubectl get secret router-certs-default \
 . Save the admin credentials in the https://password.vshn.net[password manager].
 You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
 +
-[source,console]
+[source,bash]
 ----
 popd
 ls -l ${INSTALLER_DIR}/auth/
@@ -22,7 +22,7 @@ ls -l ${INSTALLER_DIR}/auth/
 
 . Configure the apt-dater groups for the LBs.
 +
-[source,shell]
+[source,bash]
 ----
 git clone git@git.vshn.net:vshn-puppet/nodes_hieradata.git
 pushd nodes_hieradata
@@ -48,7 +48,7 @@ Adjust the apt-dater groups according to the https://wiki.vshn.net/display/VT/Av
 
 . Wait for deploy job on nodes hieradata to complete and run Puppet on the LBs to update the apt-dater groups.
 +
-[source,shell]
+[source,bash]
 ----
 for fqdn in ${LB_FQDNS[*]}; do
   ssh "${fqdn}" sudo puppetctl run
@@ -57,7 +57,7 @@ done
 
 . Delete local config files
 +
-[source,console]
+[source,bash]
 ----
 rm -r ${INSTALLER_DIR}/
 ----

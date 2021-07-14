@@ -1,7 +1,7 @@
 . Setup Terraform
 +
 .Prepare Terraform execution environment
-[source,console]
+[source,bash]
 ----
 # Set terraform image and tag to be used
 tf_image=$(\
@@ -30,7 +30,7 @@ pushd catalog/manifests/openshift4-terraform/
 ----
 +
 .Initialize Terraform
-[source,console]
+[source,bash]
 ----
 terraform init \
   "-backend-config=address=${GITLAB_STATE_URL}" \

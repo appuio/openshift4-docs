@@ -51,7 +51,7 @@ include::partial$install/register.adoc[]
 === Configure input
 
 .Access to various APIs
-[source,console]
+[source,bash]
 ----
 export EXOSCALE_ACCOUNT=<exoscale-account>
 export EXOSCALE_API_KEY=<exoscale-key>
@@ -75,7 +75,7 @@ include::partial$install/vshn-input.adoc[]
 
 . Prepare Exoscale CLI
 +
-[source,console]
+[source,bash]
 ----
 mkdir -p ~/.config/exoscale
 cat <<EOF >> ~/.config/exoscale/exoscale.toml
@@ -91,7 +91,7 @@ EOF
 . Create restricted API keys
 +
 .Restricted API key for object storage
-[source,shell]
+[source,bash]
 ----
 export EXOSCALE_S3_SECRETKEY=$(exo iam apikey create "${CLUSTER_ID}_object_storage" \
   -o 'sos/*' -O json | jq -r '.secret')
@@ -100,7 +100,7 @@ export EXOSCALE_S3_ACCESSKEY=$(exo iam apikey show "${CLUSTER_ID}_object_storage
 ----
 +
 .Restricted API key for the LBs
-[source,console]
+[source,bash]
 ----
 export TF_VAR_lb_exoscale_api_secret=$(exo iam apikey create "${CLUSTER_ID}_floaty" \
   -o 'compute/addIpToNic' \
@@ -118,7 +118,7 @@ export TF_VAR_lb_exoscale_api_key=$(exo iam apikey show "${CLUSTER_ID}_floaty" \
 
 . Create S3 bucket
 +
-[source,console]
+[source,bash]
 ----
 exo storage create "sos://${CLUSTER_ID}-bootstrap"
 ----
@@ -127,7 +127,7 @@ exo storage create "sos://${CLUSTER_ID}-bootstrap"
 
 . Fetch and convert the latest Red Hat CoreOS image
 +
-[source,console,subs="attributes+"]
+[source,bash,subs="attributes+"]
 ----
 RHCOS_VERSION="{ocp-patch-version}"
 
@@ -156,14 +156,14 @@ export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
 === Set secrets in Vault
 
 .Connect with Vault
-[source,console]
+[source,bash]
 ----
 export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=ldap username=<your.name>
 ----
 
 .Store various secrets in Vault
-[source,console]
+[source,bash]
 ----
 # Set the Exoscale object storage API key
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/storage_iam \
@@ -197,7 +197,7 @@ vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
 ----
 
 .Grab the LB hieradata repo token from Vault
-[source,shell]
+[source,bash]
 ----
 export HIERADATA_REPO_SECRET=$(vault kv get \
   -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq '.data.data')
@@ -211,9 +211,12 @@ include::partial$install/installer-notes.adoc[]
 
 . Prepare SSH key
 +
-NOTE: We generate a unique SSH key pair for the cluster, because Exoscale doesn't support configuring multiple public keys for a VM.
+[NOTE]
+====
+We generate a unique SSH key pair for the cluster, because Exoscale doesn't support configuring multiple public keys for a VM.
+====
 +
-[source,console]
+[source,bash]
 ----
 SSH_PRIVATE_KEY="$(pwd)/ssh_$CLUSTER_ID"
 export SSH_PUBLIC_KEY="${SSH_PRIVATE_KEY}.pub"
@@ -228,7 +231,7 @@ ssh-add $SSH_PRIVATE_KEY
 
 . Prepare `install-config.yaml`
 +
-[source,shell]
+[source,bash]
 ----
 export INSTALLER_DIR="$(pwd)/target"
 mkdir -p "${INSTALLER_DIR}"
@@ -248,7 +251,7 @@ EOF
 
 . Render install manifests (this will consume the `install-config.yaml`)
 +
-[source,console]
+[source,bash]
 ----
 openshift-install --dir "${INSTALLER_DIR}" \
   create manifests
@@ -256,7 +259,7 @@ openshift-install --dir "${INSTALLER_DIR}" \
 
 .. If you want to change the default "apps" domain for the cluster:
 +
-[source,console]
+[source,bash]
 ----
 yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
   spec.domain apps.example.com
@@ -264,7 +267,7 @@ yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
 
 . Prepare install manifests and ignition config
 +
-[source,console]
+[source,bash]
 ----
 openshift-install --dir "${INSTALLER_DIR}" \
   create ignition-configs
@@ -281,7 +284,7 @@ Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for 
 
 . Prepare Commodore inventory.
 +
-[source,console]
+[source,bash]
 ----
 mkdir -p inventory/classes/
 git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
@@ -289,7 +292,7 @@ git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_
 
 . Prepare Terraform cluster config
 +
-[source,shell]
+[source,bash]
 ----
 CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
   "${INSTALLER_DIR}/master.ign" | \
@@ -349,7 +352,7 @@ popd
 
 . Compile and push Terraform setup
 +
-[source,console]
+[source,bash]
 ----
 commodore catalog compile ${CLUSTER_ID} --push -i
 ----
@@ -358,7 +361,7 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 
 . Configure Terraform secrets
 +
-[source,console]
+[source,bash]
 ----
 cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
 EXOSCALE_API_KEY
@@ -376,7 +379,7 @@ include::partial$setup_terraform.adoc[]
 
 . Provision Domain and security groups
 +
-[source,console]
+[source,bash]
 ----
 cat > override.tf <<EOF
 module "cluster" {
@@ -395,7 +398,7 @@ terraform apply
 
 . Create LB hieradata
 +
-[source,console]
+[source,bash]
 ----
 cat > override.tf <<EOF
 module "cluster" {
@@ -414,7 +417,7 @@ terraform apply -target module.cluster.local_file.lb_hieradata[0]
 
 . Create LBs
 +
-[source,console]
+[source,bash]
 ----
 terraform apply
 ----
@@ -422,7 +425,7 @@ terraform apply
 . Make LB FQDNs available for later steps
 +
 .Store LB FQDNs in environment
-[source,shell]
+[source,bash]
 ----
 declare -a LB_FQDNS
 for id in 0 1; do
@@ -431,14 +434,14 @@ done
 ----
 +
 .Verify FQDNs
-[source,shell]
+[source,bash]
 ----
 echo "${LB_FQDNS[*]}"
 ----
 
 . Check LB connectivity
 +
-[source,shell]
+[source,bash]
 ----
 for lb in ${LB_FQDNS[*]}; do
   ping -c1 "${lb}"
@@ -447,7 +450,7 @@ done
 
 . Wait until LBs are fully initialized by Puppet
 +
-[source,shell]
+[source,bash]
 ----
 # Wait for Puppet provisioning to complete
 while true; do
@@ -472,7 +475,7 @@ done
 ====
 While you're waiting for the LBs to be provisioned, you can check the cloud-init logs with the following SSH commands
 
-[source,shell]
+[source,bash]
 ----
 ssh ubuntu@"${LB_FQDNS[0]}" tail -f /var/log/cloud-init-output.log
 ssh ubuntu@"${LB_FQDNS[1]}" tail -f /var/log/cloud-init-output.log
@@ -485,7 +488,7 @@ include::partial$install/bootstrap-nodes.adoc[]
 
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
 +
-[source,console]
+[source,bash]
 ----
 oc create secret generic image-registry-private-configuration-user \
 --namespace openshift-image-registry \

@@ -15,7 +15,7 @@ Use https://control.vshn.net/vshn/services/_create to create a service.
 The name must contain the customer and the cluster name.
 And then put the LDAP service ID in the following variable:
 +
-[source,console]
+[source,bash]
 ----
 export LDAP_ID="Your_LDAP_ID_here"
 export LDAP_PASSWORD="Your_LDAP_pw_here"

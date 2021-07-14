@@ -1,5 +1,5 @@
 .VSHN-specific input
-[source,console]
+[source,bash]
 ----
 export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
 export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
@@ -12,7 +12,7 @@ export TF_VAR_control_vshn_net_token=<control-vshn-net-token>
 ----
 
 .OpenShift configuration
-[source,console]
+[source,bash]
 ----
 export BASE_DOMAIN=<your-base-domain>
 export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.

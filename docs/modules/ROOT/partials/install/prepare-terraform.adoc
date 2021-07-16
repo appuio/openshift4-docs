@@ -1,0 +1,62 @@
+
+[NOTE]
+====
+Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for details on how to run commodore.
+====
+
+. Prepare Commodore inventory.
++
+[source,bash]
+----
+mkdir -p inventory/classes/
+git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
+----
+
+. Prepare Terraform cluster config
++
+[source,bash]
+----
+CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
+  "${INSTALLER_DIR}/master.ign" | \
+  awk -F ',' '{ print $2 }' | \
+  base64 --decode)
+
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i '.applications += ["openshift4-terraform"]' ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID "${INSTALLER_DIR}/metadata.json")\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.appsDomain = \"apps.${CLUSTER_ID}.${BASE_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \"${BASE_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${CA_CERT}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_user = \"${HIERADATA_REPO_USER}\"" \
+  ${CLUSTER_ID}.yml
+
+# Configure default ingress controller with 3 replicas, so that the
+# VSHN-managed LB HAproxy health check isn't complaining about a missing backend
+yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.replicas = 3" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
+  ${CLUSTER_ID}.yml
+
+# Configure Git author information for the CI pipeline
+yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.username = \"GitLab CI\"" \
+  ${CLUSTER_ID}.yml
+yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.email = \"tech+${CLUSTER_ID}@vshn.ch\"" \
+  ${CLUSTER_ID}.yml
+----

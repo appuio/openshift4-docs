@@ -23,7 +23,7 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch]
 
 . Export the following vars
 +
-[source,console]
+[source,bash]
 ----
 export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
 export CLUSTER_ID=<lieutenant-cluster-id>
@@ -37,14 +37,17 @@ include::partial$setup_terraform.adoc[]
 
 . Delete resources from clouscale.ch using Terraform
 +
-[source,console]
+[source,bash]
 ----
+# The first time it will fail
+terraform destroy
+# Destroy a second time to delete private networks
 terraform destroy
 ----
 
 . After all resources are deleted we need to remove the bucket
 +
-[source,console]
+[source,bash]
 ----
 # Use already exiting bucket user
 response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
@@ -61,7 +64,7 @@ mc config host add \
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition" --force
 
 # delete image-registry object
-mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry --force
+mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry" --force
 
 # delete cloudscale.ch user object
 curl -i -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" -X DELETE $(echo $response | jq -r '.href')
@@ -69,7 +72,7 @@ curl -i -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" -X DELETE $(echo $respons
 
 . Delete vault entries:
 +
-[source,console]
+[source,bash]
 ----
 # Vault login
 export VAULT_ADDR=https://vault-prod.syn.vshn.net

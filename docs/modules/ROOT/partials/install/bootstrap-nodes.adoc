@@ -121,6 +121,7 @@ openshift-install --dir ${INSTALLER_DIR} \
   wait-for install-complete
 ----
 
+ifeval::["{provider}" == "exoscale"]
 . Provision storage nodes
 +
 [source,bash]
@@ -160,6 +161,7 @@ kubectl taint node -lnode-role.kubernetes.io/storage \
 # This should show the storage nodes only
 kubectl get nodes -l node-role.kubernetes.io/storage
 ----
+endif::[]
 
 . Provision worker nodes
 +
@@ -184,14 +186,16 @@ kubectl get nodes
 
 . Label worker nodes
 +
-[source,bash]
+[source,bash,subs="attributes"]
 ----
 kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
   node-role.kubernetes.io/app=""
 kubectl label node -lnode-role.kubernetes.io/infra \
   node-role.kubernetes.io/app-
+ifeval::["{provider}" == "exoscale"]
 kubectl label node -lnode-role.kubernetes.io/storage \
   node-role.kubernetes.io/app-
+endif::[]
 
 # This should show the worker nodes only
 kubectl get nodes -l node-role.kubernetes.io/app

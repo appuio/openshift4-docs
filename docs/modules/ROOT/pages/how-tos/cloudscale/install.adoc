@@ -1,6 +1,7 @@
 = Installation on cloudscale.ch
 :ocp-minor-version: 4.7
 :ocp-patch-version: {ocp-minor-version}.0
+:provider: cloudscale
 
 [abstract]
 --
@@ -53,21 +54,12 @@ include::partial$install/register.adoc[]
 
 === Configure input
 
-.Access to various APIs
+.Access to cloud API
 [source,bash]
 ----
 # From https://control.cloudscale.ch/user/api-tokens
 export CLOUDSCALE_TOKEN=<cloudscale-api-token>
 export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
-
-# From https://git.vshn.net/profile/personal_access_tokens
-export GITLAB_TOKEN=<gitlab-api-token>
-export GITLAB_USER=<gitlab-user-name>
-
-# For example: https://api.syn.vshn.net
-# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
-export COMMODORE_API_URL=<lieutenant-api-endpoint>
-export COMMODORE_API_TOKEN=<lieutenant-api-token>
 ----
 
 include::partial$install/vshn-input.adoc[]
@@ -406,7 +398,6 @@ module "cluster" {
   bootstrap_count = 0
   master_count    = 0
   infra_count     = 0
-  storage_count   = 0
   worker_count    = 0
 }
 EOF
@@ -445,50 +436,7 @@ done
 echo "${LB_FQDNS[*]}"
 ----
 
-. Check LB connectivity
-+
-[source,bash]
-----
-for lb in ${LB_FQDNS[*]}; do
-  ping -c1 "${lb}"
-done
-----
-
-. Wait until LBs are fully initialized by Puppet
-+
-[source,bash]
-----
-# Wait for Puppet provisioning to complete
-while true; do
-  curl --connect-timeout 1 "http://api.${CLUSTER_ID}.${BASE_DOMAIN}:6443"
-  if [ $? -eq 52 ]; then
-    echo -e "\nHAproxy up"
-    break
-  else
-    echo -n "."
-    sleep 5
-  fi
-done
-# Update sshop config, see https://wiki.vshn.net/pages/viewpage.action?pageId=40108094
-sshop_update
-# Check that you can access the LBs using your usual SSH config
-for lb in ${LB_FQDNS[*]}; do
-  ssh "${lb}" hostname -f
-done
-----
-+
-[TIP]
-====
-While you're waiting for the LBs to be provisioned, you can check the cloud-init logs with the following SSH commands
-
-[source,bash]
-----
-ssh ubuntu@"${LB_FQDNS[0]}" tail -f /var/log/cloud-init-output.log
-ssh ubuntu@"${LB_FQDNS[1]}" tail -f /var/log/cloud-init-output.log
-----
-====
-
-. Check the https://ticket.vshn.net/issues/?jql=project%20%3D%20APPU%20AND%20status%20%3D%20New%20AND%20text%20~%20%22server%20created%22["Server created" tickets] for the LBs and link them to the cluster setup ticket.
+include::partial$install/bootstrap-lb.adoc[]
 
 include::partial$install/bootstrap-nodes.adoc[]
 

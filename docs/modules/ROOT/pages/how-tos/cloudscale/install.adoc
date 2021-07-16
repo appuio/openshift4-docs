@@ -225,50 +225,12 @@ export HIERADATA_REPO_TOKEN=$(echo "${HIERADATA_REPO_SECRET}" | jq -r '.token')
 
 === OpenShift Installer Setup
 
-include::partial$install/installer-notes.adoc[]
+include::partial$install/prepare-installer.adoc[]
 
-. Prepare `install-config.yaml`
+. Upload ignition config
 +
 [source,bash]
 ----
-export INSTALLER_DIR="$(pwd)/target"
-mkdir -p "${INSTALLER_DIR}"
-
-cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
-apiVersion: v1
-metadata:
-  name: ${CLUSTER_ID}
-baseDomain: ${BASE_DOMAIN}
-platform:
-  none: {}
-pullSecret: |
-  ${PULL_SECRET}
-EOF
-----
-
-. Render install manifests (this will consume the `install-config.yaml`)
-+
-[source,bash]
-----
-openshift-install --dir "${INSTALLER_DIR}" \
-  create manifests
-----
-
-.. If you want to change the default "apps" domain for the cluster:
-+
-[source,bash]
-----
-yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
-  spec.domain apps.example.com
-----
-
-. Render and upload ignition config (this will consume all the manifests)
-+
-[source,bash]
-----
-openshift-install --dir "${INSTALLER_DIR}" \
-  create ignition-configs
-
 mc cp "${INSTALLER_DIR}/bootstrap.ign" "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/"
 
 export TF_VAR_ignition_bootstrap=$(mc share download \
@@ -278,64 +240,12 @@ export TF_VAR_ignition_bootstrap=$(mc share download \
 
 === Terraform Cluster Config
 
-[NOTE]
-====
-Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for details on how to run commodore.
-====
+include::partial$install/prepare-terraform.adoc[]
 
-. Prepare Commodore inventory.
+. Review and commit
 +
 [source,bash]
 ----
-mkdir -p inventory/classes/
-git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
-----
-
-. Prepare Terraform cluster config
-+
-[source,bash]
-----
-CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
-  "${INSTALLER_DIR}/master.ign" | \
-  awk -F ',' '{ print $2 }' | \
-  base64 --decode)
-
-pushd "inventory/classes/${TENANT_ID}/"
-
-yq eval -i '.applications += ["openshift4-terraform"]' ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID "${INSTALLER_DIR}/metadata.json")\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift.appsDomain = \"apps.${CLUSTER_ID}.${BASE_DOMAIN}\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \"${BASE_DOMAIN}\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${CA_CERT}\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_user = \"${HIERADATA_REPO_USER}\"" \
-  ${CLUSTER_ID}.yml
-
-# Configure default ingress controller with 3 replicas, so that the
-# VSHN-managed LB HAproxy health check isn't complaining about a missing backend
-yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.replicas = 3" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
-  ${CLUSTER_ID}.yml
-
-# Configure Git author information for the CI pipeline
-yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.username = \"GitLab CI\"" \
-  ${CLUSTER_ID}.yml
-yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.email = \"tech+${CLUSTER_ID}@vshn.ch\"" \
-  ${CLUSTER_ID}.yml
-
 # Have a look at the file ${CLUSTER_ID}.yml.
 # Override any default parameters or add more component configuration.
 

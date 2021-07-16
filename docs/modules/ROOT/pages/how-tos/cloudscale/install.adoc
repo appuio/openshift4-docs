@@ -58,6 +58,7 @@ include::partial$install/register.adoc[]
 ----
 # From https://control.cloudscale.ch/user/api-tokens
 export CLOUDSCALE_TOKEN=<cloudscale-api-token>
+export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 
 # From https://git.vshn.net/profile/personal_access_tokens
 export GITLAB_TOKEN=<gitlab-api-token>
@@ -198,7 +199,6 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
 
 # Put LB API key in Vault
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty \
-  iam_key=${TF_VAR_lb_cloudscale_api_key} \
   iam_secret=${TF_VAR_lb_cloudscale_api_secret}
 
 # Generate an HTTP secret for the registry
@@ -369,7 +369,6 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
 CLOUDSCALE_TOKEN
 TF_VAR_ignition_bootstrap
-TF_VAR_lb_cloudscale_api_key
 TF_VAR_lb_cloudscale_api_secret
 TF_VAR_control_vshn_net_token
 GIT_AUTHOR_NAME
@@ -396,7 +395,7 @@ EOF
 terraform apply
 ----
 
-. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
+. Set up DNS NS records on parent zone using the data from the Terraform output variable `dns_entries` from the previous step
 
 . Create LB hieradata
 +
@@ -411,7 +410,7 @@ module "cluster" {
   worker_count    = 0
 }
 EOF
-terraform apply -target module.cluster.local_file.lb_hieradata[0]
+terraform apply -target "module.cluster.local_file.lb_hieradata[0]"
 ----
 
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and wait until the deploy pipeline after the merge is completed.
@@ -454,12 +453,6 @@ for lb in ${LB_FQDNS[*]}; do
   ping -c1 "${lb}"
 done
 ----
-
-////
-########################
-TODO fix command below
-########################
-////
 
 . Wait until LBs are fully initialized by Puppet
 +

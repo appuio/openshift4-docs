@@ -409,7 +409,7 @@ module "cluster" {
   worker_count    = 0
 }
 EOF
-terraform apply -target module.cluster.local_file.lb_hieradata[0]
+terraform apply -target "module.cluster.local_file.lb_hieradata[0]"
 ----
 
 

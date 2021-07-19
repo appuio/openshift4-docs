@@ -19,7 +19,7 @@ terraform apply
 +
 [source,bash]
 ----
-for fqdn in ${LB_FQDNS[*]}; do
+for fqdn in "${LB_FQDNS[@]}"; do
   ssh "${fqdn}" sudo puppetctl run
 done
 ----
@@ -54,7 +54,7 @@ terraform apply
 +
 [source,bash]
 ----
-for fqdn in ${LB_FQDNS[*]}; do
+for fqdn in "${LB_FQDNS[@]}"; do
   ssh "${fqdn}" sudo puppetctl run
 done
 ----
@@ -108,7 +108,7 @@ kubectl label node -lnode-role.kubernetes.io/worker \
 +
 [source,bash]
 ----
-for fqdn in ${LB_FQDNS[*]}; do
+for fqdn in "${LB_FQDNS[@]}"; do
   ssh "${fqdn}" sudo puppetctl run
 done
 ----

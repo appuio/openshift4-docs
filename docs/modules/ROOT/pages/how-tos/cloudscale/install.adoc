@@ -323,27 +323,21 @@ terraform apply -target "module.cluster.local_file.lb_hieradata[0]"
 terraform apply
 ----
 
-
-////
-########################
-TODO fix command below
-########################
-////
 . Make LB FQDNs available for later steps
 +
 .Store LB FQDNs in environment
 [source,bash]
 ----
 declare -a LB_FQDNS
-for id in 0 1; do
-  LB_FQDNS[$id]=$(terraform state show module.cluster.exoscale_domain_record.lb[$id] | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
+for id in 1 2; do
+  LB_FQDNS[$id]=$(terraform state show "module.cluster.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | sed -e 's/"//g')
 done
 ----
 +
 .Verify FQDNs
 [source,bash]
 ----
-echo "${LB_FQDNS[*]}"
+for lb in "${LB_FQDNS[@]}"; do echo $lb; done
 ----
 
 include::partial$install/bootstrap-lb.adoc[]

@@ -30,11 +30,11 @@ ls -l ${INSTALLER_DIR}/auth/
 ----
 git clone git@git.vshn.net:vshn-puppet/nodes_hieradata.git
 pushd nodes_hieradata
-cat >"${LB_FQDNS[0]}.yaml" <<EOF
+cat >"${LB_FQDNS[1]}.yaml" <<EOF
 ---
 s_apt_dater::host::group: '2200_20_night_main'
 EOF
-cat >"${LB_FQDNS[1]}.yaml" <<EOF
+cat >"${LB_FQDNS[2]}.yaml" <<EOF
 ---
 s_apt_dater::host::group: '2200_40_night_second'
 EOF
@@ -54,7 +54,7 @@ Adjust the apt-dater groups according to the https://wiki.vshn.net/display/VT/Av
 +
 [source,bash]
 ----
-for fqdn in ${LB_FQDNS[*]}; do
+for fqdn in "${LB_FQDNS[@]}"; do
   ssh "${fqdn}" sudo puppetctl run
 done
 ----

@@ -2,7 +2,7 @@
 +
 [source,bash]
 ----
-for lb in ${LB_FQDNS[*]}; do
+for lb in "${LB_FQDNS[@]}"; do
   ping -c1 "${lb}"
 done
 ----
@@ -25,7 +25,7 @@ done
 # Update sshop config, see https://wiki.vshn.net/pages/viewpage.action?pageId=40108094
 sshop_update
 # Check that you can access the LBs using your usual SSH config
-for lb in ${LB_FQDNS[*]}; do
+for lb in "${LB_FQDNS[@]}"; do
   ssh "${lb}" hostname -f
 done
 ----
@@ -36,8 +36,8 @@ While you're waiting for the LBs to be provisioned, you can check the cloud-init
 
 [source,bash]
 ----
-ssh ubuntu@"${LB_FQDNS[0]}" tail -f /var/log/cloud-init-output.log
 ssh ubuntu@"${LB_FQDNS[1]}" tail -f /var/log/cloud-init-output.log
+ssh ubuntu@"${LB_FQDNS[2]}" tail -f /var/log/cloud-init-output.log
 ----
 ====
 

@@ -57,7 +57,7 @@ include::partial$install/register.adoc[]
 .Access to cloud API
 [source,bash]
 ----
-# From https://control.cloudscale.ch/user/api-tokens
+# https://control.cloudscale.ch/service/<your-project>/api-token
 export CLOUDSCALE_TOKEN=<cloudscale-api-token>
 export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 ----

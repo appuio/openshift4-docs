@@ -281,22 +281,6 @@ EOF
 
 include::partial$setup_terraform.adoc[]
 
-. Provision bootstrap node
-+
-[source,bash]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  bootstrap_count = 0
-  master_count    = 0
-  infra_count     = 0
-  worker_count    = 0
-}
-EOF
-
-terraform apply
-----
-
 . Create LB hieradata
 +
 [source,bash]
@@ -309,7 +293,7 @@ module "cluster" {
   worker_count    = 0
 }
 EOF
-terraform apply -target "module.cluster.local_file.lb_hieradata[0]"
+terraform apply
 ----
 
 . Ensure that all the DNS records shown in output variable `dns_entries` from the previous step are configured in the cluster's parent zone.

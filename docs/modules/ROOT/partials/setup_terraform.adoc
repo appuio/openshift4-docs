@@ -11,7 +11,6 @@ tf_tag=$(\
   yq eval ".parameters.openshift4_terraform.images.terraform.tag" \
   dependencies/openshift4-terraform/class/defaults.yml)
 
-pushd catalog/manifests/openshift4-terraform/
 # Generate the terraform alias
 base_dir=$(pwd)
 alias terraform='docker run -it --rm \
@@ -27,6 +26,7 @@ export GITLAB_REPOSITORY_NAME=${GITLAB_REPOSITORY_URL##*/}
 export GITLAB_CATALOG_PROJECT_ID=$(curl -sH "Authorization: Bearer ${GITLAB_TOKEN}" "https://git.vshn.net/api/v4/projects?simple=true&search=${GITLAB_REPOSITORY_NAME/.git}" | jq -r ".[] | select(.ssh_url_to_repo == \"${GITLAB_REPOSITORY_URL}\") | .id")
 export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/${GITLAB_CATALOG_PROJECT_ID}/terraform/state/cluster"
 
+pushd catalog/manifests/openshift4-terraform/
 ----
 +
 .Initialize Terraform

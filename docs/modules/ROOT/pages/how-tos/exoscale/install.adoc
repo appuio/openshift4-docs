@@ -242,7 +242,7 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 +
 [source,bash]
 ----
-cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
+cat <<EOF > ./terraform.env
 EXOSCALE_API_KEY
 EXOSCALE_API_SECRET
 TF_VAR_lb_exoscale_api_key

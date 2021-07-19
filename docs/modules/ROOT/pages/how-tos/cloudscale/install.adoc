@@ -268,7 +268,7 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 +
 [source,bash]
 ----
-cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
+cat <<EOF > ./terraform.env
 CLOUDSCALE_TOKEN
 TF_VAR_ignition_bootstrap
 TF_VAR_lb_cloudscale_api_secret
@@ -312,7 +312,7 @@ EOF
 terraform apply -target "module.cluster.local_file.lb_hieradata[0]"
 ----
 
-. Set up DNS NS records on parent zone using the data from the Terraform output variable `dns_entries` from the previous step
+. Ensure that all the DNS records shown in output variable `dns_entries` from the previous step are configured in the cluster's parent zone.
 
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and wait until the deploy pipeline after the merge is completed.
 

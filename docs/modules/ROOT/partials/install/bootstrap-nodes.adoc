@@ -1,14 +1,16 @@
 
 . Deploy bootstrap node
 +
-[source,bash]
+[source,bash,subs="attributes+"]
 ----
 cat > override.tf <<EOF
 module "cluster" {
   bootstrap_count = 1
   master_count    = 0
   infra_count     = 0
+ifeval::["{provider}" == "exoscale"]
   storage_count   = 0
+endif::[]
   worker_count    = 0
 }
 EOF
@@ -37,13 +39,15 @@ done && echo -e "\nAPI is up"
 
 . Deploy control plane nodes
 +
-[source,bash]
+[source,bash,subs="attributes+"]
 ----
 cat > override.tf <<EOF
 module "cluster" {
   bootstrap_count = 1
   infra_count     = 0
+ifeval::["{provider}" == "exoscale"]
   storage_count   = 0
+endif::[]
   worker_count    = 0
 }
 EOF
@@ -69,11 +73,13 @@ openshift-install --dir "${INSTALLER_DIR}" \
 
 . Remove bootstrap node and provision infra nodes
 +
-[source,bash]
+[source,bash,subs="attributes+"]
 ----
 cat > override.tf <<EOF
 module "cluster" {
-  storage_count = 0
+ifeval::["{provider}" == "exoscale"]
+  storage_count   = 0
+endif::[]
   worker_count  = 0
 }
 EOF

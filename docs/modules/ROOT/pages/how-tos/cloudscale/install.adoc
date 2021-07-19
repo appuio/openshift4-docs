@@ -287,7 +287,7 @@ include::partial$setup_terraform.adoc[]
 ----
 cat > override.tf <<EOF
 module "cluster" {
-  bootstrap_count = 1
+  bootstrap_count = 0
   master_count    = 0
   infra_count     = 0
   worker_count    = 0
@@ -296,8 +296,6 @@ EOF
 
 terraform apply
 ----
-
-. Set up DNS NS records on parent zone using the data from the Terraform output variable `dns_entries` from the previous step
 
 . Create LB hieradata
 +
@@ -313,6 +311,8 @@ module "cluster" {
 EOF
 terraform apply -target "module.cluster.local_file.lb_hieradata[0]"
 ----
+
+. Set up DNS NS records on parent zone using the data from the Terraform output variable `dns_entries` from the previous step
 
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and wait until the deploy pipeline after the merge is completed.
 

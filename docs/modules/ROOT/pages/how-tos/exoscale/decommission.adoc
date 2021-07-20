@@ -69,7 +69,7 @@ TF_VAR_lb_exoscale_api_secret
 EOF
 ----
 
-include::partial$setup_terraform_exoscale.adoc[]
+include::partial$setup_terraform.adoc[]
 
 . Grab location of LB backups and potential Icinga2 satellite host before decommissioning VMs.
 +

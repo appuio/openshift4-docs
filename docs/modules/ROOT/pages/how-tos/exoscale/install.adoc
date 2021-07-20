@@ -1,6 +1,7 @@
 = Installation on Exoscale
 :ocp-minor-version: 4.7
 :ocp-patch-version: {ocp-minor-version}.13
+:provider: exoscale
 
 [abstract]
 --
@@ -20,7 +21,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 * You already have a Tenant and its Git repository
 * You have a CCSP Red Hat login and are logged into https://cloud.redhat.com/openshift/install/metal/user-provisioned[Red Hat Openshift Cluster Manager]
-* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on Cloudscale
+* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on Exoscale
 
 == Prerequisites
 
@@ -46,77 +47,27 @@ Make sure the version of openshift-install and the rhcos image is the same, othe
 
 == Cluster Installation
 
-Register the new OpenShift 4 cluster in Lieutenant.
-
-.Lieutenant API endpoint
-****
-Use the following endpoint for Lieutenant:
-
-VSHN:: https://api.syn.vshn.net
-****
-
-=== Set up LDAP service
-
-. Create an LDAP service
-+
-Use https://control.vshn.net/vshn/services/_create to create a service.
-The name must contain the customer and the cluster name.
-And then put the LDAP service ID in the following variable:
-+
-[source,console]
-----
-export LDAP_ID="Your_LDAP_ID_here"
-export LDAP_PASSWORD="Your_LDAP_pw_here"
-----
+include::partial$install/register.adoc[]
 
 === Configure input
 
-.Access to various APIs
-[source,console]
+.Access to cloud API
+[source,bash]
 ----
 export EXOSCALE_ACCOUNT=<exoscale-account>
 export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
 export EXOSCALE_REGION=<exoscale-zone>
 export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
-
-# From https://git.vshn.net/profile/personal_access_tokens
-export GITLAB_TOKEN=<gitlab-api-token>
-export GITLAB_USER=<gitlab-user-name>
-
-# For example: https://api.syn.vshn.net
-# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
-export COMMODORE_API_URL=<lieutenant-api-endpoint>
-export COMMODORE_API_TOKEN=<lieutenant-api-token>
 ----
 
-.VSHN-specific input
-[source,console]
-----
-export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
-export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
-# For LB hieradata commits
-export GIT_AUTHOR_NAME=$(git config --global user.name)
-export GIT_AUTHOR_EMAIL=$(git config --global user.email)
-
-# From https://control.vshn.net/tokens/_create/servers
-export TF_VAR_control_vshn_net_token=<control-vshn-net-token>
-----
-
-.OpenShift configuration
-[source,console]
-----
-export BASE_DOMAIN=<your-base-domain>
-export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
-----
-
-For `BASE_DOMAIN` explanation, see xref:explanations/dns_scheme.adoc[DNS Scheme].
+include::partial$install/vshn-input.adoc[]
 
 === Create restricted Exoscale IAM keys for the LBs and object storage
 
 . Prepare Exoscale CLI
 +
-[source,console]
+[source,bash]
 ----
 mkdir -p ~/.config/exoscale
 cat <<EOF >> ~/.config/exoscale/exoscale.toml
@@ -132,7 +83,7 @@ EOF
 . Create restricted API keys
 +
 .Restricted API key for object storage
-[source,shell]
+[source,bash]
 ----
 export EXOSCALE_S3_SECRETKEY=$(exo iam apikey create "${CLUSTER_ID}_object_storage" \
   -o 'sos/*' -O json | jq -r '.secret')
@@ -141,7 +92,7 @@ export EXOSCALE_S3_ACCESSKEY=$(exo iam apikey show "${CLUSTER_ID}_object_storage
 ----
 +
 .Restricted API key for the LBs
-[source,console]
+[source,bash]
 ----
 export TF_VAR_lb_exoscale_api_secret=$(exo iam apikey create "${CLUSTER_ID}_floaty" \
   -o 'compute/addIpToNic' \
@@ -159,7 +110,7 @@ export TF_VAR_lb_exoscale_api_key=$(exo iam apikey show "${CLUSTER_ID}_floaty" \
 
 . Create S3 bucket
 +
-[source,console]
+[source,bash]
 ----
 exo storage create "sos://${CLUSTER_ID}-bootstrap"
 ----
@@ -168,7 +119,7 @@ exo storage create "sos://${CLUSTER_ID}-bootstrap"
 
 . Fetch and convert the latest Red Hat CoreOS image
 +
-[source,console,subs="attributes+"]
+[source,bash,subs="attributes+"]
 ----
 RHCOS_VERSION="{ocp-patch-version}"
 
@@ -197,14 +148,14 @@ export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
 === Set secrets in Vault
 
 .Connect with Vault
-[source,console]
+[source,bash]
 ----
 export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=ldap username=<your.name>
 ----
 
 .Store various secrets in Vault
-[source,console]
+[source,bash]
 ----
 # Set the Exoscale object storage API key
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/storage_iam \
@@ -238,7 +189,7 @@ vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
 ----
 
 .Grab the LB hieradata repo token from Vault
-[source,shell]
+[source,bash]
 ----
 export HIERADATA_REPO_SECRET=$(vault kv get \
   -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq '.data.data')
@@ -248,147 +199,25 @@ export HIERADATA_REPO_TOKEN=$(echo "${HIERADATA_REPO_SECRET}" | jq -r '.token')
 
 === OpenShift Installer Setup
 
-For the following steps, change into a clean directory (for example a directory in your home).
+include::partial$install/prepare-installer.adoc[]
 
-[CAUTION]
-These are the only steps which aren't idempotent and have to be completed uninterrupted in one go.
-If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
-
-[NOTE]
---
-You can add more options to the `install-config.yaml` file.
-Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
-
-For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
---
-
-. Prepare SSH key
+. Upload ignition config
 +
-NOTE: We generate a unique SSH key pair for the cluster, because Exoscale doesn't support configuring multiple public keys for a VM.
-+
-[source,console]
+[source,bash]
 ----
-SSH_PRIVATE_KEY="$(pwd)/ssh_$CLUSTER_ID"
-export SSH_PUBLIC_KEY="${SSH_PRIVATE_KEY}.pub"
-
-ssh-keygen -C "vault@$CLUSTER_ID" -t ed25519 -f $SSH_PRIVATE_KEY -N ''
-
-vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/ssh \
-  private_key=$(cat $SSH_PRIVATE_KEY | base64 --wrap 0)
-
-ssh-add $SSH_PRIVATE_KEY
-----
-
-. Prepare `install-config.yaml`
-+
-[source,shell]
-----
-export INSTALLER_DIR="$(pwd)/target"
-mkdir -p "${INSTALLER_DIR}"
-
-cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
-apiVersion: v1
-metadata:
-  name: ${CLUSTER_ID}
-baseDomain: ${BASE_DOMAIN}
-platform:
-  none: {}
-pullSecret: |
-  ${PULL_SECRET}
-sshKey: "$(cat $SSH_PUBLIC_KEY)"
-EOF
-----
-
-. Render install manifests (this will consume the `install-config.yaml`)
-+
-[source,console]
-----
-openshift-install --dir "${INSTALLER_DIR}" \
-  create manifests
-----
-
-.. If you want to change the default "apps" domain for the cluster:
-+
-[source,console]
-----
-yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
-  spec.domain apps.example.com
-----
-
-. Prepare install manifests and ignition config
-+
-[source,console]
-----
-openshift-install --dir "${INSTALLER_DIR}" \
-  create ignition-configs
-
 exo storage upload "${INSTALLER_DIR}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstrap" --acl public-read
 ----
 
 === Terraform Cluster Config
 
-[NOTE]
-====
-Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for details on how to run commodore.
-====
+include::partial$install/prepare-terraform.adoc[]
 
-. Prepare Commodore inventory.
+. Review and commit
 +
-[source,console]
+[source,bash]
 ----
-mkdir -p inventory/classes/
-git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
-----
-
-. Prepare Terraform cluster config
-+
-[source,shell]
-----
-CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
-  "${INSTALLER_DIR}/master.ign" | \
-  awk -F ',' '{ print $2 }' | \
-  base64 --decode)
-
-pushd "inventory/classes/${TENANT_ID}/"
-
-yq eval -i '.applications += ["openshift4-terraform"]' ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID "${INSTALLER_DIR}/metadata.json")\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift.appsDomain = \"apps.${CLUSTER_ID}.${BASE_DOMAIN}\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \"${BASE_DOMAIN}\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${CA_CERT}\"" \
-  ${CLUSTER_ID}.yml
-
+# Exoscale-specific config
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${RHCOS_TEMPLATE}\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_user = \"${HIERADATA_REPO_USER}\"" \
-  ${CLUSTER_ID}.yml
-
-# Configure default ingress controller with 3 replicas, so that the
-# VSHN-managed LB HAproxy health check isn't complaining about a missing backend
-yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.replicas = 3" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
-  ${CLUSTER_ID}.yml
-
-# Configure Git author information for the CI pipeline
-yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.username = \"GitLab CI\"" \
-  ${CLUSTER_ID}.yml
-yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.email = \"tech+${CLUSTER_ID}@vshn.ch\"" \
   ${CLUSTER_ID}.yml
 
 # Have a look at the file ${CLUSTER_ID}.yml.
@@ -402,7 +231,7 @@ popd
 
 . Compile and push Terraform setup
 +
-[source,console]
+[source,bash]
 ----
 commodore catalog compile ${CLUSTER_ID} --push -i
 ----
@@ -411,9 +240,9 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 
 . Configure Terraform secrets
 +
-[source,console]
+[source,bash]
 ----
-cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
+cat <<EOF > ./terraform.env
 EXOSCALE_API_KEY
 EXOSCALE_API_SECRET
 TF_VAR_lb_exoscale_api_key
@@ -425,11 +254,11 @@ HIERADATA_REPO_TOKEN
 EOF
 ----
 
-include::partial$setup_terraform_exoscale.adoc[]
+include::partial$setup_terraform.adoc[]
 
 . Provision Domain and security groups
 +
-[source,console]
+[source,bash]
 ----
 cat > override.tf <<EOF
 module "cluster" {
@@ -448,7 +277,7 @@ terraform apply
 
 . Create LB hieradata
 +
-[source,console]
+[source,bash]
 ----
 cat > override.tf <<EOF
 module "cluster" {
@@ -459,7 +288,7 @@ module "cluster" {
   worker_count    = 0
 }
 EOF
-terraform apply -target module.cluster.local_file.lb_hieradata[0]
+terraform apply -target "module.cluster.local_file.lb_hieradata[0]"
 ----
 
 
@@ -467,7 +296,7 @@ terraform apply -target module.cluster.local_file.lb_hieradata[0]
 
 . Create LBs
 +
-[source,console]
+[source,bash]
 ----
 terraform apply
 ----
@@ -475,266 +304,27 @@ terraform apply
 . Make LB FQDNs available for later steps
 +
 .Store LB FQDNs in environment
-[source,shell]
+[source,bash]
 ----
 declare -a LB_FQDNS
-for id in 0 1; do
-  LB_FQDNS[$id]=$(terraform state show module.cluster.exoscale_domain_record.lb[$id] | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
+for id in 1 2; do
+  LB_FQDNS[$id]=$(terraform state show "module.cluster.exoscale_domain_record.lb[$(expr $id - 1)]" | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
 done
 ----
 +
 .Verify FQDNs
-[source,shell]
+[source,bash]
 ----
-echo "${LB_FQDNS[*]}"
-----
-
-. Check LB connectivity
-+
-[source,shell]
-----
-for lb in ${LB_FQDNS[*]}; do
-  ping -c1 "${lb}"
-done
+for lb in "${LB_FQDNS[@]}"; do echo $lb; done
 ----
 
-. Wait until LBs are fully initialized by Puppet
-+
-[source,shell]
-----
-# Wait for Puppet provisioning to complete
-while true; do
-  curl --connect-timeout 1 "http://api.${CLUSTER_ID}.${BASE_DOMAIN}:6443"
-  if [ $? -eq 52 ]; then
-    echo -e "\nHAproxy up"
-    break
-  else
-    echo -n "."
-    sleep 5
-  fi
-done
-# Update sshop config, see https://wiki.vshn.net/pages/viewpage.action?pageId=40108094
-sshop_update
-# Check that you can access the LBs using your usual SSH config
-for lb in ${LB_FQDNS[*]}; do
-  ssh "${lb}" hostname -f
-done
-----
-+
-[TIP]
-====
-While you're waiting for the LBs to be provisioned, you can check the cloud-init logs with the following SSH commands
+include::partial$install/bootstrap-lb.adoc[]
 
-[source,shell]
-----
-ssh ubuntu@"${LB_FQDNS[0]}" tail -f /var/log/cloud-init-output.log
-ssh ubuntu@"${LB_FQDNS[1]}" tail -f /var/log/cloud-init-output.log
-----
-====
-
-. Check the https://ticket.vshn.net/issues/?jql=project%20%3D%20APPU%20AND%20status%20%3D%20New%20AND%20text%20~%20%22server%20created%22["Server created" tickets] for the LBs and link them to the cluster setup ticket.
-
-. Deploy bootstrap node
-+
-[source,console]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  bootstrap_count = 1
-  master_count    = 0
-  infra_count     = 0
-  storage_count   = 0
-  worker_count    = 0
-}
-EOF
-terraform apply
-----
-
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
-+
-[source,shell]
-----
-for fqdn in ${LB_FQDNS[*]}; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
-. Wait for bootstrap API to come up
-+
-[source,console]
-----
-API_URL=$(yq e '.clusters[0].cluster.server' "${INSTALLER_DIR}/auth/kubeconfig")
-while ! curl --connect-timeout 1 "${API_URL}/healthz" -k &>/dev/null; do
-  echo -n "."
-  sleep 5
-done && echo -e "\nAPI is up"
-----
-
-. Deploy control plane nodes
-+
-[source,console]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  bootstrap_count = 1
-  infra_count     = 0
-  storage_count   = 0
-  worker_count    = 0
-}
-EOF
-terraform apply
-----
-
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
-+
-[source,shell]
-----
-for fqdn in ${LB_FQDNS[*]}; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
-. Wait for bootstrap to complete
-+
-[source,console]
-----
-openshift-install --dir "${INSTALLER_DIR}" \
-  wait-for bootstrap-complete
-----
-
-. Remove bootstrap node and provision infra nodes
-+
-[source,console]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  storage_count = 0
-  worker_count  = 0
-}
-EOF
-terraform apply
-----
-
-. Approve infra certs
-+
-[source,console]
-----
-export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
-
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl get csr -w
-oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc adm certificate approve
-
-kubectl get nodes
-----
-
-. Label infra nodes
-+
-[source,console]
-----
-kubectl get nodes -l node-role.kubernetes.io/worker
-kubectl label node -l node-role.kubernetes.io/worker \
-  node-role.kubernetes.io/infra=""
-----
-
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
-+
-[source,shell]
-----
-for fqdn in ${LB_FQDNS[*]}; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
-. Wait for installation to complete
-+
-[source,console]
-----
-openshift-install --dir ${INSTALLER_DIR} \
-  wait-for install-complete
-----
-
-. Provision storage nodes
-+
-[source,console]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  worker_count  = 0
-}
-EOF
-terraform apply
-----
-
-. Approve storage certs
-+
-[source,console]
-----
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl get csr -w
-oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc adm certificate approve
-
-kubectl get nodes
-----
-
-. Label and taint storage nodes
-+
-[source,console]
-----
-kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/storage=""
-kubectl label node -lnode-role.kubernetes.io/infra \
-  node-role.kubernetes.io/storage-
-kubectl taint node -lnode-role.kubernetes.io/storage \
-  storagenode=True:NoSchedule
-
-# This should show the storage nodes only
-kubectl get nodes -l node-role.kubernetes.io/storage
-----
-
-. Provision worker nodes
-+
-[source,console]
-----
-rm override.tf
-terraform apply
-----
-
-. Approve worker certs
-+
-[source,console]
-----
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl get csr -w
-oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc adm certificate approve
-
-kubectl get nodes
-----
-
-. Label worker nodes
-+
-[source,console]
-----
-kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/app=""
-kubectl label node -lnode-role.kubernetes.io/infra \
-  node-role.kubernetes.io/app-
-kubectl label node -lnode-role.kubernetes.io/storage \
-  node-role.kubernetes.io/app-
-
-# This should show the worker nodes only
-kubectl get nodes -l node-role.kubernetes.io/app
-----
+include::partial$install/bootstrap-nodes.adoc[]
 
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
 +
-[source,console]
+[source,bash]
 ----
 oc create secret generic image-registry-private-configuration-user \
 --namespace openshift-image-registry \
@@ -742,66 +332,4 @@ oc create secret generic image-registry-private-configuration-user \
 --from-literal=REGISTRY_STORAGE_S3_SECRETKEY=${EXOSCALE_S3_SECRETKEY}
 ----
 
-. Create wildcard cert for router
-+
-[source,console]
-----
-kubectl get secret router-certs-default \
-  -n openshift-ingress \
-  -o json | \
-    jq 'del(.metadata.ownerReferences) | .metadata.name = "router-certs-snakeoil"' | \
-  kubectl -n openshift-ingress apply -f -
-----
-
-. Save the admin credentials in the https://password.vshn.net[password manager].
-You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
-+
-[source,console]
-----
-popd
-ls -l ${INSTALLER_DIR}/auth/
-----
-
-. https://kb.vshn.ch/vshnsyn/how-tos/synthesize.html[Make the cluster Project Syn enabled]
-
-. Configure the apt-dater groups for the LBs.
-+
-[source,shell]
-----
-git clone git@git.vshn.net:vshn-puppet/nodes_hieradata.git
-pushd nodes_hieradata
-cat >"${LB_FQDNS[0]}.yaml" <<EOF
----
-s_apt_dater::host::group: '2200_20_night_main'
-EOF
-cat >"${LB_FQDNS[1]}.yaml" <<EOF
----
-s_apt_dater::host::group: '2200_40_night_second'
-EOF
-git add *.yaml
-git commit -m"Configure apt-dater groups for LBs for OCP4 cluster ${CLUSTER_ID}"
-git push origin master
-popd
-----
-+
-[NOTE]
-====
-This how-to defaults to the night maintenance window on Tuesday at 22:00.
-Adjust the apt-dater groups according to the https://wiki.vshn.net/display/VT/Available+apt-dater+Groups[documented groups] (VSHN-internal only) if the cluster requires a different maintenance window.
-====
-
-. Wait for deploy job on nodes hieradata to complete and run Puppet on the LBs to update the apt-dater groups.
-+
-[source,shell]
-----
-for fqdn in ${LB_FQDNS[*]}; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
-. Delete local config files
-+
-[source,console]
-----
-rm -r ${INSTALLER_DIR}/
-----
+include::partial$install/finalize.adoc[]

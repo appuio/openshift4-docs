@@ -1,37 +1,36 @@
 . Setup Terraform
 +
-Prepare terraform
-+
-[source,console]
+.Prepare Terraform execution environment
+[source,bash]
 ----
 # Set terraform image and tag to be used
 tf_image=$(\
-  yq eval ".parameters.openshift4_cloudscale.images.terraform.image" \
-  dependencies/openshift4-cloudscale/class/defaults.yml)
+  yq eval ".parameters.openshift4_terraform.images.terraform.image" \
+  dependencies/openshift4-terraform/class/defaults.yml)
 tf_tag=$(\
-  yq eval ".parameters.openshift4_cloudscale.images.terraform.tag" \
-  dependencies/openshift4-cloudscale/class/defaults.yml)
+  yq eval ".parameters.openshift4_terraform.images.terraform.tag" \
+  dependencies/openshift4-terraform/class/defaults.yml)
 
 # Generate the terraform alias
+base_dir=$(pwd)
 alias terraform='docker run -it --rm \
-  -u $(id -u) \
-  --env-file .env \
+  -e REAL_UID=$(id -u) \
+  --env-file ${base_dir}/terraform.env \
   -w /tf \
   -v $(pwd):/tf \
   --ulimit memlock=-1 \
-  "${tf_image}:${tf_tag}" terraform'
+  "${tf_image}:${tf_tag}" /tf/terraform.sh'
 
 export GITLAB_REPOSITORY_URL=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
 export GITLAB_REPOSITORY_NAME=${GITLAB_REPOSITORY_URL##*/}
 export GITLAB_CATALOG_PROJECT_ID=$(curl -sH "Authorization: Bearer ${GITLAB_TOKEN}" "https://git.vshn.net/api/v4/projects?simple=true&search=${GITLAB_REPOSITORY_NAME/.git}" | jq -r ".[] | select(.ssh_url_to_repo == \"${GITLAB_REPOSITORY_URL}\") | .id")
 export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/${GITLAB_CATALOG_PROJECT_ID}/terraform/state/cluster"
 
-pushd catalog/manifests/openshift4-cloudscale/
+pushd catalog/manifests/openshift4-terraform/
 ----
 +
-Initiate terraform
-+
-[source,console]
+.Initialize Terraform
+[source,bash]
 ----
 terraform init \
   "-backend-config=address=${GITLAB_STATE_URL}" \

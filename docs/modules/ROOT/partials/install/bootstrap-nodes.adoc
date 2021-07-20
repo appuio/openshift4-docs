@@ -1,0 +1,208 @@
+
+. Deploy bootstrap node
++
+[source,bash,subs="attributes+"]
+----
+cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 1
+  master_count    = 0
+  infra_count     = 0
+ifeval::["{provider}" == "exoscale"]
+  storage_count   = 0
+endif::[]
+  worker_count    = 0
+}
+EOF
+terraform apply
+----
+
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
++
+[source,bash]
+----
+for fqdn in "${LB_FQDNS[@]}"; do
+  ssh "${fqdn}" sudo puppetctl run
+done
+----
+
+. Wait for bootstrap API to come up
++
+[source,bash]
+----
+API_URL=$(yq e '.clusters[0].cluster.server' "${INSTALLER_DIR}/auth/kubeconfig")
+while ! curl --connect-timeout 1 "${API_URL}/healthz" -k &>/dev/null; do
+  echo -n "."
+  sleep 5
+done && echo -e "\nAPI is up"
+----
+
+. Deploy control plane nodes
++
+[source,bash,subs="attributes+"]
+----
+cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count = 1
+  infra_count     = 0
+ifeval::["{provider}" == "exoscale"]
+  storage_count   = 0
+endif::[]
+  worker_count    = 0
+}
+EOF
+terraform apply
+----
+
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
++
+[source,bash]
+----
+for fqdn in "${LB_FQDNS[@]}"; do
+  ssh "${fqdn}" sudo puppetctl run
+done
+----
+
+. Wait for bootstrap to complete
++
+[source,bash]
+----
+openshift-install --dir "${INSTALLER_DIR}" \
+  wait-for bootstrap-complete
+----
+
+. Remove bootstrap node and provision infra nodes
++
+[source,bash,subs="attributes+"]
+----
+cat > override.tf <<EOF
+module "cluster" {
+ifeval::["{provider}" == "exoscale"]
+  storage_count   = 0
+endif::[]
+  worker_count  = 0
+}
+EOF
+terraform apply
+----
+
+. Approve infra certs
++
+[source,bash]
+----
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
+
+# Once CSRs in state Pending show up, approve them
+# Needs to be run twice, two CSRs for each node need to be approved
+kubectl get csr -w
+oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc adm certificate approve
+
+kubectl get nodes
+----
+
+. Label infra nodes
++
+[source,bash]
+----
+kubectl get nodes -lnode-role.kubernetes.io/worker
+kubectl label node -lnode-role.kubernetes.io/worker \
+  node-role.kubernetes.io/infra=""
+----
+
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
++
+[source,bash]
+----
+for fqdn in "${LB_FQDNS[@]}"; do
+  ssh "${fqdn}" sudo puppetctl run
+done
+----
+
+. Wait for installation to complete
++
+[source,bash]
+----
+openshift-install --dir ${INSTALLER_DIR} \
+  wait-for install-complete
+----
+
+ifeval::["{provider}" == "exoscale"]
+. Provision storage nodes
++
+[source,bash]
+----
+cat > override.tf <<EOF
+module "cluster" {
+  worker_count  = 0
+}
+EOF
+terraform apply
+----
+
+. Approve storage certs
++
+[source,bash]
+----
+# Once CSRs in state Pending show up, approve them
+# Needs to be run twice, two CSRs for each node need to be approved
+kubectl get csr -w
+oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc adm certificate approve
+
+kubectl get nodes
+----
+
+. Label and taint storage nodes
++
+[source,bash]
+----
+kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
+  node-role.kubernetes.io/storage=""
+kubectl label node -lnode-role.kubernetes.io/infra \
+  node-role.kubernetes.io/storage-
+kubectl taint node -lnode-role.kubernetes.io/storage \
+  storagenode=True:NoSchedule
+
+# This should show the storage nodes only
+kubectl get nodes -l node-role.kubernetes.io/storage
+----
+endif::[]
+
+. Provision worker nodes
++
+[source,bash]
+----
+rm override.tf
+terraform apply
+----
+
+. Approve worker certs
++
+[source,bash]
+----
+# Once CSRs in state Pending show up, approve them
+# Needs to be run twice, two CSRs for each node need to be approved
+kubectl get csr -w
+oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc adm certificate approve
+
+kubectl get nodes
+----
+
+. Label worker nodes
++
+[source,bash,subs="attributes"]
+----
+kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
+  node-role.kubernetes.io/app=""
+kubectl label node -lnode-role.kubernetes.io/infra \
+  node-role.kubernetes.io/app-
+ifeval::["{provider}" == "exoscale"]
+kubectl label node -lnode-role.kubernetes.io/storage \
+  node-role.kubernetes.io/app-
+endif::[]
+
+# This should show the worker nodes only
+kubectl get nodes -l node-role.kubernetes.io/app
+----

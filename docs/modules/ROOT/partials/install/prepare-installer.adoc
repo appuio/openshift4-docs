@@ -1,0 +1,77 @@
+For the following steps, change into a clean directory (for example a directory in your home).
+
+[CAUTION]
+These are the only steps which aren't idempotent and have to be completed uninterrupted in one go.
+If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
+
+[NOTE]
+--
+You can add more options to the `install-config.yaml` file.
+Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
+
+For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
+--
+
+. Prepare SSH key
++
+[NOTE]
+====
+We generate a unique SSH key pair for the cluster as this gives us troubleshooting access.
+====
++
+[source,bash,subs="attributes+"]
+----
+SSH_PRIVATE_KEY="$(pwd)/ssh_$CLUSTER_ID"
+export SSH_PUBLIC_KEY="${SSH_PRIVATE_KEY}.pub"
+
+ssh-keygen -C "vault@$CLUSTER_ID" -t ed25519 -f $SSH_PRIVATE_KEY -N ''
+
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/{provider}/ssh \
+  private_key=$(cat $SSH_PRIVATE_KEY | base64 --wrap 0)
+
+ssh-add $SSH_PRIVATE_KEY
+----
+
+. Prepare `install-config.yaml`
++
+[source,bash]
+----
+export INSTALLER_DIR="$(pwd)/target"
+mkdir -p "${INSTALLER_DIR}"
+
+cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
+apiVersion: v1
+metadata:
+  name: ${CLUSTER_ID}
+baseDomain: ${BASE_DOMAIN}
+platform:
+  none: {}
+pullSecret: |
+  ${PULL_SECRET}
+sshKey: "$(cat $SSH_PUBLIC_KEY)"
+EOF
+----
+
+. Render install manifests (this will consume the `install-config.yaml`)
++
+[source,bash]
+----
+openshift-install --dir "${INSTALLER_DIR}" \
+  create manifests
+----
+
+.. If you want to change the default "apps" domain for the cluster:
++
+[source,bash]
+----
+yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
+  spec.domain apps.example.com
+----
+
+. Prepare install manifests and ignition config
++
+[source,bash]
+----
+openshift-install --dir "${INSTALLER_DIR}" \
+  create ignition-configs
+----

@@ -16,17 +16,17 @@ For example, you could change the SDN from a default value to something a custom
 +
 [NOTE]
 ====
-We generate a unique SSH key pair for the cluster, because Exoscale doesn't support configuring multiple public keys for a VM.
+We generate a unique SSH key pair for the cluster as this gives us troubleshooting access.
 ====
 +
-[source,bash]
+[source,bash,subs="attributes+"]
 ----
 SSH_PRIVATE_KEY="$(pwd)/ssh_$CLUSTER_ID"
 export SSH_PUBLIC_KEY="${SSH_PRIVATE_KEY}.pub"
 
 ssh-keygen -C "vault@$CLUSTER_ID" -t ed25519 -f $SSH_PRIVATE_KEY -N ''
 
-vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/ssh \
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/{provider}/ssh \
   private_key=$(cat $SSH_PRIVATE_KEY | base64 --wrap 0)
 
 ssh-add $SSH_PRIVATE_KEY

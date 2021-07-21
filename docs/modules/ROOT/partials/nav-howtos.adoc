@@ -14,6 +14,7 @@
 
 * Exoscale
 ** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Cluster Setup]
+** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[Replace a storage node]
 ** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Cluster Decommission]
 
 * Google Cloud Platform

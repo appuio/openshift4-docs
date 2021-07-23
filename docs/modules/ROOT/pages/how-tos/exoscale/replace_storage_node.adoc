@@ -408,7 +408,7 @@ This tells the operator to perform the MON failover after less time than the def
 [NOTE]
 ====
 We currently have to restart the operator to force it to pick up the new MON health check configuration.
-Depending on the outcome from https://github.com/rook/rook/issues/8363[this issue] on GitHub, the operator restart may not be needed in the future.
+Once https://github.com/rook/rook/issues/8363[Rook.io GitHub issue #8363] is fixed, the operator restart shouldn't be necessary anymore.
 ====
 +
 [source,bash]
@@ -470,7 +470,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy -l app=rook-ceph-
 [NOTE]
 ====
 We currently have to restart the operator to force it to pick up the new MON health check configuration.
-Depending on the outcome from https://github.com/rook/rook/issues/8363[this issue] on GitHub, the operator restart may not be needed in the future.
+Once https://github.com/rook/rook/issues/8363[Rook.io GitHub issue #8363] is fixed, the operator restart shouldn't be necessary anymore.
 ====
 +
 [source,bash]

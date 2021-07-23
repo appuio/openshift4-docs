@@ -1,0 +1,265 @@
+= Reinitialize a storage disk
+
+[abstract]
+--
+Steps to reinitialize an existing, but corrupted storage disk of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
+--
+
+== Starting situation
+
+* You already have a OpenShift 4 cluster on Exoscale
+* You have admin-level access to the cluster
+* You want to reinitialize a corrupted storage disk of an existing storage node of the cluster.
+
+== Prerequisites
+
+The following CLI utilities need to be available locally:
+
+* `kubectl`
+
+== Reinitialize storage disk
+
+=== Gather information
+
+. Make a note of the ID of OSD of the disk you want to reinitialize
++
+[source,bash]
+----
+export OSD_ID=<ID>
+----
+
+. Find PVC and PV of the disk to reinitialize
++
+[source,bash]
+----
+pvc_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+  "rook-ceph-osd-${OSD_ID}" -ojsonpath='{.metadata.labels.ceph\.rook\.io/pvc}')
+pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
+  "${pvc_name}" -o jsonpath='{.spec.volumeName}')
+----
+
+. Find node hosting the disk to reinitialize
++
+[source,bash]
+----
+node_name=$(kubectl --as=cluster-admin get pv ${pv_name} \
+  -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]'})
+----
+
+=== Shut down OSD of the disk to reinitialize
+
+. Temporarily disable rebalancing of the Ceph cluster
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph osd set noout
+----
+
+. Disable auto sync for component `rook-ceph`.
+This allows us to temporarily make manual changes to the Rook Ceph cluster.
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn patch apps root --type=json \
+  -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
+kubectl --as=cluster-admin -n syn patch apps rook-ceph --type=json \
+  -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
+----
+
+. Scale down the Rook-Ceph operator
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
+  deploy/rook-ceph-operator
+----
+
+. Take the old OSD out of service
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph osd out "osd.${OSD_ID}"
+----
+
+. Delete the OSD deployment of the disk you want to reinitialize
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
+  "rook-ceph-osd-${OSD_ID}"
+----
+
+=== Reinitialize disk
+
+. Find the local-storage-provisioner pod managing the disk
++
+[source,bash]
+----
+provisioner_pod_label="local-volume-provisioner-$(kubectl --as=cluster-admin \
+  get pv ${pv_name} \
+  -o jsonpath='{.metadata.labels.storage\.openshift\.com/local-volume-owner-name}')"
+provisioner_pod=$(kubectl --as=cluster-admin -n openshift-local-storage get pods \
+  -l "app=${provisioner_pod_label}" --field-selector="spec.nodeName=${node_name}" \
+  -o jsonpath='{.items[0].metadata.name}')
+----
+
+. Close the LUKS device of the disk
++
+[source,bash]
+----
+ceph_image=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get job \
+  -l "ceph.rook.io/pvc=${pvc_name}" \
+  -o jsonpath='{.items[0].spec.template.spec.containers[0].image}')
+kubectl --as=cluster-admin run -n syn-rook-ceph-cluster \
+  "cryptclose-${node_name}-$(date +%s)" --restart=Never -it --rm --image overridden \
+  --overrides '{
+  "spec": {
+    "nodeSelector": {
+      "kubernetes.io/hostname": "'"${node_name}"'"
+    },
+    "hostNetwork": true,
+    "hostIPC": true,
+    "containers": [{
+      "name": "crypttool",
+      "image": "'"${ceph_image}"'",
+      "command": [
+        "sh", "-c",
+        "cryptsetup remove /dev/mapper/'"${pvc_name}"'*"
+      ],
+      "securityContext": {
+        "privileged": true,
+        "runAsNonRoot": false,
+        "runAsUser": 0
+      },
+      "serviceAccount": "rook-ceph-osd",
+      "volumeMounts": [{
+        "name": "devices",
+        "mountPath": "/dev"
+      }]
+    }],
+    "tolerations": [{
+      "key": "storagenode",
+      "operator": "Exists"
+    }],
+    "volumes": [{
+      "hostPath": {
+        "path": "/dev",
+        "type": ""
+      },
+      "name": "devices"
+    }]
+  }
+}'
+----
+
+. Clean the disk
++
+[NOTE]
+====
+We're cleaning the disk by zeroing the first 512MB.
+This should be sufficient to allow Ceph to create a new OSD on the disk.
+If you get errors in the new OSD prepare job, increase `count` of the `dd` command to a larger number, for example `count=2048` to zero the first 2GB of the disk.
+====
++
+[source,bash]
+----
+disk_path=$(kubectl --as=cluster-admin get pv "${pv_name}" -o jsonpath='{.spec.local.path}')
+kubectl --as=cluster-admin -n openshift-local-storage exec -it "${provisioner_pod}" -- \
+ dd if=/dev/zero of="${disk_path}" bs=1M count=512
+----
+
+=== Start a new OSD on the cleaned disk
+
+. Scale Rook-Ceph operator back to 1 replica
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=1 \
+  deploy/rook-ceph-operator
+----
+
+. Wait for the operator to reconfigure the disk for the OSD
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
+----
+
+. Re-enable Ceph balancing
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph osd unset noout
+----
+
+. Wait for the OSD to be repopulated with data ("backfilled").
++
+TIP: When backfilling is completed, `ceph status` should show all PGs as `active+clean`.
++
+NOTE: Depending on the number of OSDs in the storage cluster and the amount of data that needs to be moved, this may take a while.
++
+[TIP]
+====
+If the storage cluster is mostly idle, you can speed up backfilling by temporarily setting the following configurations.
+
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph config set osd osd_max_backfills 10 <1>
+----
+<1> The number of PGs which are allowed to backfill in parallel.
+Adjust up or down depending on client load on the storage cluster.
+
+After backfilling is completed, you can remove the configurations with
+
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph config rm osd osd_max_backfills
+----
+====
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph status
+----
+
+=== Finish up
+
+. Clean up the old OSD
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph osd purge "osd.${OSD_ID}"
+----
+
+. Check that Ceph cluster is healthy
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph status
+----
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph osd tree
+----
+
+. Re-enable ArgoCD auto sync
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn patch apps root --type=json \
+  -p '[{
+    "op":"replace",
+    "path":"/spec/syncPolicy",
+    "value": {"automated": {"prune": true, "selfHeal": true}}
+  }]'
+----

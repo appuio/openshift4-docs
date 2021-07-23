@@ -332,6 +332,18 @@ kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
   deploy/rook-ceph-operator
 ----
 
+. Make a note of the PVC of the old OSD
++
+NOTE: We also extract the name of the PV here, but we'll only delete the PV after removing the node from the cluster.
++
+[source,bash]
+----
+pvc_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+  "rook-ceph-osd-${OSD_ID}" -ojsonpath='{.metadata.labels.ceph\.rook\.io/pvc}')
+pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
+  "${pvc_name}" -o jsonpath='{.spec.volumeName}')
+----
+
 . Check if the OSD deployment needs to be deleted, and delete it if necessary
 +
 [source,bash]
@@ -357,17 +369,8 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --
 
 . Clean up PVC and prepare job of the old OSD if necessary
 +
-NOTE: We also extract the name of the PV here, but we'll only delete the PV after removing the node from the cluster.
-+
 [source,bash]
 ----
-pv_info=$(kubectl get pv -l storage.openshift.com/local-volume-owner-name=storagevolumes \
-  -ojson | jq --arg storage_node "${NODE_TO_REPLACE}" -r \
-    '.items[]
-     | select(.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0] == $storage_node)
-     | "\(.metadata.name),\(.spec.claimRef.name)"')
-pv_name=$(echo "${pv_info}" | cut -d, -f1)
-pvc_name=$(echo "${pv_info}" | cut -d, -f2)
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete job \
   -l ceph.rook.io/pvc="${pvc_name}"
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pvc "${pvc_name}"

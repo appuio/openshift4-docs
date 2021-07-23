@@ -51,8 +51,6 @@ include::partial$exoscale/environment-vars.adoc[]
 +
 include::partial$vshn-input.adoc[]
 
-include::partial$exoscale/setup-cli.adoc[]
-
 . Get required tokens from Vault
 +
 include::partial$connect-to-vault.adoc[]

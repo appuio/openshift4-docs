@@ -1,5 +1,8 @@
 = Replace a storage node
 
+:kubectl_extra_args: --as=cluster-admin
+:delabel_app_nodes: yes
+
 [abstract]
 --
 Steps to replace a storage node of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
@@ -44,50 +47,17 @@ pushd "${WORK_DIR}"
 
 . Configure API access
 +
-.Access to cloud API
-[source,bash]
-----
-export EXOSCALE_ACCOUNT=<exoscale-account>
-export EXOSCALE_API_KEY=<exoscale-key>
-export EXOSCALE_API_SECRET=<exoscale-secret>
-export EXOSCALE_REGION=<exoscale-zone>
-export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
-----
+include::partial$exoscale/environment-vars.adoc[]
 +
 include::partial$vshn-input.adoc[]
 
-. Configure Exoscale CLI
-+
-[source,bash]
-----
-mkdir -p ~/.config/exoscale
-cat <<EOF >> ~/.config/exoscale/exoscale.toml
-
-[[accounts]]
-  account = "${EXOSCALE_ACCOUNT}"
-  defaultZone = "${EXOSCALE_REGION}"
-  endpoint = "https://api.exoscale.ch/v1"
-  name = "${CLUSTER_ID}"
-EOF
-----
+include::partial$exoscale/setup-cli.adoc[]
 
 . Get required tokens from Vault
 +
-.Connect with Vault
-[source,bash]
-----
-export VAULT_ADDR=https://vault-prod.syn.vshn.net
-vault login -method=ldap username=<your.name>
-----
+include::partial$connect-to-vault.adoc[]
 +
-.Grab the LB hieradata repo token from Vault
-[source,bash]
-----
-export HIERADATA_REPO_SECRET=$(vault kv get \
-  -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq '.data.data')
-export HIERADATA_REPO_USER=$(echo "${HIERADATA_REPO_SECRET}" | jq -r '.user')
-export HIERADATA_REPO_TOKEN=$(echo "${HIERADATA_REPO_SECRET}" | jq -r '.token')
-----
+include::partial$get-hieradata-token-from-vault.adoc[]
 
 . Compile the catalog for the cluster.
 Having the catalog available locally enables us to run Terraform for the cluster to make any required changes.
@@ -99,21 +69,7 @@ commodore catalog compile "${CLUSTER_ID}"
 
 == Prepare Terraform environment
 
-. Configure Terraform secrets
-+
-[source,bash]
-----
-cat <<EOF > ./terraform.env
-EXOSCALE_API_KEY
-EXOSCALE_API_SECRET
-TF_VAR_lb_exoscale_api_key
-TF_VAR_lb_exoscale_api_secret
-TF_VAR_control_vshn_net_token
-GIT_AUTHOR_NAME
-GIT_AUTHOR_EMAIL
-HIERADATA_REPO_TOKEN
-EOF
-----
+include::partial$exoscale/configure-terraform-secrets.adoc[]
 
 include::partial$setup_terraform.adoc[]
 
@@ -172,31 +128,11 @@ terraform apply
 
 . Approve node cert for new storage node
 +
-[source,bash]
-----
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl --as=cluster-admin get csr -w
-oc --as=cluster-admin get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc --as=cluster-admin adm certificate approve
-
-kubectl --as=cluster-admin get nodes
-----
+include::partial$install/approve-node-csrs.adoc[]
 
 . Label and taint the new storage node
 +
-[source,bash]
-----
-kubectl --as=cluster-admin label --overwrite node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/storage=""
-kubectl --as=cluster-admin label node -lnode-role.kubernetes.io/infra \
-  node-role.kubernetes.io/storage-
-kubectl --as=cluster-admin label node -lnode-role.kubernetes.io/app \
-  node-role.kubernetes.io/storage-
-
-kubectl --as=cluster-admin taint node -lnode-role.kubernetes.io/storage \
-  storagenode=True:NoSchedule
-----
+include::partial$exoscale/label-taint-storage-nodes.adoc[]
 
 . Wait for the localstorage PV on the new node to be created
 +

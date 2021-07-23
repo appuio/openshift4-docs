@@ -91,15 +91,9 @@ terraform apply
 [source,bash]
 ----
 export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
-
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl get csr -w
-oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc adm certificate approve
-
-kubectl get nodes
 ----
++
+include::partial$install/approve-node-csrs.adoc[]
 
 . Label infra nodes
 +
@@ -142,31 +136,11 @@ terraform apply
 
 . Approve storage certs
 +
-[source,bash]
-----
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl get csr -w
-oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc adm certificate approve
-
-kubectl get nodes
-----
+include::partial$install/approve-node-csrs.adoc[]
 
 . Label and taint storage nodes
 +
-[source,bash]
-----
-kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/storage=""
-kubectl label node -lnode-role.kubernetes.io/infra \
-  node-role.kubernetes.io/storage-
-kubectl taint node -lnode-role.kubernetes.io/storage \
-  storagenode=True:NoSchedule
-
-# This should show the storage nodes only
-kubectl get nodes -l node-role.kubernetes.io/storage
-----
+include::partial$exoscale/label-taint-storage-nodes.adoc[]
 endif::[]
 
 . Provision worker nodes
@@ -179,16 +153,7 @@ terraform apply
 
 . Approve worker certs
 +
-[source,bash]
-----
-# Once CSRs in state Pending show up, approve them
-# Needs to be run twice, two CSRs for each node need to be approved
-kubectl get csr -w
-oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
-  xargs oc adm certificate approve
-
-kubectl get nodes
-----
+include::partial$install/approve-node-csrs.adoc[]
 
 . Label worker nodes
 +

@@ -1,0 +1,8 @@
+.Grab the LB hieradata repo token from Vault
+[source,bash]
+----
+export HIERADATA_REPO_SECRET=$(vault kv get \
+  -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq '.data.data')
+export HIERADATA_REPO_USER=$(echo "${HIERADATA_REPO_SECRET}" | jq -r '.user')
+export HIERADATA_REPO_TOKEN=$(echo "${HIERADATA_REPO_SECRET}" | jq -r '.token')
+----

@@ -143,13 +143,8 @@ kubectl --as=cluster-admin get pv \
 . Disable auto sync for component `rook-ceph`.
 This allows us to temporarily make manual changes to the Rook Ceph cluster.
 +
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn patch apps root --type=json \
-  -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
-kubectl --as=cluster-admin -n syn patch apps rook-ceph --type=json \
-  -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
-----
+:argo_app: rook-ceph
+include::partial$disable-argocd-autosync.adoc[]
 
 . Make a note of the original count of OSDs in the Ceph cluster
 +
@@ -471,17 +466,7 @@ kubectl --as=cluster-admin delete pv "${pv_name}"
 
 === Finish up
 
-. Re-enable ArgoCD auto sync
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn patch apps root --type=json \
-  -p '[{
-    "op":"replace",
-    "path":"/spec/syncPolicy",
-    "value": {"automated": {"prune": true, "selfHeal": true}}
-  }]'
-----
+include::partial$enable-argocd-autosync.adoc[]
 
 == Upstream documentation
 

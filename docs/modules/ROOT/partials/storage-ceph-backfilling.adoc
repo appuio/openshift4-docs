@@ -1,0 +1,30 @@
+TIP: When backfilling is completed, `ceph status` should show all PGs as `active+clean`.
++
+NOTE: Depending on the number of OSDs in the storage cluster and the amount of data that needs to be moved, this may take a while.
++
+[TIP]
+====
+If the storage cluster is mostly idle, you can speed up backfilling by temporarily setting the following configuration.
+
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph config set osd osd_max_backfills 10 <1>
+----
+<1> The number of PGs which are allowed to backfill in parallel.
+Adjust up or down depending on client load on the storage cluster.
+
+After backfilling is completed, you can remove the configuration with
+
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph config rm osd osd_max_backfills
+----
+====
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph status
+----

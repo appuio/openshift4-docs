@@ -1,0 +1,26 @@
+.Access to various API
+[source,bash]
+----
+# From https://git.vshn.net/profile/personal_access_tokens, "api" scope is sufficient
+export GITLAB_TOKEN=<gitlab-api-token>
+export GITLAB_USER=<gitlab-user-name>
+
+# For example: https://api.syn.vshn.net
+# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
+export COMMODORE_API_URL=<lieutenant-api-endpoint>
+export COMMODORE_API_TOKEN=<lieutenant-api-token>
+
+# Set Project Syn cluster and tenant ID
+export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
+export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+----
+
+ifeval::["{needs_hieradata_edit}" == "yes"]
+.Configuration for hieradata commits
+[source,bash]
+----
+export GIT_AUTHOR_NAME=$(git config --global user.name)
+export GIT_AUTHOR_EMAIL=$(git config --global user.email)
+export TF_VAR_control_vshn_net_token=<control-vshn-net-token>
+----
+endif::[]

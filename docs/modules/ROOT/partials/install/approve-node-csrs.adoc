@@ -1,0 +1,15 @@
+[source,bash,subs="attributes"]
+----
+# Once CSRs in state Pending show up, approve them
+# Needs to be run twice, two CSRs for each node need to be approved
+kubectl get csr -w
+oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc adm certificate approve
+
+ifdef::kubectl_extra_args[]
+kubectl {kubectl_extra_args} get nodes
+endif::kubectl_extra_args[]
+ifndef::kubectl_extra_args[]
+kubectl get nodes
+endif::kubectl_extra_args[]
+----

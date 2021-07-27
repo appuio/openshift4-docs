@@ -10,6 +10,14 @@ Steps to reinitialize an existing, but corrupted storage disk of an OpenShift 4 
 * You already have a OpenShift 4 cluster on Exoscale
 * You have admin-level access to the cluster
 * You want to reinitialize a corrupted storage disk of an existing storage node of the cluster.
++
+[TIP]
+====
+The main symptoms indicating a corrupted storage disk are:
+
+* the OSD pod associated with the corrupted disk is in `CrashLoopBackOff`
+* the alert https://hub.syn.tools/rook-ceph/runbooks/CephOSDDiskNotResponding.html[`CephOSDDiskNotResponding`] is firing for the OSD associated with the corrupted disk.
+====
 
 == Prerequisites
 

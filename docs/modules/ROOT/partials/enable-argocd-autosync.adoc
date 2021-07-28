@@ -1,0 +1,11 @@
+. Re-enable ArgoCD auto sync
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn patch apps root --type=json \
+  -p '[{
+    "op":"replace",
+    "path":"/spec/syncPolicy",
+    "value": {"automated": {"prune": true, "selfHeal": true}}
+  }]'
+----

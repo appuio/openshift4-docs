@@ -1,5 +1,7 @@
 = Reinitialize a storage disk
 
+:argo_app: rook-ceph
+
 [abstract]
 --
 Steps to reinitialize an existing, but corrupted Ceph storage disk of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
@@ -24,6 +26,7 @@ The main symptoms indicating a corrupted storage disk are:
 The following CLI utilities need to be available locally:
 
 * `kubectl`
+* `jq`
 
 == Gather information
 
@@ -52,6 +55,11 @@ node_name=$(kubectl --as=cluster-admin get pv ${pv_name} \
   -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]'})
 ----
 
+== Create silence in Alertmanager
+
+:duration: +30 minutes
+include::partial$create-alertmanager-silence.adoc[]
+
 == Reinitialize disk
 
 === Shut down OSD of the disk to reinitialize
@@ -67,7 +75,6 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 . Disable auto sync for component `rook-ceph`.
 This allows us to temporarily make manual changes to the Rook Ceph cluster.
 +
-:argo_app: rook-ceph
 include::partial$disable-argocd-autosync.adoc[]
 
 . Scale down the Rook-Ceph operator
@@ -227,5 +234,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 ----
 
 == Finish up
+
+include::partial$remove-alertmanager-silence.adoc[]
 
 include::partial$enable-argocd-autosync.adoc[]

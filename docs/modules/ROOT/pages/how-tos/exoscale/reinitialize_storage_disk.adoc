@@ -25,9 +25,7 @@ The following CLI utilities need to be available locally:
 
 * `kubectl`
 
-== Reinitialize storage disk
-
-=== Gather information
+== Gather information
 
 . Make a note of the OSD ID for the disk you want to reinitialize
 +
@@ -53,6 +51,8 @@ pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
 node_name=$(kubectl --as=cluster-admin get pv ${pv_name} \
   -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]'})
 ----
+
+== Reinitialize disk
 
 === Shut down OSD of the disk to reinitialize
 
@@ -94,7 +94,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
   "rook-ceph-osd-${OSD_ID}"
 ----
 
-=== Reinitialize disk
+=== Clean the disk
 
 . Find the local-storage-provisioner pod managing the disk
 +
@@ -202,7 +202,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 +
 include::partial$storage-ceph-backfilling.adoc[]
 
-=== Finish up
+=== Finalize reinitialization
 
 . Clean up the old OSD
 +
@@ -225,5 +225,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph osd tree
 ----
+
+== Finish up
 
 include::partial$enable-argocd-autosync.adoc[]

@@ -2,6 +2,7 @@
 
 :kubectl_extra_args: --as=cluster-admin
 :delabel_app_nodes: yes
+:argo_app: rook-ceph
 
 [abstract]
 --
@@ -70,6 +71,11 @@ commodore catalog compile "${CLUSTER_ID}"
 include::partial$exoscale/configure-terraform-secrets.adoc[]
 
 include::partial$setup_terraform.adoc[]
+
+== Set alert silence
+
+:duration: +60 minutes
+include::partial$create-alertmanager-silence.adoc[]
 
 == Replace node
 
@@ -143,7 +149,6 @@ kubectl --as=cluster-admin get pv \
 . Disable auto sync for component `rook-ceph`.
 This allows us to temporarily make manual changes to the Rook Ceph cluster.
 +
-:argo_app: rook-ceph
 include::partial$disable-argocd-autosync.adoc[]
 
 . Make a note of the original count of OSDs in the Ceph cluster
@@ -435,7 +440,9 @@ exo vm delete "${node_id}"
 kubectl --as=cluster-admin delete pv "${pv_name}"
 ----
 
-=== Finish up
+== Finish up
+
+include::partial$remove-alertmanager-silence.adoc[]
 
 include::partial$enable-argocd-autosync.adoc[]
 

@@ -1,5 +1,7 @@
 = Reinitialize a storage disk
 
+:argo_app: rook-ceph
+
 [abstract]
 --
 Steps to reinitialize an existing, but corrupted Ceph storage disk of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
@@ -24,10 +26,9 @@ The main symptoms indicating a corrupted storage disk are:
 The following CLI utilities need to be available locally:
 
 * `kubectl`
+* `jq`
 
-== Reinitialize storage disk
-
-=== Gather information
+== Gather information
 
 . Make a note of the OSD ID for the disk you want to reinitialize
 +
@@ -54,6 +55,13 @@ node_name=$(kubectl --as=cluster-admin get pv ${pv_name} \
   -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]'})
 ----
 
+== Create silence in Alertmanager
+
+:duration: +30 minutes
+include::partial$create-alertmanager-silence.adoc[]
+
+== Reinitialize disk
+
 === Shut down OSD of the disk to reinitialize
 
 . Temporarily disable rebalancing of the Ceph cluster
@@ -67,7 +75,6 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 . Disable auto sync for component `rook-ceph`.
 This allows us to temporarily make manual changes to the Rook Ceph cluster.
 +
-:argo_app: rook-ceph
 include::partial$disable-argocd-autosync.adoc[]
 
 . Scale down the Rook-Ceph operator
@@ -94,7 +101,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
   "rook-ceph-osd-${OSD_ID}"
 ----
 
-=== Reinitialize disk
+=== Clean the disk
 
 . Find the local-storage-provisioner pod managing the disk
 +
@@ -202,7 +209,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 +
 include::partial$storage-ceph-backfilling.adoc[]
 
-=== Finish up
+=== Finalize reinitialization
 
 . Clean up the old OSD
 +
@@ -225,5 +232,9 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph osd tree
 ----
+
+== Finish up
+
+include::partial$remove-alertmanager-silence.adoc[]
 
 include::partial$enable-argocd-autosync.adoc[]

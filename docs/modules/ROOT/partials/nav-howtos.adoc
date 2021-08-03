@@ -16,6 +16,7 @@
 ** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Cluster Setup]
 ** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[Replace a storage node]
 ** xref:oc4:ROOT:how-tos/exoscale/add_storage_node.adoc[Add a storage node]
+** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[Remove a storage node]
 ** xref:oc4:ROOT:how-tos/exoscale/reinitialize_storage_disk.adoc[Reinitialize a storage disk]
 ** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Cluster Decommission]
 

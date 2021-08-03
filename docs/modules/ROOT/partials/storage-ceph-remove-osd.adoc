@@ -1,42 +1,40 @@
-. Find the OSD on the node you want to replace
+. Tell Ceph to take the OSD(s) on the node(s) to {mon-operation} out of service and relocate data stored on them
 +
 [source,bash,subs="attributes+"]
 ----
-OSD_ID=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
-  -l failure-domain="{osd-node}" --no-headers \
-  -o custom-columns="NAME:.metadata.name" | cut -d- -f4)
-echo $OSD_ID
-----
-
-. Verify that we found the correct OSD ID in the previous step
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -o wide | grep "osd-${OSD_ID}"
-----
-
-. Tell Ceph to take this OSD out of service and relocate data stored on it
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph osd out "osd.${OSD_ID}"
+# Verify that the list of nodes to replace is correct
+echo {osd-replace-list}
+# Reweight OSDs on those nodes to 0
+for node in $(echo -n {osd-replace-list}); do
+  osd_id=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+    -l failure-domain="${node}" --no-headers \
+    -o custom-columns="OSD_ID:.metadata.labels.ceph_daemon_id")
+  kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+    ceph osd crush reweight "osd.${osd_id}" 0
+done
 ----
 
 . Wait for the data to be redistributed ("backfilled")
 +
 include::partial$storage-ceph-backfilling.adoc[]
 
-. Remove the OSD from the Ceph cluster
+. Remove the OSD(s) from the Ceph cluster
 +
 [source,bash,subs="attributes+"]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster scale --replicas=0 \
-  "deploy/rook-ceph-osd-${OSD_ID}"
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph osd purge "${OSD_ID}"
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph osd crush remove "{osd-node}"
+for node in $(echo -n {osd-replace-list}); do
+  osd_id=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+    -l failure-domain="${node}" --no-headers \
+    -o custom-columns="OSD_ID:.metadata.labels.ceph_daemon_id")
+  kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+    ceph osd out "${osd_id}"
+  kubectl --as=cluster-admin -n syn-rook-ceph-cluster scale --replicas=0 \
+    "deploy/rook-ceph-osd-${osd_id}"
+  kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+    ceph osd purge "${osd_id}"
+  kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+    ceph osd crush remove "${osd_id}"
+done
 ----
 
 . Check that the OSD is no longer listed in `ceph osd tree`
@@ -46,5 +44,3 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph osd tree
 ----
-
-

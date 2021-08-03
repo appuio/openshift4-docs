@@ -1,40 +1,54 @@
-. Make a note of the PVC of the old OSD
+. Make a note of the PVC(s) of the old OSD(s)
 +
-NOTE: We also extract the name of the PV here, but we'll only delete the PV after removing the node from the cluster.
+NOTE: We also extract the name of the PV(s) here, but we'll only delete the PV(s) after removing the node(s) from the cluster.
++
+[source,bash,subs="attributes+"]
+----
+old_pvc_names=""
+{delete-pvs}=""
+for node in $(echo -n {osd-replace-list}); do
+  osd_id=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+    -l failure-domain="${node}" --no-headers \
+    -o custom-columns="NAME:.metadata.name" | cut -d- -f4)
+
+  pvc_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+    "rook-ceph-osd-${osd_id}" -ojsonpath='{.metadata.labels.ceph\.rook\.io/pvc}')
+  pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
+    "${pvc_name}" -o jsonpath='{.spec.volumeName}')
+
+  old_pvc_names="$old_pvc_names $pvc_name"
+  {delete-pvs}="${delete-pvs} $pv_name"
+done
+echo $old_pvc_names
+echo ${delete-pvs}
+----
+
+. Delete old OSD deployment(s)
++
+[source,bash,subs="attributes+"]
+----
+for node in $(echo -n {osd-replace-list}); do
+  kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
+    -l failure-domain="${node}"
+done
+----
+
+. Clean up PVC(s) and prepare job(s) of the old OSD(s) if necessary
 +
 [source,bash]
 ----
-pvc_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
-  "rook-ceph-osd-${OSD_ID}" -ojsonpath='{.metadata.labels.ceph\.rook\.io/pvc}')
-pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
-  "${pvc_name}" -o jsonpath='{.spec.volumeName}')
+for pvc_name in $(echo -n $old_pvc_names); do
+  kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete job \
+    -l ceph.rook.io/pvc="${pvc_name}"
+  kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pvc "${pvc_name}"
+done
 ----
 
-. Check if the OSD deployment needs to be deleted, and delete it if necessary
+. Clean up PVC encryption secret(s)
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
-  -l failure-domain="${NODE_TO_REMOVE}"
-# Run this command if the previous command lists a deployment
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
-  -l failure-domain="${NODE_TO_REMOVE}"
+for pvc_name in $(echo -n $old_pvc_names); do
+  kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete secret -l pvc_name="${pvc_name}"
+done
 ----
-
-. Clean up PVC and prepare job of the old OSD if necessary
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete job \
-  -l ceph.rook.io/pvc="${pvc_name}"
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pvc "${pvc_name}"
-----
-
-. Clean up PVC encryption secret
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete secret -l pvc_name="${pvc_name}"
-----
-
-

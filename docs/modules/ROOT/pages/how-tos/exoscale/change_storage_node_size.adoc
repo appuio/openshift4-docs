@@ -1,29 +1,33 @@
-= Replace a storage node
+= Change Storage Node Size
 
 :kubectl_extra_args: --as=cluster-admin
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
 
-:osd-replace-list: $NODE_TO_REPLACE
+:osd-replace-list: $NODES_TO_REPLACE
 
+:mon-expect-to-replace-nodes: yes
 :mon-operation: replace
 :mon-argocd-autosync-already-disabled: yes
-:mon-replace-list: $NODE_TO_REPLACE
+:mon-replace-list: $NODES_TO_REPLACE
 
-:node-delete-list: ${NODE_TO_REPLACE}
 :delete-nodes-manually: yes
+:node-delete-list: $NODES_TO_REPLACE
+
 :delete-pvs: $old_pv_names
 
 [abstract]
 --
-Steps to replace a storage node of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
+Steps to change the storage node size of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
 --
 
 == Starting situation
 
 * You already have a OpenShift 4 cluster on Exoscale
 * You have admin-level access to the cluster
-* You want to replace an existing storage node in the cluster with a new storage node
+* You want to change the storage disk size for all the storage nodes in the cluster
+
+NOTE: We currently don't support having storage clusters with mixed storage disk sizes.
 
 == Prerequisites
 
@@ -33,79 +37,87 @@ include::partial$exoscale/prerequisites.adoc[]
 
 include::partial$exoscale/setup-local-env.adoc[]
 
+== Set alert silence
+
+:duration: +60 minutes
+include::partial$create-alertmanager-silence.adoc[]
+
+== Set desired storage size
+
+. Set the desired storage size as a plain integer in gigabytes, example `200`.
++
+CAUTION: While you can reduce the size of storage nodes, make sure that the total storage disk utilization will remain below 75% after replacing the nodes.
++
+[source,bash]
+----
+DESIRED_STORAGE_SIZE_GIGABYTES=<desired size>
+pushd "inventory/classes/${TENANT_ID}"
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.storage_cluster_disk_size = ${DESIRED_STORAGE_SIZE_GIGABYTES}" "${CLUSTER_ID}.yml"
+git commit -m "Set storage node disk size to ${DESIRED_STORAGE_SIZE_GIGABYTES}GB" "${CLUSTER_ID}.yml"
+git show
+
+git push
+popd
+----
++
+. Compile commodore catalog, verify and push changes
++
+[source,bash]
+----
+commodore catalog compile "${CLUSTER_ID}" -i --push
+----
+
 == Prepare Terraform environment
 
 include::partial$exoscale/configure-terraform-secrets.adoc[]
 
 include::partial$setup_terraform.adoc[]
 
-== Set alert silence
+== Replace nodes
 
-:duration: +60 minutes
-include::partial$create-alertmanager-silence.adoc[]
-
-== Replace node
-
-. Make a note of the node you want to replace
-+
-[source,bash]
-----
-export NODE_TO_REPLACE=storage-XXXX
-----
-
-=== Create a new node
-
-. Find Terraform resource index of the node to replace
+. Make a note of the old nodes you want to replace
 +
 [source,bash]
 ----
 # Grab JSON copy of current Terraform state
 terraform state pull > .tfstate.json
-node_index=$(jq --arg storage_node "${NODE_TO_REPLACE}" -r \
-  '.resources[] |
-   select(.module=="module.cluster.module.storage" and .type=="random_id") |
-   .instances[] |
-   select(.attributes.hex==$storage_node) |
-   .index_key' \
-  .tfstate.json)
+export NODES_TO_REPLACE=$(jq -r \
+  '[
+    .resources[] |
+    select(.module=="module.cluster.module.storage" and .type=="random_id") |
+    .instances[] |
+    .attributes.hex
+  ] | join(" ")' \
+  .tfstate.json )
+echo $NODES_TO_REPLACE
 ----
 
-. Verify that resource index is correct
+=== Create new nodes
+
+. Remove all storage nodes from the Terraform state
 +
 [source,bash]
 ----
-jq --arg index "${node_index}" -r \
-  '.resources[] |
-   select(.module=="module.cluster.module.storage" and .type=="exoscale_compute") |
-   .instances[$index|tonumber] |
-   .attributes.hostname' \
-   .tfstate.json
+terraform state rm "module.cluster.module.storage.random_id.node_id"
+terraform state rm "module.cluster.module.storage.exoscale_compute.nodes"
 ----
 
-. Remove node ID and node resource for node that we want to replace from the Terraform state
-+
-[source,bash]
-----
-terraform state rm "module.cluster.module.storage.random_id.node_id[$node_index]"
-terraform state rm "module.cluster.module.storage.exoscale_compute.nodes[$node_index]"
-----
-
-. Run Terraform to spin up a replacement node
+. Run Terraform to spin up replacement nodes
 +
 [source,bash]
 ----
 terraform apply
 ----
 
-. Approve node cert for new storage node
+. Approve node certs for new storage nodes
 +
 include::partial$install/approve-node-csrs.adoc[]
 
-. Label and taint the new storage node
+. Label and taint the new storage nodes
 +
 include::partial$exoscale/label-taint-storage-nodes.adoc[]
 
-. Wait for the localstorage PV on the new node to be created
+. Wait for the localstorage PVs on the new nodes to be created
 +
 [source,bash]
 ----
@@ -124,9 +136,10 @@ include::partial$disable-argocd-autosync.adoc[]
 ----
 orig_osd_count=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
   get cephcluster cluster -o jsonpath='{.spec.storage.storageClassDeviceSets[0].count}')
+echo $orig_osd_count
 ----
 
-. Change Ceph cluster to have one more OSD
+. Change Ceph cluster to lauch new OSDs
 +
 [source,bash]
 ----
@@ -134,28 +147,26 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --
   -p "[{
     \"op\": \"replace\",
     \"path\": \"/spec/storage/storageClassDeviceSets/0/count\",
-    \"value\": $(expr ${orig_osd_count} + 1)
+    \"value\": $(expr ${orig_osd_count} '*' 2) <1>
   }]"
 ----
+<1> The expression assumes that you aren't changing the storage node count.
+Adjust accordingly, if you are changing the storage node count as well as the  storage size.
 
-. Wait until the new OSD is launched
+. Wait until the new OSDs are launched
 +
 [source,bash]
 ----
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
+
+# Wait for all PGs to reach `active+clean` state
+watch kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph status
 ----
 
-=== Remove old OSD
+=== Remove old OSDs
 
 include::partial$storage-ceph-remove-osd.adoc[]
-
-. Scale down the Rook-Ceph operator
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
-  deploy/rook-ceph-operator
-----
 
 . Reset Ceph cluster resource to have original number of OSDs
 +
@@ -179,11 +190,11 @@ kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=1 \
   deploy/rook-ceph-operator
 ----
 
-=== Remove the old MON
+=== Move the MONs to the new nodes
 
 include::partial$storage-ceph-remove-mon.adoc[]
 
-=== Clean up the old node
+=== Clean up the old nodes
 
 include::partial$exoscale/delete-node.adoc[]
 

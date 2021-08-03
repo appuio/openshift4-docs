@@ -10,3 +10,4 @@ The following CLI utilities need to be available locally:
 * `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+* macOS: `gdate` from GNU coreutils, `brew install coreutils`

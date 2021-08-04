@@ -1,0 +1,107 @@
+
+. Find the MON (if any) on the node to be replaced
++
+[source,bash,subs="attributes+"]
+----
+MON_ID=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods \
+  -lapp=rook-ceph-mon -o wide \
+  | grep "{mon_node}" | cut -d- -f4)
+echo $MON_ID
+----
++
+TIP: You can skip the remaining steps in this section if `$MON_ID` is empty.
+
+ifeval::["{argocd_disabled}" != "true"]
+. Disable auto sync for component `rook-ceph`.
+This allows us to temporarily make manual changes to the Rook Ceph cluster.
++
+include::partial$disable-argocd-autosync.adoc[]
+endif::[]
+
+. Temporarily adjust the Rook MON failover timeout.
+This tells the operator to perform the MON failover after less time than the default 10 minutes.
++
+[NOTE]
+====
+We currently have to restart the operator to force it to pick up the new MON health check configuration.
+Once https://github.com/rook/rook/issues/8363[Rook.io GitHub issue #8363] is fixed, the operator restart shouldn't be necessary anymore.
+====
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
+  -p '[{
+    "op": "replace",
+    "path": "/spec/healthCheck/daemonHealth/mon",
+    "value": {
+      "disabled": false,
+      "interval": "10s",
+      "timeout": "10s"
+    }
+  }]'
+kubectl --as=cluster-admin -n syn-rook-ceph-operator delete pods \
+  -l app=rook-ceph-operator
+----
+
+. Wait for operator to settle.
+Wait for a log message saying `done reconciling ceph cluster in namespace "syn-rook-ceph-cluster"`
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-operator logs -f \
+  deploy/rook-ceph-operator
+----
+
+. Cordon node to replace and delete MON pod
++
+[source,bash,subs="attributes+"]
+----
+kubectl --as=cluster-admin cordon "{mon_node}"
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pod \
+  -l app=rook-ceph-mon,ceph_daemon_id="${MON_ID}"
+----
+
+. Wait until new MON is scheduled
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
+----
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph status
+----
+
+. Verify that three MONs are running
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy -l app=rook-ceph-mon
+----
+
+. Reset the MON failover timeout
++
+[NOTE]
+====
+We currently have to restart the operator to force it to pick up the new MON health check configuration.
+Once https://github.com/rook/rook/issues/8363[Rook.io GitHub issue #8363] is fixed, the operator restart shouldn't be necessary anymore.
+====
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
+  -p '[{
+    "op": "replace",
+    "path": "/spec/healthCheck/daemonHealth/mon",
+    "value": {}
+  }]'
+kubectl --as=cluster-admin -n syn-rook-ceph-operator delete pods \
+  -l app=rook-ceph-operator
+----
+
+ifeval::["{argocd_disabled}" != "true"]
+include::partial$enable-argocd-autosync.adoc[]
+endif::[]
+

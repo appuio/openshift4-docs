@@ -1,0 +1,37 @@
+. Drain the node to replace
++
+[source,bash,subs="attributes+"]
+----
+kubectl --as=cluster-admin drain "{delete-node}" \
+  --delete-emptydir-data --ignore-daemonsets
+----
+
+. Delete the node to replace from the cluster
++
+[source,bash,subs="attributes+"]
+----
+kubectl --as=cluster-admin delete node "{delete-node}"
+----
+
+. Find the Exoscale node id of the node to replace
++
+[source,bash,subs="attributes+"]
+----
+node_id=$(exo vm list -O json | \
+  jq --arg storage_node "{delete-node}" -r \
+  '.[] | select(.name==$storage_node) | .id')
+----
+
+. Verify that the node ID is correct
++
+[source,bash]
+----
+exo vm list | grep "${node_id}"
+----
+
+. Delete the node
++
+[source,bash]
+----
+exo vm delete "${node_id}"
+----

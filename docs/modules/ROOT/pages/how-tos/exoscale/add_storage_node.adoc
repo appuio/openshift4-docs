@@ -81,11 +81,6 @@ commodore catalog compile "${CLUSTER_ID}"
 include::partial$create-alertmanager-silence.adoc[]
 
 == Update Cluster Config
-[WARNING]
-====
-Check if this update in one step actually works.
-Especially with the short time we label all worker nodes as storage.
-====
 
 . Update cluster config. 
 +
@@ -133,7 +128,6 @@ include::partial$setup_terraform.adoc[]
 
 == Add node
 
-
 . Run Terraform to spin up a new node
 +
 [source,bash]
@@ -147,17 +141,22 @@ include::partial$install/approve-node-csrs.adoc[]
 
 . Label and taint the new storage node
 +
-include::partial$exoscale/label-taint-storage-nodes.adoc[]
-
-. Wait for the localstorage PV on the new node to be created
-+
 [source,bash]
 ----
-kubectl --as=cluster-admin get pv \
-  -l storage.openshift.com/local-volume-owner-name=storagevolumes -w
+# Find the new storage node
+kubectl --as=cluster-admin get nodes
+
+# Label the new storage node
+kubectl --as=cluster-admin label node <storage-XXX>\
+  node-role.kubernetes.io/storage=""
+
+kubectl --as=cluster-admin taint node -lnode-role.kubernetes.io/storage \
+  storagenode=True:NoSchedule
 ----
 
-. Wait until the new OSD is launched
+. Wait until the new OSD is launched.
+This requires ArgoCD to have run and the Rook-Ceph operator to notice the change.
+This might take a few minutes.
 +
 [source,bash]
 ----
@@ -171,7 +170,3 @@ include::partial$storage-ceph-backfilling.adoc[]
 == Finish up
 
 include::partial$remove-alertmanager-silence.adoc[]
-
-== Upstream documentation
-
-* Rook documentation

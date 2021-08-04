@@ -72,11 +72,6 @@ commodore catalog compile "${CLUSTER_ID}"
 include::partial$create-alertmanager-silence.adoc[]
 
 == Update Cluster Config
-[WARNING]
-====
-Check if this update in one step actually works.
-Especially with the short time we label all worker nodes as storage.
-====
 
 . Update cluster config. 
 +
@@ -91,6 +86,12 @@ yq eval -i ".parameters.rook_ceph.ceph_cluster.node_count -= 1" \
   ${CLUSTER_ID}.yml
 
 ----
++
+[NOTE]
+====
+Ceph can't scale below 3 storage nodes, which is the default number of nodes.
+Please check that this update doesn't reduce the number of storage nodes below 3, before continuing.
+====
 
 . Review and commit
 +
@@ -112,8 +113,6 @@ popd
 commodore catalog compile ${CLUSTER_ID} --push -i
 ----
 
-
-
 == Prepare Terraform environment
 
 include::partial$exoscale/configure-terraform-secrets.adoc[]
@@ -129,7 +128,13 @@ export NODE_TO_REMOVE=storage-XXXX
 ----
 
 === Remove old OSD
-. Make sure ArgoCD ran and reduced the target number of OSDs
+. Make sure ArgoCD ran and reduced the target number of OSDs.
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
+  get cephcluster cluster -o jsonpath='{.spec.storage.storageClassDeviceSets[0].count}'
+----
 
 . Find the OSD on the node you want to replace
 +
@@ -167,9 +172,9 @@ include::partial$storage-ceph-backfilling.adoc[]
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster scale --replicas=0 \
   "deploy/rook-ceph-osd-${OSD_ID}"
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph osd purge "${OSD_ID}" --yes-i-really-mean-it
+  ceph osd purge "${OSD_ID}"
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph osd crush remove "${NODE_TO_REPLACE}"
+  ceph osd crush remove "${NODE_TO_REMOVE}"
 ----
 
 . Check that the OSD is no longer listed in `ceph osd tree`
@@ -197,10 +202,10 @@ pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
 [source,bash]
 ----
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
-  -l failure-domain="${NODE_TO_REPLACE}"
+  -l failure-domain="${NODE_TO_REMOVE}"
 # Run this command if the previous command lists a deployment
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
-  -l failure-domain="${NODE_TO_REPLACE}"
+  -l failure-domain="${NODE_TO_REMOVE}"
 ----
 
 . Clean up PVC and prepare job of the old OSD if necessary
@@ -276,7 +281,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-operator logs -f \
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin cordon "${NODE_TO_REPLACE}"
+kubectl --as=cluster-admin cordon "${NODE_TO_REMOVE}"
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pod \
   -l app=rook-ceph-mon,ceph_daemon_id="${MON_ID}"
 ----
@@ -361,12 +366,11 @@ terraform state rm "module.cluster.module.storage.random_id.node_id[$node_index]
 terraform state rm "module.cluster.module.storage.exoscale_compute.nodes[$node_index]"
 ----
 
-
 . Drain the node to replace
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin drain "${NODE_TO_REPLACE}" \
+kubectl --as=cluster-admin drain "${NODE_TO_REMOVE}" \
   --delete-emptydir-data --ignore-daemonsets
 ----
 
@@ -374,7 +378,7 @@ kubectl --as=cluster-admin drain "${NODE_TO_REPLACE}" \
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin delete node "${NODE_TO_REPLACE}"
+kubectl --as=cluster-admin delete node "${NODE_TO_REMOVE}"
 ----
 
 . Find the Exoscale node id of the node to replace
@@ -382,7 +386,7 @@ kubectl --as=cluster-admin delete node "${NODE_TO_REPLACE}"
 [source,bash]
 ----
 node_id=$(exo vm list -O json | \
-  jq --arg storage_node "$NODE_TO_REPLACE" -r \
+  jq --arg storage_node "$NODE_TO_REMOVE" -r \
   '.[] | select(.name==$storage_node) | .id')
 ----
 

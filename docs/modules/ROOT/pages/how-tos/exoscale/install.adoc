@@ -1,6 +1,6 @@
 = Installation on Exoscale
-:ocp-minor-version: 4.7
-:ocp-patch-version: {ocp-minor-version}.13
+:ocp-minor-version: 4.8
+:ocp-patch-version: {ocp-minor-version}.2
 :provider: exoscale
 
 [abstract]

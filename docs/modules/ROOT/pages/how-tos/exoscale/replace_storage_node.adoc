@@ -7,7 +7,7 @@
 :osd-node: ${NODE_TO_REPLACE}
 
 :mon-operation: replace
-:mon-argocd-disabled: yes
+:mon-argocd-autosync-already-disabled: yes
 :mon-node: ${NODE_TO_REPLACE}
 
 :delete-node: ${NODE_TO_REPLACE}

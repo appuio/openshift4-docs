@@ -11,7 +11,7 @@ echo $MON_ID
 +
 TIP: You can skip the remaining steps in this section if `$MON_ID` is empty.
 
-ifeval::["{mon-argocd-disabled}" != "yes"]
+ifeval::["{mon-argocd-autosync-already-disabled}" != "yes"]
 . Disable auto sync for component `rook-ceph`.
 This allows us to temporarily make manual changes to the Rook Ceph cluster.
 +
@@ -101,7 +101,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-operator delete pods \
   -l app=rook-ceph-operator
 ----
 
-ifeval::["{mon-argocd-disabled}" != "yes"]
+ifeval::["{mon-argocd-autosync-already-disabled}" != "yes"]
 include::partial$enable-argocd-autosync.adoc[]
 endif::[]
 

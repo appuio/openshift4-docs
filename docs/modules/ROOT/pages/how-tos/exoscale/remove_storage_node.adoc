@@ -51,8 +51,8 @@ yq eval -i ".parameters.rook_ceph.ceph_cluster.node_count -= 1" \
 +
 [NOTE]
 ====
-Ceph can't scale below 3 storage nodes, which is the default number of nodes.
-Please check that this update doesn't reduce the number of storage nodes below 3, before continuing.
+Ceph can't scale to less than 3 storage nodes, which is the default number of nodes.
+Please ensure that this update doesn't reduce the number of storage nodes to less than 3 before continuing.
 ====
 
 . Review and commit
@@ -95,7 +95,7 @@ node_count=$(jq  -r \
    select(.module=="module.cluster.module.storage" and .type=="exoscale_compute") |
    .instances | length' \
    .tfstate.json)
-# Make sure the number of nodes is conistent with what we configured earlier
+# Verify that the number of nodes is one more than we configured earlier.
 echo $node_count
 
 export NODE_TO_REMOVE=$(jq --arg index "$node_count" -r \

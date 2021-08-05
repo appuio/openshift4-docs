@@ -52,7 +52,7 @@ pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
 [source,bash]
 ----
 node_name=$(kubectl --as=cluster-admin get pv ${pv_name} \
-  -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]'})
+  -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}')
 ----
 
 == Create silence in Alertmanager

@@ -3,6 +3,12 @@
 :kubectl_extra_args: --as=cluster-admin
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
+:osd-node: ${NODE_TO_REMOVE}
+:mon-node: ${NODE_TO_REMOVE}
+:mon-operation: remove
+:delete-node: ${NODE_TO_REMOVE}
+:delete-node-manually: no
+
 
 [abstract]
 --
@@ -17,54 +23,11 @@ Steps to remove a storage node of an OpenShift 4 cluster on https://www.exoscale
 
 == Prerequisites
 
-The following CLI utilities need to be available locally:
-
-* `docker`
-* `curl`
-* `kubectl`
-* `oc`
-* `exo` >= v1.28.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
-* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
-* `jq`
-* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+include::partial$exoscale/prerequisites.adoc[]
 
 == Prepare local environment
 
-. Create local directory to work in
-+
-[TIP]
-====
-We strongly recommend creating an empty directory, unless you already have a work directory for the cluster you're about to work on.
-This guide will run Commodore in the directory created in this step.
-====
-+
-[source,bash]
-----
-export WORK_DIR=/path/to/work/dir
-mkdir -p "${WORK_DIR}"
-pushd "${WORK_DIR}"
-----
-
-. Configure API access
-+
-include::partial$exoscale/environment-vars.adoc[]
-+
-include::partial$vshn-input.adoc[]
-
-. Get required tokens from Vault
-+
-include::partial$connect-to-vault.adoc[]
-+
-include::partial$get-hieradata-token-from-vault.adoc[]
-
-. Compile the catalog for the cluster.
-Having the catalog available locally enables us to run Terraform for the cluster to make any required changes.
-+
-[source,bash]
-----
-commodore catalog compile "${CLUSTER_ID}"
-----
+include::partial$exoscale/setup-local-env.adoc[]
 
 == Set alert silence
 
@@ -84,7 +47,6 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.storage_count -
 
 yq eval -i ".parameters.rook_ceph.ceph_cluster.node_count -= 1" \
   ${CLUSTER_ID}.yml
-
 ----
 +
 [NOTE]
@@ -120,11 +82,29 @@ include::partial$exoscale/configure-terraform-secrets.adoc[]
 include::partial$setup_terraform.adoc[]
 
 == Remove Node
-Make a note of the node you want to remove
-
+* Find the node you want to remove.
+It has to be the one with the highest terraform index.
++
 [source,bash]
 ----
-export NODE_TO_REMOVE=storage-XXXX
+# Grab JSON copy of current Terraform state
+terraform state pull > .tfstate.json
+
+node_count=$(jq  -r \
+  '.resources[] |
+   select(.module=="module.cluster.module.storage" and .type=="exoscale_compute") |
+   .instances | length' \
+   .tfstate.json)
+# Make sure the number of nodes is conistent with what we configured earlier
+echo $node_count
+
+export NODE_TO_REMOVE=$(jq --arg index "$node_count" -r \
+  '.resources[] |
+   select(.module=="module.cluster.module.storage" and .type=="exoscale_compute") |
+   .instances[$index|tonumber-1] |
+   .attributes.hostname' \
+   .tfstate.json)
+echo $NODE_TO_REMOVE
 ----
 
 === Remove old OSD
@@ -136,100 +116,17 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
   get cephcluster cluster -o jsonpath='{.spec.storage.storageClassDeviceSets[0].count}'
 ----
 
-:osd-node: ${NODE_TO_REMOVE}
 include::partial$storage-ceph-remove-osd.adoc[]
 
-. Make a note of the PVC of the old OSD
-+
-NOTE: We also extract the name of the PV here, but we'll only delete the PV after removing the node from the cluster.
-+
-[source,bash]
-----
-pvc_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
-  "rook-ceph-osd-${OSD_ID}" -ojsonpath='{.metadata.labels.ceph\.rook\.io/pvc}')
-pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
-  "${pvc_name}" -o jsonpath='{.spec.volumeName}')
-----
-
-. Check if the OSD deployment needs to be deleted, and delete it if necessary
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
-  -l failure-domain="${NODE_TO_REMOVE}"
-# Run this command if the previous command lists a deployment
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
-  -l failure-domain="${NODE_TO_REMOVE}"
-----
-
-. Clean up PVC and prepare job of the old OSD if necessary
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete job \
-  -l ceph.rook.io/pvc="${pvc_name}"
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pvc "${pvc_name}"
-----
-
-. Clean up PVC encryption secret
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete secret -l pvc_name="${pvc_name}"
-----
+include::partial$storage-ceph-cleanup-osd.adoc[]
 
 === Remove the old MON
 
-:mon_node: ${NODE_TO_REMOVE}
 include::partial$storage-ceph-remove-mon.adoc[]
 
 === Remove VM
 
-
-. Find Terraform resource index of the node to replace
-+
-[source,bash]
-----
-# Grab JSON copy of current Terraform state
-terraform state pull > .tfstate.json
-node_index=$(jq --arg storage_node "${NODE_TO_REMOVE}" -r \
-  '.resources[] |
-   select(.module=="module.cluster.module.storage" and .type=="random_id") |
-   .instances[] |
-   select(.attributes.hex==$storage_node) |
-   .index_key' \
-  .tfstate.json)
-----
-
-. Verify that resource index is correct
-+
-[source,bash]
-----
-jq --arg index "${node_index}" -r \
-  '.resources[] |
-   select(.module=="module.cluster.module.storage" and .type=="exoscale_compute") |
-   .instances[$index|tonumber] |
-   .attributes.hostname' \
-   .tfstate.json
-----
-
-. Remove node ID and node resource for node that we want to remove from the Terraform state
-+
-[source,bash]
-----
-terraform state rm "module.cluster.module.storage.random_id.node_id[$node_index]"
-terraform state rm "module.cluster.module.storage.exoscale_compute.nodes[$node_index]"
-----
-
-:delete-node: ${NODE_TO_REMOVE}
 include::partial$exoscale/delete-node.adoc[]
-
-. Clean up localstorage PV of decommissioned node
-+
-[source,bash]
-----
-kubectl --as=cluster-admin delete pv "${pv_name}"
-----
 
 == Finish up
 

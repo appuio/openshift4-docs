@@ -1,0 +1,46 @@
+. Create local directory to work in
++
+[TIP]
+====
+We strongly recommend creating an empty directory, unless you already have a work directory for the cluster you're about to work on.
+This guide will run Commodore in the directory created in this step.
+====
++
+[source,bash]
+----
+export WORK_DIR=/path/to/work/dir
+mkdir -p "${WORK_DIR}"
+pushd "${WORK_DIR}"
+----
+
+. Configure API access
++
+include::partial$exoscale/environment-vars.adoc[]
++
+include::partial$vshn-input.adoc[]
+
+. Get required tokens from Vault
++
+include::partial$connect-to-vault.adoc[]
++
+include::partial$get-hieradata-token-from-vault.adoc[]
++
+.Get Floaty credentials
++
+[source,bash]
+----
+export TF_VAR_lb_exoscale_api_user=$(vault kv get \
+  -format=json "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty" | jq '.data.data')
+export TF_VAR_lb_exoscale_api_key=$(echo "${TF_VAR_lb_exoscale_api_user}" | jq -r '.iam_key')
+export TF_VAR_lb_exoscale_api_secret=$(echo "${TF_VAR_lb_exoscale_api_user}" | jq -r '.iam_secret')
+----
+
+. Compile the catalog for the cluster.
+Having the catalog available locally enables us to run Terraform for the cluster to make any required changes.
++
+[source,bash]
+----
+commodore catalog compile "${CLUSTER_ID}"
+----
+
+

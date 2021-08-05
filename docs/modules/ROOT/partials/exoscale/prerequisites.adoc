@@ -1,0 +1,12 @@
+
+The following CLI utilities need to be available locally:
+
+* `docker`
+* `curl`
+* `kubectl`
+* `oc`
+* `exo` >= v1.28.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
+* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `jq`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)

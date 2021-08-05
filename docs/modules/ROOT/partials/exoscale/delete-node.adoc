@@ -13,6 +13,7 @@ kubectl --as=cluster-admin drain "{delete-node}" \
 kubectl --as=cluster-admin delete node "{delete-node}"
 ----
 
+ifeval::["{delete-node-manually}" == "yes"]
 . Find the Exoscale node id of the node to replace
 +
 [source,bash,subs="attributes+"]
@@ -34,4 +35,27 @@ exo vm list | grep "${node_id}"
 [source,bash]
 ----
 exo vm delete "${node_id}"
+----
+endif::[]
+
+ifeval::["{delete-node-manually}" != "yes"]
+. Remove the node by applying terraform
++
+[WARNING]
+====
+Verify that the hostname of the to be deleted node matches `{delete-node}`
+====
++
+[source,bash]
+----
+terraform apply
+----
+
+endif::[]
+
+. Clean up localstorage PV of decommissioned node
++
+[source,bash]
+----
+kubectl --as=cluster-admin delete pv "${pv_name}"
 ----

@@ -17,63 +17,11 @@ Steps to add a storage node to an OpenShift 4 cluster on https://www.exoscale.co
 
 == Prerequisites
 
-The following CLI utilities need to be available locally:
-
-* `docker`
-* `curl`
-* `kubectl`
-* `oc`
-* `exo` >= v1.28.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
-* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
-* `jq`
-* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+include::partial$exoscale/prerequisites.adoc[]
 
 == Prepare local environment
 
-. Create local directory to work in
-+
-[TIP]
-====
-We strongly recommend creating an empty directory, unless you already have a work directory for the cluster you're about to work on.
-This guide will run Commodore in the directory created in this step.
-====
-+
-[source,bash]
-----
-export WORK_DIR=/path/to/work/dir
-mkdir -p "${WORK_DIR}"
-pushd "${WORK_DIR}"
-----
-
-. Configure API access
-+
-include::partial$exoscale/environment-vars.adoc[]
-+
-include::partial$vshn-input.adoc[]
-
-. Get required tokens from Vault
-+
-include::partial$connect-to-vault.adoc[]
-+
-include::partial$get-hieradata-token-from-vault.adoc[]
-+
-[source,bash]
-----
-export TF_VAR_lb_exoscale_api_user=$(vault kv get \
-  -format=json "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty" | jq '.data.data')
-export TF_VAR_lb_exoscale_api_key=$(echo "${TF_VAR_lb_exoscale_api_user}" | jq -r '.iam_key')
-export TF_VAR_lb_exoscale_api_secret=$(echo "${TF_VAR_lb_exoscale_api_user}" | jq -r '.iam_secret')
-----
-
-. Compile the catalog for the cluster.
-Having the catalog available locally enables us to run Terraform for the cluster to make any required changes.
-+
-[source,bash]
-----
-commodore catalog compile "${CLUSTER_ID}"
-----
-
+include::partial$exoscale/setup-local-env.adoc[]
 
 == Set alert silence
 
@@ -124,8 +72,6 @@ include::partial$exoscale/configure-terraform-secrets.adoc[]
 
 include::partial$setup_terraform.adoc[]
 
-
-
 == Add node
 
 . Run Terraform to spin up a new node
@@ -141,18 +87,7 @@ include::partial$install/approve-node-csrs.adoc[]
 
 . Label and taint the new storage node
 +
-[source,bash]
-----
-# Find the new storage node
-kubectl --as=cluster-admin get nodes
-
-# Label the new storage node
-kubectl --as=cluster-admin label node <storage-XXX>\
-  node-role.kubernetes.io/storage=""
-
-kubectl --as=cluster-admin taint node -lnode-role.kubernetes.io/storage \
-  storagenode=True:NoSchedule
-----
+include::partial$exoscale/label-taint-storage-nodes.adoc[]
 
 . Wait until the new OSD is launched.
 This requires ArgoCD to have run and the Rook-Ceph operator to notice the change.

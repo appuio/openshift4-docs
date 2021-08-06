@@ -40,7 +40,7 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${CA_CERT}\"" \
   ${CLUSTER_ID}.yml
 
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_keys = [\"$(cat ${SSH_PUBLIC_KEY})\"]" \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_user = \"${HIERADATA_REPO_USER}\"" \

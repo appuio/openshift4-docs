@@ -1,0 +1,61 @@
+. Drain the node to replace
++
+[source,bash,subs="attributes+"]
+----
+kubectl --as=cluster-admin drain "{delete-node}" \
+  --delete-emptydir-data --ignore-daemonsets
+----
+
+. Delete the node to replace from the cluster
++
+[source,bash,subs="attributes+"]
+----
+kubectl --as=cluster-admin delete node "{delete-node}"
+----
+
+ifeval::["{delete-node-manually}" == "yes"]
+. Find the Exoscale node id of the node to replace
++
+[source,bash,subs="attributes+"]
+----
+node_id=$(exo vm list -O json | \
+  jq --arg storage_node "{delete-node}" -r \
+  '.[] | select(.name==$storage_node) | .id')
+----
+
+. Verify that the node ID is correct
++
+[source,bash]
+----
+exo vm list | grep "${node_id}"
+----
+
+. Delete the node
++
+[source,bash]
+----
+exo vm delete "${node_id}"
+----
+endif::[]
+
+ifeval::["{delete-node-manually}" != "yes"]
+. Remove the node by applying terraform
++
+[WARNING]
+====
+Verify that the hostname of the to be deleted node matches `{delete-node}`
+====
++
+[source,bash]
+----
+terraform apply
+----
+
+endif::[]
+
+. Clean up localstorage PV of decommissioned node
++
+[source,bash]
+----
+kubectl --as=cluster-admin delete pv "${pv_name}"
+----

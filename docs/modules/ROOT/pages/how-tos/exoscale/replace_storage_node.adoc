@@ -4,6 +4,16 @@
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
 
+:osd-node: ${NODE_TO_REPLACE}
+
+:mon-operation: replace
+:mon-argocd-autosync-already-disabled: yes
+:mon-node: ${NODE_TO_REPLACE}
+
+:delete-node: ${NODE_TO_REPLACE}
+:delete-node-manually: yes
+
+
 [abstract]
 --
 Steps to replace a storage node of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
@@ -17,54 +27,11 @@ Steps to replace a storage node of an OpenShift 4 cluster on https://www.exoscal
 
 == Prerequisites
 
-The following CLI utilities need to be available locally:
-
-* `docker`
-* `curl`
-* `kubectl`
-* `oc`
-* `exo` >= v1.28.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
-* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
-* `jq`
-* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+include::partial$exoscale/prerequisites.adoc[]
 
 == Prepare local environment
 
-. Create local directory to work in
-+
-[TIP]
-====
-We strongly recommend creating an empty directory, unless you already have a work directory for the cluster you're about to work on.
-This guide will run Commodore in the directory created in this step.
-====
-+
-[source,bash]
-----
-export WORK_DIR=/path/to/work/dir
-mkdir -p "${WORK_DIR}"
-pushd "${WORK_DIR}"
-----
-
-. Configure API access
-+
-include::partial$exoscale/environment-vars.adoc[]
-+
-include::partial$vshn-input.adoc[]
-
-. Get required tokens from Vault
-+
-include::partial$connect-to-vault.adoc[]
-+
-include::partial$get-hieradata-token-from-vault.adoc[]
-
-. Compile the catalog for the cluster.
-Having the catalog available locally enables us to run Terraform for the cluster to make any required changes.
-+
-[source,bash]
-----
-commodore catalog compile "${CLUSTER_ID}"
-----
+include::partial$exoscale/setup-local-env.adoc[]
 
 == Prepare Terraform environment
 
@@ -180,54 +147,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
 
 === Remove old OSD
 
-. Find the OSD on the node you want to replace
-+
-[source,bash]
-----
-OSD_ID=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
-  -l failure-domain="${NODE_TO_REPLACE}" --no-headers \
-  -o custom-columns="NAME:.metadata.name" | cut -d- -f4)
-echo $OSD_ID
-----
-
-. Verify that we found the correct OSD ID in the previous step
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -o wide | grep "osd-${OSD_ID}"
-----
-
-. Tell Ceph to take this OSD out of service and relocate data stored on it
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph osd out "osd.${OSD_ID}"
-----
-
-. Wait for the data to be redistributed ("backfilled") to the other OSDs.
-+
-include::partial$storage-ceph-backfilling.adoc[]
-
-. Remove the OSD from the Ceph cluster
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster scale --replicas=0 \
-  "deploy/rook-ceph-osd-${OSD_ID}"
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph osd purge "${OSD_ID}" --yes-i-really-mean-it
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph osd crush remove "${NODE_TO_REPLACE}"
-----
-
-. Check that the OSD is no longer listed in `ceph osd tree`
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph osd tree
-----
+include::partial$storage-ceph-remove-osd.adoc[]
 
 . Scale down the Rook-Ceph operator
 +
@@ -235,29 +155,6 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 ----
 kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
   deploy/rook-ceph-operator
-----
-
-. Make a note of the PVC of the old OSD
-+
-NOTE: We also extract the name of the PV here, but we'll only delete the PV after removing the node from the cluster.
-+
-[source,bash]
-----
-pvc_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
-  "rook-ceph-osd-${OSD_ID}" -ojsonpath='{.metadata.labels.ceph\.rook\.io/pvc}')
-pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
-  "${pvc_name}" -o jsonpath='{.spec.volumeName}')
-----
-
-. Check if the OSD deployment needs to be deleted, and delete it if necessary
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
-  -l failure-domain="${NODE_TO_REPLACE}"
-# Run this command if the previous command lists a deployment
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
-  -l failure-domain="${NODE_TO_REPLACE}"
 ----
 
 . Reset Ceph cluster resource to have original number of OSDs
@@ -272,21 +169,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --
   }]"
 ----
 
-. Clean up PVC and prepare job of the old OSD if necessary
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete job \
-  -l ceph.rook.io/pvc="${pvc_name}"
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pvc "${pvc_name}"
-----
-
-. Clean up PVC encryption secret
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete secret -l pvc_name="${pvc_name}"
-----
+include::partial$storage-ceph-cleanup-osd.adoc[]
 
 . Scale up the Rook-Ceph operator
 +
@@ -298,147 +181,11 @@ kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=1 \
 
 === Remove the old MON
 
-. Find the MON (if any) on the node to be replaced
-+
-[source,bash]
-----
-MON_ID=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods \
-  -lapp=rook-ceph-mon -o wide \
-  | grep "${NODE_TO_REPLACE}" | cut -d- -f4)
-echo $MON_ID
-----
-+
-TIP: You can skip the remaining steps in this section if `$MON_ID` is empty.
-
-. Temporarily adjust the Rook MON failover timeout.
-This tells the operator to perform the MON failover after less time than the default 10 minutes.
-+
-[NOTE]
-====
-We currently have to restart the operator to force it to pick up the new MON health check configuration.
-Once https://github.com/rook/rook/issues/8363[Rook.io GitHub issue #8363] is fixed, the operator restart shouldn't be necessary anymore.
-====
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
-  -p '[{
-    "op": "replace",
-    "path": "/spec/healthCheck/daemonHealth/mon",
-    "value": {
-      "disabled": false,
-      "interval": "10s",
-      "timeout": "10s"
-    }
-  }]'
-kubectl --as=cluster-admin -n syn-rook-ceph-operator delete pods \
-  -l app=rook-ceph-operator
-----
-
-. Wait for operator to settle.
-Wait for a log message saying `done reconciling ceph cluster in namespace "syn-rook-ceph-cluster"`
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-operator logs -f \
-  deploy/rook-ceph-operator
-----
-
-. Cordon node to replace and delete MON pod
-+
-[source,bash]
-----
-kubectl --as=cluster-admin cordon "${NODE_TO_REPLACE}"
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pod \
-  -l app=rook-ceph-mon,ceph_daemon_id="${MON_ID}"
-----
-
-. Wait until new MON is scheduled
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
-----
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph status
-----
-
-. Verify that three MONs are running
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy -l app=rook-ceph-mon
-----
-
-. Reset the MON failover timeout
-+
-[NOTE]
-====
-We currently have to restart the operator to force it to pick up the new MON health check configuration.
-Once https://github.com/rook/rook/issues/8363[Rook.io GitHub issue #8363] is fixed, the operator restart shouldn't be necessary anymore.
-====
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
-  -p '[{
-    "op": "replace",
-    "path": "/spec/healthCheck/daemonHealth/mon",
-    "value": {}
-  }]'
-kubectl --as=cluster-admin -n syn-rook-ceph-operator delete pods \
-  -l app=rook-ceph-operator
-----
+include::partial$storage-ceph-remove-mon.adoc[]
 
 === Clean up the old node
 
-. Drain the node to replace
-+
-[source,bash]
-----
-kubectl --as=cluster-admin drain "${NODE_TO_REPLACE}" \
-  --delete-emptydir-data --ignore-daemonsets
-----
-
-. Delete the node to replace from the cluster
-+
-[source,bash]
-----
-kubectl --as=cluster-admin delete node "${NODE_TO_REPLACE}"
-----
-
-. Find the Exoscale node id of the node to replace
-+
-[source,bash]
-----
-node_id=$(exo vm list -O json | \
-  jq --arg storage_node "$NODE_TO_REPLACE" -r \
-  '.[] | select(.name==$storage_node) | .id')
-----
-
-. Verify that the node ID is correct
-+
-[source,bash]
-----
-exo vm list | grep "${node_id}"
-----
-
-. Delete the node
-+
-[source,bash]
-----
-exo vm delete "${node_id}"
-----
-
-. Clean up localstorage PV of decommissioned node
-+
-[source,bash]
-----
-kubectl --as=cluster-admin delete pv "${pv_name}"
-----
+include::partial$exoscale/delete-node.adoc[]
 
 == Finish up
 

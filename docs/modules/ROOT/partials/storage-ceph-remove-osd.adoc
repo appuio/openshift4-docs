@@ -1,0 +1,50 @@
+. Find the OSD on the node you want to replace
++
+[source,bash,subs="attributes+"]
+----
+OSD_ID=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+  -l failure-domain="{osd-node}" --no-headers \
+  -o custom-columns="NAME:.metadata.name" | cut -d- -f4)
+echo $OSD_ID
+----
+
+. Verify that we found the correct OSD ID in the previous step
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -o wide | grep "osd-${OSD_ID}"
+----
+
+. Tell Ceph to take this OSD out of service and relocate data stored on it
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph osd out "osd.${OSD_ID}"
+----
+
+. Wait for the data to be redistributed ("backfilled")
++
+include::partial$storage-ceph-backfilling.adoc[]
+
+. Remove the OSD from the Ceph cluster
++
+[source,bash,subs="attributes+"]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster scale --replicas=0 \
+  "deploy/rook-ceph-osd-${OSD_ID}"
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph osd purge "${OSD_ID}"
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph osd crush remove "{osd-node}"
+----
+
+. Check that the OSD is no longer listed in `ceph osd tree`
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph osd tree
+----
+
+

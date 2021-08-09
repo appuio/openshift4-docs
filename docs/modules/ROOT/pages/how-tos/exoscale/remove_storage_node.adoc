@@ -1,0 +1,140 @@
+= Remove a storage node
+
+:kubectl_extra_args: --as=cluster-admin
+:delabel_app_nodes: yes
+:argo_app: rook-ceph
+:osd-node: ${NODE_TO_REMOVE}
+:mon-node: ${NODE_TO_REMOVE}
+:mon-operation: remove
+:delete-node: ${NODE_TO_REMOVE}
+:delete-node-manually: no
+
+
+[abstract]
+--
+Steps to remove a storage node of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
+--
+
+== Starting situation
+
+* You already have a OpenShift 4 cluster on Exoscale
+* You have admin-level access to the cluster
+* You want to remove an existing storage node in the cluster
+
+== Prerequisites
+
+include::partial$exoscale/prerequisites.adoc[]
+
+== Prepare local environment
+
+include::partial$exoscale/setup-local-env.adoc[]
+
+== Set alert silence
+
+:duration: +60 minutes
+include::partial$create-alertmanager-silence.adoc[]
+
+== Update Cluster Config
+
+. Update cluster config. 
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.storage_count -= 1" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.rook_ceph.ceph_cluster.node_count -= 1" \
+  ${CLUSTER_ID}.yml
+----
++
+[NOTE]
+====
+Ceph can't scale to less than 3 storage nodes, which is the default number of nodes.
+Please ensure that this update doesn't reduce the number of storage nodes to less than 3 before continuing.
+====
+
+. Review and commit
++
+[source,bash]
+----
+
+# Have a look at the file ${CLUSTER_ID}.yml.
+
+git commit -a -m "Remove storage node from cluster ${CLUSTER_ID}"
+git push
+
+popd
+----
+
+. Compile and push cluster catalog 
++
+[source,bash]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i
+----
+
+== Prepare Terraform environment
+
+include::partial$exoscale/configure-terraform-secrets.adoc[]
+
+include::partial$setup_terraform.adoc[]
+
+== Remove Node
+* Find the node you want to remove.
+It has to be the one with the highest terraform index.
++
+[source,bash]
+----
+# Grab JSON copy of current Terraform state
+terraform state pull > .tfstate.json
+
+node_count=$(jq  -r \
+  '.resources[] |
+   select(.module=="module.cluster.module.storage" and .type=="exoscale_compute") |
+   .instances | length' \
+   .tfstate.json)
+# Verify that the number of nodes is one more than we configured earlier.
+echo $node_count
+
+export NODE_TO_REMOVE=$(jq --arg index "$node_count" -r \
+  '.resources[] |
+   select(.module=="module.cluster.module.storage" and .type=="exoscale_compute") |
+   .instances[$index|tonumber-1] |
+   .attributes.hostname' \
+   .tfstate.json)
+echo $NODE_TO_REMOVE
+----
+
+=== Remove old OSD
+. Make sure ArgoCD ran and reduced the target number of OSDs
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
+  get cephcluster cluster -o jsonpath='{.spec.storage.storageClassDeviceSets[0].count}'
+----
+
+include::partial$storage-ceph-remove-osd.adoc[]
+
+include::partial$storage-ceph-cleanup-osd.adoc[]
+
+=== Remove the old MON
+
+include::partial$storage-ceph-remove-mon.adoc[]
+
+=== Remove VM
+
+include::partial$exoscale/delete-node.adoc[]
+
+== Finish up
+
+include::partial$remove-alertmanager-silence.adoc[]
+
+
+== Upstream documentation
+
+* Rook documentation
+** https://rook.io/docs/rook/v1.6/ceph-osd-mgmt.html#remove-an-osd[Remove an OSD]
+** https://rook.io/docs/rook/v1.6/ceph-mon-health.html#failing-over-a-monitor[MON failover]

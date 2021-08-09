@@ -62,7 +62,7 @@ Please ensure that this update doesn't reduce the number of storage nodes to les
 
 # Have a look at the file ${CLUSTER_ID}.yml.
 
-git commit -a -m "Remove storage node to cluster ${CLUSTER_ID}"
+git commit -a -m "Remove storage node from cluster ${CLUSTER_ID}"
 git push
 
 popd

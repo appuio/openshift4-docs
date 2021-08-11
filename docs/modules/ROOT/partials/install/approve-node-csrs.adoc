@@ -2,9 +2,22 @@
 ----
 # Once CSRs in state Pending show up, approve them
 # Needs to be run twice, two CSRs for each node need to be approved
+
+ifdef::kubectl_extra_args[]
+kubectl {kubectl_extra_args} get csr -w
+endif::kubectl_extra_args[]
+ifndef::kubectl_extra_args[]
 kubectl get csr -w
+endif::kubectl_extra_args[]
+
+ifdef::kubectl_extra_args[]
+oc {kubectl_extra_args} get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
+  xargs oc {kubectl_extra_args} adm certificate approve
+endif::kubectl_extra_args[]
+ifndef::kubectl_extra_args[]
 oc get csr -o go-template='{{range .items}}{{if not .status}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' | \
   xargs oc adm certificate approve
+endif::kubectl_extra_args[]
 
 ifdef::kubectl_extra_args[]
 kubectl {kubectl_extra_args} get nodes

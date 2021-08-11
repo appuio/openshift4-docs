@@ -1,6 +1,7 @@
 [source,bash,subs="attributes+"]
 ----
-job_name="{http-method}-silence-{argo_app}-alerts-$(date +%s)"
+if [[ "$OSTYPE" == "darwin"* ]]; then alias date=gdate; fi
+job_name=$(printf "{http-method}-silence-{argo_app}-alerts-$(date +%s)" | tr '[:upper:]' '[:lower:]')
 ifeval::["{http-method}" == "POST"]
 silence_duration='{duration}' <1>
 endif::[]

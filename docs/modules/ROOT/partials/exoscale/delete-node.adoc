@@ -1,49 +1,46 @@
-. Drain the node to replace
+. Drain the node(s) to replace
 +
 [source,bash,subs="attributes+"]
 ----
-kubectl --as=cluster-admin drain "{delete-node}" \
-  --delete-emptydir-data --ignore-daemonsets
+for node in $(echo -n {node-delete-list}); do
+  kubectl --as=cluster-admin drain "${node}" \
+    --delete-emptydir-data --ignore-daemonsets
+done
 ----
 
-. Delete the node to replace from the cluster
+. Delete the node(s) to replace from the cluster
 +
 [source,bash,subs="attributes+"]
 ----
-kubectl --as=cluster-admin delete node "{delete-node}"
+for node in $(echo -n {node-delete-list}); do
+  kubectl --as=cluster-admin delete node "${node}"
+done
 ----
 
-ifeval::["{delete-node-manually}" == "yes"]
-. Find the Exoscale node id of the node to replace
+ifeval::["{delete-nodes-manually}" == "yes"]
+. Remove the Exoscale VM(s)
 +
 [source,bash,subs="attributes+"]
 ----
-node_id=$(exo vm list -O json | \
-  jq --arg storage_node "{delete-node}" -r \
-  '.[] | select(.name==$storage_node) | .id')
-----
+for node in $(echo -n {node-delete-list}); do
+  node_id=$(exo vm list -O json | \
+    jq --arg storage_node "$node" -r \
+    '.[] | select(.name==$storage_node) | .id')
 
-. Verify that the node ID is correct
-+
-[source,bash]
-----
-exo vm list | grep "${node_id}"
-----
+  echo "Removing node:"
+  exo vm list | grep "${node_id}"
 
-. Delete the node
-+
-[source,bash]
-----
-exo vm delete "${node_id}"
+  exo vm delete "${node_id}"
+done
 ----
 endif::[]
 
-ifeval::["{delete-node-manually}" != "yes"]
-. Remove the node by applying terraform
+ifeval::["{delete-nodes-manually}" != "yes"]
+. Remove the node(s) by applying Terraform
 +
 [WARNING]
 ====
-Verify that the hostname of the to be deleted node matches `{delete-node}`
+Verify that the hostname of the to be deleted node(s) matches `{node-delete-list}`
 ====
 +
 [source,bash]
@@ -53,9 +50,11 @@ terraform apply
 
 endif::[]
 
-. Clean up localstorage PV of decommissioned node
+. Clean up localstorage PV(s) of decommissioned node(s)
 +
-[source,bash]
+[source,bash,subs="attributes+"]
 ----
-kubectl --as=cluster-admin delete pv "${pv_name}"
+for pv_name in $(echo -n {delete-pvs}); do
+  kubectl --as=cluster-admin delete pv "${pv_name}"
+done
 ----

@@ -37,7 +37,7 @@ export EXOSCALE_REGION=<cluster-region>
 
 export CLUSTER_ID=<cluster-name>
 
-# From https://git.vshn.net/profile/personal_access_tokens
+# From https://git.vshn.net/-/profile/personal_access_tokens
 export GITLAB_TOKEN=<gitlab-api-token>
 export GITLAB_USER=<gitlab-user-name>
 

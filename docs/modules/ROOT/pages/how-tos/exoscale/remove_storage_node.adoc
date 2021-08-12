@@ -7,6 +7,7 @@
 :osd-replace-list: $NODE_TO_REMOVE
 
 :mon-operation: remove
+:mon-argocd-autosync-already-disabled: yes
 :mon-replace-list: $NODE_TO_REMOVE
 
 :node-delete-list: ${NODE_TO_REMOVE}

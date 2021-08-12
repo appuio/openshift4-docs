@@ -4,14 +4,15 @@
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
 
-:osd-replace-list: $NODE_TO_REPLACE
+:osd-replace-list: $NODE_TO_REMOVE
 
 :mon-operation: remove
-:mon-replace-list: $NODE_TO_REPLACE
+:mon-argocd-autosync-already-disabled: yes
+:mon-replace-list: $NODE_TO_REMOVE
 
 :node-delete-list: ${NODE_TO_REMOVE}
 :delete-nodes-manually: no
-:delete-pvs: $old_pv_names
+:delete-pvs: old_pv_names
 
 [abstract]
 --
@@ -119,9 +120,29 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
   get cephcluster cluster -o jsonpath='{.spec.storage.storageClassDeviceSets[0].count}'
 ----
 
+. Disable ArgoCD auto sync for component `rook-ceph`
++
+include::partial$disable-argocd-autosync.adoc[]
+
+. Scale down the Rook-Ceph operator
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
+  deploy/rook-ceph-operator
+----
+
 include::partial$storage-ceph-remove-osd.adoc[]
 
 include::partial$storage-ceph-cleanup-osd.adoc[]
+
+. Scale up the Rook-Ceph operator
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=1 \
+  deploy/rook-ceph-operator
+----
 
 === Remove the old MON
 
@@ -134,6 +155,8 @@ include::partial$exoscale/delete-node.adoc[]
 == Finish up
 
 include::partial$remove-alertmanager-silence.adoc[]
+
+include::partial$enable-argocd-autosync.adoc[]
 
 == Upstream documentation
 

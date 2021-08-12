@@ -4,10 +4,10 @@
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
 
-:osd-replace-list: $NODE_TO_REPLACE
+:osd-replace-list: $NODE_TO_REMOVE
 
 :mon-operation: remove
-:mon-replace-list: $NODE_TO_REPLACE
+:mon-replace-list: $NODE_TO_REMOVE
 
 :node-delete-list: ${NODE_TO_REMOVE}
 :delete-nodes-manually: no

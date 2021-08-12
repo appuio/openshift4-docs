@@ -119,6 +119,18 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
   get cephcluster cluster -o jsonpath='{.spec.storage.storageClassDeviceSets[0].count}'
 ----
 
+. Disable ArgoCD auto sync for component `rook-ceph`
++
+include::partial$disable-argocd-autosync.adoc[]
+
+. Scale down the Rook-Ceph operator
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
+  deploy/rook-ceph-operator
+----
+
 include::partial$storage-ceph-remove-osd.adoc[]
 
 include::partial$storage-ceph-cleanup-osd.adoc[]
@@ -134,6 +146,8 @@ include::partial$exoscale/delete-node.adoc[]
 == Finish up
 
 include::partial$remove-alertmanager-silence.adoc[]
+
+include::partial$enable-argocd-autosync.adoc[]
 
 == Upstream documentation
 

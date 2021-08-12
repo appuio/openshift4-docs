@@ -43,6 +43,8 @@ ifeval::["{delete-nodes-manually}" != "yes"]
 Verify that the hostname of the to be deleted node(s) matches `{node-delete-list}`
 ====
 +
+NOTE: Ensure that you're still in directory `${WORK_DIR}/catalog/manifests/openshift4-terraform` before executing this command.
++
 [source,bash]
 ----
 terraform apply

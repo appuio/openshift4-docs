@@ -11,7 +11,7 @@
 
 :node-delete-list: ${NODE_TO_REMOVE}
 :delete-nodes-manually: no
-:delete-pvs: $old_pv_names
+:delete-pvs: old_pv_names
 
 [abstract]
 --

@@ -54,7 +54,7 @@ endif::[]
 +
 [source,bash,subs="attributes+"]
 ----
-for pv_name in $(echo -n {delete-pvs}); do
+for pv_name in $(echo -n ${delete-pvs}); do
   kubectl --as=cluster-admin delete pv "${pv_name}"
 done
 ----

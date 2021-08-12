@@ -14,7 +14,7 @@
 :delete-nodes-manually: yes
 :node-delete-list: $NODES_TO_REPLACE
 
-:delete-pvs: $old_pv_names
+:delete-pvs: old_pv_names
 
 [abstract]
 --

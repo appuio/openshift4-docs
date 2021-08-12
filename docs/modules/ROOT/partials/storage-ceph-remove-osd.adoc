@@ -33,7 +33,7 @@ for node in $(echo -n {osd-replace-list}); do
   kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
     ceph osd purge "${osd_id}"
   kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-    ceph osd crush remove "${osd_id}"
+    ceph osd crush remove "${node}"
 done
 ----
 

@@ -136,6 +136,14 @@ include::partial$storage-ceph-remove-osd.adoc[]
 
 include::partial$storage-ceph-cleanup-osd.adoc[]
 
+. Scale up the Rook-Ceph operator
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=1 \
+  deploy/rook-ceph-operator
+----
+
 === Remove the old MON
 
 include::partial$storage-ceph-remove-mon.adoc[]

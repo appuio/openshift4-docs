@@ -1,0 +1,33 @@
+= Release Notes
+
+TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
+
+== OpenShift 4.8
+
+OpenShift 4.8 was released on 2021-08-02.
+See the official release blog post https://cloud.redhat.com/blog/red-hat-openshift-4.8-is-now-generally-available[Red Hat OpenShift 4.8 Is Now Generally Available] for more information.
+
+The release notes are available in the upstream documentation under https://docs.openshift.com/container-platform/4.8/release_notes/ocp-4-8-release-notes.html[OpenShift Container Platform 4.8 release notes].
+
+Notable changes with a possible user-visible impact:
+
+HAproxy Upgrade to 2.2::
++
+[quote, Upstream OpenShift 4.8 Release Notes]
+____
+OpenShift Container Platform updated to HAProxy 2.2, which changes HTTP header names to lowercase by default, for example, changing `Host: xyz.com` to `host: xyz.com`. For legacy applications that are sensitive to the capitalization of HTTP header names, use the Ingress Controller `spec.httpHeaders.headerNameCaseAdjustments` API field to accommodate legacy applications until they can be fixed. Make sure to add the necessary configuration by using `spec.httpHeaders.headerNameCaseAdjustments` before upgrading OpenShift Container Platform now that HAProxy 2.2 is available.
+
+For more information, see https://docs.openshift.com/container-platform/4.8/networking/ingress-operator.html#nw-ingress-converting-http-header-case_configuring-ingress[Converting HTTP header case].
+____
++
+The Commodore Component https://github.com/appuio/component-openshift4-ingress[openshift4-ingress] allows to configure the Ingress Controller like that:
++
+[code]
+----
+parameters:
+  openshift4_ingress:
+    ingressControllers:
+      default:
+        httpHeaders:
+          headerNameCaseAdjustments: true
+----

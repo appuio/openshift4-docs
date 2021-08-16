@@ -1,3 +1,4 @@
+* xref:oc4:ROOT:references/release_notes.adoc[Release Notes]
 * xref:oc4:ROOT:references/operators.adoc[Operators]
 
 * Google Cloud Platform

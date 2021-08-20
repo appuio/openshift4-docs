@@ -97,7 +97,7 @@ restic snapshots
 +
 [source,console]
 ----
-restic restore <ID> --target . 
+restic restore <ID> --target .
 ----
 
 == Extract and prepare files
@@ -139,3 +139,8 @@ kubectl --as cluster-admin apply -f <path/to/file>
 ----
 kubectl --as cluster-admin apply -Rf <path/to/dir>
 ----
+
+[WARNING]
+====
+While it's technically possible to extract all files in the backup and apply them all, it's not advisable to do so. Restoring objects that are managed by ArgoCD, will prevent most ArgoCD-managed apps from successfully syncing. These objects would then need to be replaced manually. Try to limit the objects being restored to the necessary minimum.
+====

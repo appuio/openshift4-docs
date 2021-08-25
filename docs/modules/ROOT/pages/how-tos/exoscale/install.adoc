@@ -195,7 +195,7 @@ git push
 
 popd
 ----
-<1> Can be removed as soon as Project Syn is kuberenetes version aware and we can set this automatically.
+<1> Can be removed as soon as Project Syn is Kubernetes version aware and we can set this automatically.
 
 . Compile and push Terraform setup
 +

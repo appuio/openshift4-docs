@@ -1,6 +1,6 @@
 = Installation on Exoscale
-:ocp-minor-version: 4.7
-:ocp-patch-version: {ocp-minor-version}.13
+:ocp-minor-version: 4.8
+:ocp-patch-version: {ocp-minor-version}.2
 :provider: exoscale
 
 [abstract]
@@ -179,11 +179,13 @@ include::partial$install/prepare-terraform.adoc[]
 
 . Review and commit
 +
-[source,bash]
+[source,bash,subs="attributes+"]
 ----
 # Exoscale-specific config
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${RHCOS_TEMPLATE}\"" \
   ${CLUSTER_ID}.yml
+yq eval -i ".parameters.openshift4_local_storage.local_storage_operator = \"{ocp-minor-version}\"" \
+  ${CLUSTER_ID}.yml <1>
 
 # Have a look at the file ${CLUSTER_ID}.yml.
 # Override any default parameters or add more component configuration.
@@ -193,6 +195,7 @@ git push
 
 popd
 ----
+<1> Can be removed as soon as Project Syn is kuberenetes version aware and we can set this automatically.
 
 . Compile and push Terraform setup
 +

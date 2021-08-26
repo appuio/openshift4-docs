@@ -14,7 +14,7 @@ git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_
 
 . Prepare Terraform cluster config
 +
-[source,bash]
+[source,bash,subs="attributes+"]
 ----
 CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
   "${INSTALLER_DIR}/master.ign" | \
@@ -40,8 +40,14 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${CA_CERT}\"" \
   ${CLUSTER_ID}.yml
 
+ifeval::["{provider}" == "exoscale"]
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
+  ${CLUSTER_ID}.yml
+endif::[]
+ifeval::["{provider}" != "exoscale"]
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_keys = [\"$(cat ${SSH_PUBLIC_KEY})\"]" \
   ${CLUSTER_ID}.yml
+endif::[]
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_user = \"${HIERADATA_REPO_USER}\"" \
   ${CLUSTER_ID}.yml

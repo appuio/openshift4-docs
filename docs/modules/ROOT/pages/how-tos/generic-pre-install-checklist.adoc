@@ -34,7 +34,7 @@ Don't go below the defined minimum requirements.
 Further reference:
 
 * See infrastructure specific "Default Configuration / Minimum Requirements" for https://products.docs.vshn.ch/products/appuio/managed/ocp4.html[APPUiO Managed Red Hat OpenShift 4]
-* See Red Hat's https://docs.openshift.com/container-platform/4.7/installing/installing_platform_agnostic/installing-platform-agnostic.html#minimum-resource-requirements_installing-platform-agnostic[Minimum resource requirements]
+* See Red Hat's https://docs.openshift.com/container-platform/4.8/installing/installing_platform_agnostic/installing-platform-agnostic.html#minimum-resource-requirements_installing-platform-agnostic[Minimum resource requirements]
 
 == Infrastructure
 

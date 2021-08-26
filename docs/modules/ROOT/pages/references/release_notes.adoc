@@ -31,3 +31,25 @@ parameters:
         httpHeaders:
           headerNameCaseAdjustments: true
 ----
+
+Local Storage Operator::
+
+When upgrading to OpenShift 4.8, the Local Storage Operator needs to be updated too.
+The Commodore Component https://github.com/appuio/component-openshift4-local-storage[openshift4-local-storage] needs to be configured to use the new version:
++
+[code]
+----
+parameters:
+  openshift4_local_storage:
+    local_storage_operator:
+      channel: "4.8"
+----
++
+[NOTE]
+====
+With the introduction of Dynamic Facts this manual change won't be necessary anymore.
+Please check if this change is still needed before manually pinning the channel.
+====
+
+
+

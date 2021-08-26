@@ -133,7 +133,7 @@ If a URL is printed to the output, you can skip the next steps and directly jump
 +
 [source,bash,subs="attributes+"]
 ----
-curl -sL https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/{ocp-patch-version}/rhcos-{ocp-patch-version}-x86_64-openstack.x86_64.qcow2.gz | gzip -d > rhcos-{ocp-minor-version}.gcow
+curl -L https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/{ocp-patch-version}/rhcos-{ocp-patch-version}-x86_64-openstack.x86_64.qcow2.gz | gzip -d > rhcos-{ocp-minor-version}.gcow
 qemu-img convert rhcos-{ocp-minor-version}.gcow rhcos-{ocp-minor-version}.raw
 ----
 

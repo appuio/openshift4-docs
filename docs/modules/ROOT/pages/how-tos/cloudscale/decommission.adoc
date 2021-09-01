@@ -35,6 +35,31 @@ export GITLAB_USER=<gitlab-user-name>
 
 include::partial$setup_terraform.adoc[]
 
+. Grab location of LB backups and potential Icinga2 satellite host before decommissioning VMs.
++
+[source,shell]
+----
+declare -a LB_FQDNS
+for id in 0 1; do
+  LB_FQDNS[$id]=$(terraform state show "module.cluster.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | sed -e 's/"//g')
+done
+for lb in ${LB_FQDNS[*]}; do
+  ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf"
+done
+----
+
+. Set downtimes for both LBs in https://monitoring.vshn.net[Icinga2].
+
+. Remove APPUiO hieradata Git repository resource from Terraform state
++
+[source,console]
+----
+terraform state rm module.cluster.gitfile_checkout.appuio_hieradata
+----
++
+NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.
+
+
 . Delete resources from clouscale.ch using Terraform
 +
 [source,bash]
@@ -87,6 +112,10 @@ vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry
 # delete ldap secret
 vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap
 ----
+
+. Decommission Puppet-managed LBs according to the https://wiki.vshn.net/display/VT/How+To%3A+Decommission+a+VM[VSHN documentation] (Internal link).
++
+NOTE: Don't forget to remove the LB configuration in the https://git.vshn.net/appuio/appuio_hieradata/-/tree/master/lbaas[APPUiO hieradata] and the https://git.vshn.net/vshn-puppet/nodes_hieradata[nodes hieradata].
 
 . Delete cluster from Lieutenant API (via portal)
 +

@@ -326,4 +326,71 @@ oc create secret generic image-registry-private-configuration-user \
 --from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
 ----
 
+=== Configure workaround for PublicAccessBlockConfiguration prevents upload of objects with private ACL
+
+[NOTE]
+--
+OpenShift does configure a PublicAccessBlockConfiguration.
+Ceph currently has a bug pushing objects into the S3 bucket are prevented.
+
+The error message in the docker-registry logs is `s3aws: AccessDenied: \n\tstatus code: 403, request id: tx00000000000003ea93fa6-00112504a0-4fa9e750e-rma1, host id: `.
+
+See https://tracker.ceph.com/issues/49135 for more information.
+--
+
+. Install the aws cli tool
++
+[source,bash]
+----
+$ pip install awscli
+----
++
+. Configure the S3 bucket access and secret keys
++
+[source,bash]
+----
+$ aws configure
+AWS Access Key ID [****************56XS]: <REGISTRY_STORAGE_S3_ACCESSKEY>
+AWS Secret Access Key [****************sH2a]: <REGISTRY_STORAGE_S3_SECRETKEY>
+Default region name [eu-central-1]:
+Default output format [None]:
+----
++
+. Check the current S3 bucket configuration
++
+[source,bash]
+----
+$ aws --endpoint-url https://objects.${REGION}.cloudscale.ch s3api get-public-access-block --bucket ${CLUSTER_ID}-image-registry
+{
+    "PublicAccessBlockConfiguration": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
+    }
+}
+----
++
+. Configure BlockPublicAcls to `false`
++
+[source,bash]
+----
+$ aws s3api put-public-access-block --endpoint-url https://objects.${REGION}.cloudscale.ch --bucket ${CLUSTER_ID}-image-registry --public-access-block-configuration BlockPublicAcls=false
+----
++
+. Verify the configuration BlockPublicAcls is `false`
++
+[source,bash]
+----
+$ aws s3api get-public-access-block --endpoint-url https://objects.${REGION}.cloudscale.ch --bucket ${CLUSTER_ID}-image-registry
+{
+    "PublicAccessBlockConfiguration": {
+        "BlockPublicAcls": false,
+        "IgnorePublicAcls": false,
+        "BlockPublicPolicy": false,
+        "RestrictPublicBuckets": false
+    }
+}
+----
+
 include::partial$install/finalize.adoc[]

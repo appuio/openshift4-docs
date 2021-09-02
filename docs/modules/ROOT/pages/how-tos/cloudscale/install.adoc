@@ -360,6 +360,7 @@ Default output format [None]:
 +
 [source,bash]
 ----
+$ export REGION=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
 $ aws --endpoint-url https://objects.${REGION}.cloudscale.ch s3api get-public-access-block --bucket ${CLUSTER_ID}-image-registry
 {
     "PublicAccessBlockConfiguration": {

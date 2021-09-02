@@ -65,3 +65,8 @@ done
 ----
 rm -r ${INSTALLER_DIR}/
 ----
+
+=== Post tasks
+
+. Doing a https://kb.vshn.ch/oc4/how-tos/update_maintenance.html[first maintenance]
+. Add the cluster to the https://wiki.vshn.net/pages/templates2/editpagetemplate.action?entityId=137527297&key=VT[maintenance template]

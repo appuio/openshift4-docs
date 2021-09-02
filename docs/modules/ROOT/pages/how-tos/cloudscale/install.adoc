@@ -331,7 +331,7 @@ oc create secret generic image-registry-private-configuration-user \
 [NOTE]
 --
 OpenShift does configure a PublicAccessBlockConfiguration.
-Ceph currently has a bug pushing objects into the S3 bucket are prevented.
+Ceph currently has a bug, where pushing objects into the S3 bucket are prevented.
 
 The error message in the docker-registry logs is `s3aws: AccessDenied: \n\tstatus code: 403, request id: tx00000000000003ea93fa6-00112504a0-4fa9e750e-rma1, host id: `.
 

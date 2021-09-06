@@ -1,0 +1,179 @@
+= Configuration Options Exoscale
+
+[abstract]
+The OpenShift cluster setup can be customized by configuring `.parameters.openshift4_terraform.terraform_variables`.
+This page gives an overview of the configuration options.
+Futher information on the terraform module and its configuration can be found on https://github.com/appuio/terraform-openshift4-exoscale[GitHub].
+
+
+
+== Nodes
+
+Through Terraform variables you have the ability to control the instance size, count, and partition size for each VM type, as well as the option to configure additional worker groups. 
+
+
+=== Master Nodes
+
+[cols="2,2a,2a"]
+|===
+| Key | Default | Description
+
+| `master_count`
+| `3`
+| The number of Kubernetes master nodes running the control plane.
+
+
+| `master_state`
+| `Running`
+| State of the Kubernetes master node VMs.
+
+|===
+
+
+=== Infrastructure Nodes
+
+[cols="2,2a,2a"]
+|===
+| Key | Default | Description
+
+
+| `infra_count`
+| `3`
+| The number of infrastructure nodes running the OpenShift Container Platform environment
+
+
+| `infra_state`
+| `Running`
+| State of the infrastructure node VMs
+
+
+| `infra_size`
+| `Extra-large`
+| Size of the infrastructure node VMs
+
+|===
+
+
+=== Storage Nodes
+
+[cols="2,2a,2a"]
+|===
+| Key | Default | Description
+
+| `storage_count`
+| `3`
+| The number of storage nodes running Ceph
+
+
+| `storage_state`
+| `Running`
+| State of the storage node VMs
+
+
+| `storage_size`
+| `Extra-large`
+| Size of the storage node VMs
+
+| `storage_cluster_disk_size`
+| `180`
+| Ceph cluster storage per node in GB
+
+|===
+
+
+=== Worker Nodes
+
+[cols="2,2a,2a"]
+|===
+| Key | Default | Description
+
+| `worker_count`
+| `3`
+| The number of worker nodes running the customers workload
+
+
+| `worker_state`
+| `Running`
+| State of the worker node VMs
+
+
+| `worker_size`
+| `Extra-large`
+| Size of the worker node VMs
+
+| `worker_data_disk_size`
+| `0`
+| Additional storage per worker node that can be used as local storage
+
+|===
+
+
+=== Additional Worker Groups
+
+You have the option to add additional worker node groups. 
+Each worker group is a collection of VMs with the same flavor and volume size.
+
+Worker groups can be configured through the `additional_worker_groups` variable. 
+This variable is a map from worker group names (used as node prefixes) to objects providing node instance size, node count, node data disk size, and node state.
+
+The following example will add a worker group called `cpu1` with 3 instances of size `CPU-huge` with a volume size of `248GB`.
+
+[source,yaml]
+----
+terraform_variables:
+  additional_worker_groups:
+    "cpu1":
+      size: "CPU-huge"
+      count: 3
+----
+
+[NOTE]
+====
+Please note that you can't use names `master`, `infra`, `storage` or `worker` for additional worker groups. 
+We prohibit these names to ensure there are no collisions between the generated nodes names for different worker groups.
+====
+
+[cols="2,2a,2a"]
+|===
+| Key | Default | Description
+
+| `count`
+| ``
+| (Required) The number of worker nodes in this group
+
+
+| `state`
+| `Running`
+| State of the worker node VMs
+
+
+| `size`
+| ``
+| (Required) Size of the worker node VMs
+
+| `data_disk_size`
+| `0`
+| Additional storage per worker node that can be used as local storage
+
+
+|===
+
+
+== Example
+
+[source,yaml]
+----
+parameters:
+  openshift4_terraform:
+    terraform_variables:
+      root_disk_size: 128
+      worker_count: 4
+      worker_size: "Medium"
+      worker_volume_size_gb: 512
+      additional_worker_groups:
+        "cpu1":
+          size: "CPU-huge"
+          count: 3
+----
+
+

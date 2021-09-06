@@ -7,3 +7,10 @@
 
 * Project Syn
 ** xref:oc4:ROOT:references/projectsyn/developer.adoc[Commodore Component Developer Guidelines]
+
+* cloudscale.ch
+** xref:oc4:ROOT:references/cloudscale/config.adoc[Cluster Configuration]
+
+* Exoscale
+** xref:oc4:ROOT:how-tos/exoscale/config.adoc[Cluster Configuration]
+

@@ -80,7 +80,7 @@ We currently don't provide support for any of the following configurations:
 
 
 | `storage_size`
-| `Extra-large`
+| `CPU-extra-large`
 | Size of the storage node VMs
 
 | `storage_cluster_disk_size`
@@ -89,6 +89,14 @@ We currently don't provide support for any of the following configurations:
 
 |===
 
+[WARNING]
+====
+We currently don't provide support for any of the following configurations:
+
+* `storage_size` smaller than `CPU-extra-large`.
+* `storage_count < 3`.
+* `storage_cluster_disk_size < 180`.
+====
 
 === Worker Nodes
 

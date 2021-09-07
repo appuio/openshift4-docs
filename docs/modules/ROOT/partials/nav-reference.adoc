@@ -12,5 +12,5 @@
 ** xref:oc4:ROOT:references/cloudscale/config.adoc[Cluster Configuration]
 
 * Exoscale
-** xref:oc4:ROOT:how-tos/exoscale/config.adoc[Cluster Configuration]
+** xref:oc4:ROOT:references/exoscale/config.adoc[Cluster Configuration]
 

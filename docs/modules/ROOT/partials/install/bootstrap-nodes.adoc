@@ -177,4 +177,4 @@ kubectl get nodes -l node-role.kubernetes.io/app
 ----
 +
 [NOTE]
-At this point you might want to add extra labels to the additional worker groups, if there are any.
+At this point you may want to add extra labels to the additional worker groups, if there are any.

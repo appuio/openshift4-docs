@@ -52,6 +52,10 @@ endif::[]
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_user = \"${HIERADATA_REPO_USER}\"" \
   ${CLUSTER_ID}.yml
 
+# Configure the OpenShift update channel
+yq eval -i ".parameters.openshift4_version.spec.channel = \"stable-4.8\" \
+  ${CLUSTER_ID}.yml
+
 # Configure default ingress controller with 3 replicas, so that the
 # VSHN-managed LB HAproxy health check isn't complaining about a missing backend
 yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.replicas = 3" \

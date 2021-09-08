@@ -52,6 +52,11 @@ Depending on what the infrastructure supports:
 
 If the default network settings don't match the requirements, first answer the question "Is there really no way around using the default network settings?" - If the answer is no, prepare the following information:
 
+[IMPORTANT]
+--
+The OVN-Kubernetes network provider requires the address range `100.64.0.0/16` for https://docs.openshift.com/container-platform/4.8/networking/ovn_kubernetes_network_provider/migrate-from-openshift-sdn.html#considerations-migrating-ovn-kubernetes-network-provider_migrate-from-openshift-sdn[internal purposes] and can not be used.
+--
+
 * What's the IP subnet for the nodes?
 * Which IP network can be used for `clusterNetwork` (SDN)? Should be a `/14`.
 * Which IP network can be used for `serviceNetwork`? Should be a `/16`.

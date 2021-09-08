@@ -46,6 +46,8 @@ metadata:
 baseDomain: ${BASE_DOMAIN}
 platform:
   none: {}
+networking:
+  networkType: OVNKubernetes
 pullSecret: |
   ${PULL_SECRET}
 sshKey: "$(cat $SSH_PUBLIC_KEY)"

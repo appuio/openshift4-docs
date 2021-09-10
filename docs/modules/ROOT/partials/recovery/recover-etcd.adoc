@@ -96,6 +96,8 @@ endif::[]
 
 [source,bash]
 ----
+TEMP_DIR=$(mktemp -d)
+pushd ${TEMP_DIR}
 SNAPSHOT_ID=$(restic snapshots --json --latest=1 --path /syn-cluster-backup-etcd-etcd-backup.tar.gz | jq -r '.[0].id')
 restic dump "${SNAPSHOT_ID}" /syn-cluster-backup-etcd-etcd-backup.tar.gz | tar xzv
 ----

@@ -10,7 +10,8 @@ endif::[]
 
 [WARNING]
 ====
-Restoring to a previous cluster state is a destructive and destablizing action to take on a running cluster. This should only be used as a last resort.
+Restoring to a previous cluster state is a destructive and destabilizing action to take on a running cluster.
+This should only be used as a last resort.
 
 If you are able to retrieve data using the Kubernetes API server, then etcd is available and you shouldn't restore using an etcd backup.
 ====
@@ -24,8 +25,8 @@ ifeval::["{provider}" == "exoscale"]
 * You have an OpenShift 4 cluster on Exoscale
 endif::[]
 * One of the following scenarios is true:
-** The cluster has lost the majority of control plane hosts (quorum loss).
-** An administrator has deleted something critical and must restore to recover the cluster.
+** The cluster has lost the majority of its control plane hosts (quorum loss).
+** An administrator has deleted a critical component which can't be restored from the object backup.
 
 == Prerequisites
 

@@ -176,6 +176,14 @@ exo storage upload "${INSTALLER_DIR}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstr
 === Terraform Cluster Config
 
 include::partial$install/prepare-terraform.adoc[]
++
+[NOTE]
+====
+You now have the option to further customize the cluster by editing `terraform_variables`.
+Most importantly you have the option to change node sizes or add additional specialized worker nodes.
+
+Please look at the xref:oc4:ROOT:references/exoscale/config.adoc[configuration reference] for the available options.
+====
 
 . Review and commit
 +
@@ -216,12 +224,13 @@ include::partial$setup_terraform.adoc[]
 ----
 cat > override.tf <<EOF
 module "cluster" {
-  bootstrap_count = 0
-  lb_count        = 0
-  master_count    = 0
-  infra_count     = 0
-  storage_count   = 0
-  worker_count    = 0
+  bootstrap_count          = 0
+  lb_count                 = 0
+  master_count             = 0
+  infra_count              = 0
+  storage_count            = 0
+  worker_count             = 0
+  additional_worker_groups = {}
 }
 EOF
 terraform apply
@@ -235,11 +244,12 @@ terraform apply
 ----
 cat > override.tf <<EOF
 module "cluster" {
-  bootstrap_count = 0
-  master_count    = 0
-  infra_count     = 0
-  storage_count   = 0
-  worker_count    = 0
+  bootstrap_count          = 0
+  master_count             = 0
+  infra_count              = 0
+  storage_count            = 0
+  worker_count             = 0
+  additional_worker_groups = {}
 }
 EOF
 terraform apply -target "module.cluster.local_file.lb_hieradata[0]"

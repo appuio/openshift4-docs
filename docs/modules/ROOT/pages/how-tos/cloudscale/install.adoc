@@ -229,6 +229,14 @@ export TF_VAR_ignition_bootstrap=$(mc share download \
 === Terraform Cluster Config
 
 include::partial$install/prepare-terraform.adoc[]
++
+[NOTE]
+====
+You now have the option to further customize the cluster by editing `terraform_variables`.
+Most importantly you have the option to change node sizes or add additional specialized worker nodes.
+
+Please look at the xref:oc4:ROOT:references/cloudscale/config.adoc[configuration reference] for the available options.
+====
 
 . Review and commit
 +
@@ -275,10 +283,11 @@ include::partial$setup_terraform.adoc[]
 ----
 cat > override.tf <<EOF
 module "cluster" {
-  bootstrap_count = 0
-  master_count    = 0
-  infra_count     = 0
-  worker_count    = 0
+  bootstrap_count          = 0
+  master_count             = 0
+  infra_count              = 0
+  worker_count             = 0
+  additional_worker_groups = {}
 }
 EOF
 terraform apply -target "module.cluster.local_file.lb_hieradata[0]"

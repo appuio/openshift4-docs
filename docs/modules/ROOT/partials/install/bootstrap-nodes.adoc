@@ -5,13 +5,14 @@
 ----
 cat > override.tf <<EOF
 module "cluster" {
-  bootstrap_count = 1
-  master_count    = 0
-  infra_count     = 0
+  bootstrap_count          = 1
+  master_count             = 0
+  infra_count              = 0
 ifeval::["{provider}" == "exoscale"]
-  storage_count   = 0
+  storage_count            = 0
 endif::[]
-  worker_count    = 0
+  worker_count             = 0
+  additional_worker_groups = {}
 }
 EOF
 terraform apply
@@ -43,12 +44,13 @@ done && echo -e "\nAPI is up"
 ----
 cat > override.tf <<EOF
 module "cluster" {
-  bootstrap_count = 1
-  infra_count     = 0
+  bootstrap_count          = 1
+  infra_count              = 0
 ifeval::["{provider}" == "exoscale"]
-  storage_count   = 0
+  storage_count            = 0
 endif::[]
-  worker_count    = 0
+  worker_count             = 0
+  additional_worker_groups = {}
 }
 EOF
 terraform apply
@@ -78,9 +80,10 @@ openshift-install --dir "${INSTALLER_DIR}" \
 cat > override.tf <<EOF
 module "cluster" {
 ifeval::["{provider}" == "exoscale"]
-  storage_count   = 0
+  storage_count            = 0
 endif::[]
-  worker_count  = 0
+  worker_count             = 0
+  additional_worker_groups = {}
 }
 EOF
 terraform apply
@@ -128,7 +131,8 @@ ifeval::["{provider}" == "exoscale"]
 ----
 cat > override.tf <<EOF
 module "cluster" {
-  worker_count  = 0
+  worker_count             = 0
+  additional_worker_groups = {}
 }
 EOF
 terraform apply
@@ -171,3 +175,6 @@ endif::[]
 # This should show the worker nodes only
 kubectl get nodes -l node-role.kubernetes.io/app
 ----
++
+[NOTE]
+At this point you may want to add extra labels to the additional worker groups, if there are any.

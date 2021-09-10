@@ -1,0 +1,158 @@
+= Cluster configuration options on cloudscale.ch
+
+[abstract]
+The OpenShift cluster setup can be customized by configuring `.parameters.openshift4_terraform.terraform_variables`.
+This page gives an overview of the configuration options, when setting up a cluster on Cloudscale.
+Further information on the Terraform module and its configuration can be found on https://github.com/appuio/terraform-openshift4-cloudscale[GitHub].
+
+
+
+== Nodes
+
+You have the ability to control the instance size, count, and partition size for each VM type as well as the option to configure additional worker groups through Terraform variables.
+
+See the https://www.cloudscale.ch/en/pricing[cloudscale.ch pricing doucumentation] for available VM flavors.
+
+=== Master nodes
+
+[cols="2,2a,2a"]
+|===
+| Key | Default | Description
+
+| `master_count`
+| `3`
+| The number of Kubernetes master nodes running the control plane.
+
+|===
+
+WARNING: We don't provide support for configurations with `master_count != 3`.
+
+=== Infrastructure nodes
+
+[cols="2,2a,2a"]
+|===
+| Key | Default | Description
+
+
+| `infra_count`
+| `3`
+| The number of infrastructure nodes running the OpenShift Container Platform environment
+
+
+| `infra_flavor`
+| `plus-16`
+| Type of the infrastructure node VMs
+
+|===
+
+[WARNING]
+====
+We currently don't provide support for any of the following configurations:
+
+* `infra_flavor = flex-*`
+* `infra_flavor` smaller than `plus-16`.
+* `infra_count < 3`.
+====
+
+=== Worker nodes
+
+[cols="2,2a,2a"]
+|===
+| Key | Default | Description
+
+| `worker_count`
+| `3`
+| The number of worker nodes running the customers workload
+
+| `worker_flavor`
+| `plus-16`
+| Type of the worker node VMs
+
+| `worker_volume_size_gb`
+| `128`
+| Worker boot volume size in GBs
+
+|===
+
+[WARNING]
+====
+We currently don't provide support for any of the following configurations:
+
+* `worker_flavor = flex-*`
+* `worker_flavor` smaller than `plus-16`.
+* `worker_count < 3`.
+====
+
+=== Additional Worker Groups
+
+You have the option to add additional worker node groups. 
+Each worker group is a collection of VMs with the same flavor and volume size.
+
+Worker groups can be configured through the `additional_worker_groups` variable. 
+This variable is a map from worker group names (used as node prefixes) to objects providing node instance size, node count, node data disk size, and node state.
+
+The following example will add a worker group called `cpu1` with 3 instances of flavor `plus-24` with a volume size of `248GB`.
+
+[source,yaml]
+----
+terraform_variables:
+  additional_worker_groups:
+    "cpu1":
+      flavor: "plus-24"
+      count: 3
+      volume_size_gb: 248
+----
+
+[NOTE]
+====
+Please note that you can't use names `master`, `infra`, or `worker` for additional worker groups. 
+We prohibit these names to ensure there are no collisions between the generated nodes names for different worker groups.
+====
+
+
+[cols="2,2a,2a"]
+|===
+| Key | Default | Description
+
+| `count`
+| ``
+| (Required) The number of worker nodes in this group
+
+
+| `flavor`
+| ``
+| (Required) Type of the worker node VMs
+
+| `volume_size_gb`
+| `worker_volume_size_gb`
+| Worker boot volume size in GBs. 
+  Defaults to `worker_volume_size_gb`.
+
+|===
+
+[WARNING]
+====
+We currently don't provide support for any of the following configurations:
+
+* `flavor = flex-*`
+* `flavor` smaller than `plus-16`.
+====
+
+
+== Example
+
+[source,yaml]
+----
+parameters:
+  openshift4_terraform:
+    terraform_variables:
+      root_disk_size: 128
+      worker_count: 4
+      worker_flavor: "plus-4"
+      worker_volume_size_gb: 512
+      additional_worker_groups:
+        "cpu1":
+          flavor: "plus-24"
+          count: 3
+----
+

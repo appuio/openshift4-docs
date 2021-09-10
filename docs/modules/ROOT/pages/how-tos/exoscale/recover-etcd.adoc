@@ -1,0 +1,5 @@
+= Restore etcd from Backup on Exoscale
+
+:provider: exoscale
+
+include::partial$recovery/recover-etcd.adoc[]

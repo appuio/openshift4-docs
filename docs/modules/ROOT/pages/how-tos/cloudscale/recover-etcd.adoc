@@ -1,0 +1,5 @@
+= Restore etcd from Backup on cloudscale.ch
+
+:provider: cloudscale
+
+include::partial$recovery/recover-etcd.adoc[]

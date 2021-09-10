@@ -119,25 +119,25 @@ NOTE: The following steps are VSHN specific
 
 [source,bash]
 ----
-LB_HOST=$(ssh management1.corp.vshn.net grep -E "^Host.*${CLUSTER_ID}" '~/.ssh/config' | head -1 | awk '{print $2}')
+LB_HOST=$(grep -E "^Host.*${CLUSTER_ID}" ~/.ssh/sshop_config | head -1 | awk '{print $2}')
 echo $LB_HOST
 ----
 
-NOTE: Ensure your ssh config is up-to-date: `ssh management1.corp.vshn.net sshop generate -li`.
+NOTE: Ensure your ssh config is up-to-date: `sshop_update`.
 
 .Upload recovery files to master node
 
 [source,bash]
 ----
 MASTER_NODE=etcd-0
-scp -J management1.corp.vshn.net,"${LB_HOST}" -i ssh_key static_kuberesources_*.tar.gz snapshot_*.db "core@${MASTER_NODE}:"
+scp -J "${LB_HOST}" -i ssh_key static_kuberesources_*.tar.gz snapshot_*.db "core@${MASTER_NODE}:"
 ----
 
 .Connect to master node
 
 [source,bash]
 ----
-ssh -J management1.corp.vshn.net,"${LB_HOST}" -i ssh_key "core@${MASTER_NODE}"
+ssh -J "${LB_HOST}" -i ssh_key "core@${MASTER_NODE}"
 ----
 
 == Restore etcd

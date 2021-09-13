@@ -11,6 +11,7 @@
 * cloudscale.ch
 ** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Cluster Setup]
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
+** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd from Backup]
 
 * Exoscale
 ** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Cluster Setup]
@@ -20,6 +21,7 @@
 ** xref:oc4:ROOT:how-tos/exoscale/change_storage_node_size.adoc[Change Storage Node Size]
 ** xref:oc4:ROOT:how-tos/exoscale/reinitialize_storage_disk.adoc[Reinitialize a storage disk]
 ** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Cluster Decommission]
+** xref:oc4:ROOT:how-tos/exoscale/recover-etcd.adoc[Restore etcd from Backup]
 
 * Google Cloud Platform
 ** xref:oc4:ROOT:how-tos/gcp/project.adoc[Project Setup]

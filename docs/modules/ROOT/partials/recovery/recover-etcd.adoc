@@ -1,0 +1,150 @@
+[abstract]
+--
+ifeval::["{provider}" == "cloudscale"]
+Steps to recover etcd on an OpenShift 4 cluster on https://www.cloudscale.ch/[cloudscale.ch].
+endif::[]
+ifeval::["{provider}" == "exoscale"]
+Steps to recover etcd on an OpenShift 4 cluster on https://www.exoscale.com/[Exoscale].
+endif::[]
+--
+
+[WARNING]
+====
+Restoring to a previous cluster state is a destructive and destabilizing action to take on a running cluster.
+This should only be used as a last resort.
+
+If you are able to retrieve data using the Kubernetes API server, then etcd is available and you shouldn't restore using an etcd backup.
+====
+
+== Starting situation
+
+ifeval::["{provider}" == "cloudscale"]
+* You have an OpenShift 4 cluster on cloudscale.ch
+endif::[]
+ifeval::["{provider}" == "exoscale"]
+* You have an OpenShift 4 cluster on Exoscale
+endif::[]
+* One of the following scenarios is true:
+** The cluster has lost the majority of its control plane hosts (quorum loss).
+** An administrator has deleted a critical component which can't be restored from the object backup.
+
+== Prerequisites
+
+The following CLI utilities need to be available locally:
+
+* `restic` https://restic.net/[Restic Backup]
+* `kubectl`
+* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
+* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `git`
+* `jq`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+
+== Access and Download Backup
+
+.Access to Commodore APIs
+
+.Access to various API
+[source,bash]
+----
+# For example: https://api.syn.vshn.net
+# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
+export COMMODORE_API_URL=<lieutenant-api-endpoint>
+export COMMODORE_API_TOKEN=<lieutenant-api-token>
+
+# Set Project Syn cluster and tenant ID
+export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-<something>
+export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+----
+
+.Fetch backup url from cluster repo
+
+[source,bash]
+----
+GIT_REPO=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .gitRepo.url)
+git clone --depth 1 $GIT_REPO cluster-repo
+RESTIC_ENDPOINT=$(find cluster-repo/manifests/cluster-backup -name '*.yaml' -exec yq eval-all 'select(.kind == "Schedule" and .metadata.name == "etcd" ) | .spec.backend.s3.endpoint' {} \;)
+RESTIC_BUCKET=$(find cluster-repo/manifests/cluster-backup -name '*.yaml' -exec yq eval-all 'select(.kind == "Schedule" and .metadata.name == "etcd" ) | .spec.backend.s3.bucket' {} \;)
+export RESTIC_REPOSITORY="s3:${RESTIC_ENDPOINT}/${RESTIC_BUCKET}"
+echo $RESTIC_REPOSITORY
+rm -rf cluster-repo
+----
+
+include::partial$connect-to-vault.adoc[]
+
+.Fetch backup secrets from vault
+
+[source,bash]
+----
+export RESTIC_PASSWORD=$(vault kv get \
+  -format=json "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup" | jq -r '.data.data.password')
+ifeval::["{provider}" == "cloudscale"]
+export AWS_ACCESS_KEY_ID=$(vault kv get \
+  -format=json "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale" | jq -r '.data.data.s3_access_key')
+export AWS_SECRET_ACCESS_KEY=$(vault kv get \
+  -format=json "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale" | jq -r '.data.data.s3_secret_key')
+endif::[]
+ifeval::["{provider}" == "exoscale"]
+export AWS_ACCESS_KEY_ID=$(vault kv get \
+  -format=json "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/storage_iam" | jq -r '.data.data.s3_access_key')
+export AWS_SECRET_ACCESS_KEY=$(vault kv get \
+  -format=json "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/storage_iam" | jq -r '.data.data.s3_secret_key')
+endif::[]
+----
+
+.Download files from latest etcd snapshot
+
+[source,bash]
+----
+TEMP_DIR=$(mktemp -d)
+pushd ${TEMP_DIR}
+SNAPSHOT_ID=$(restic snapshots --json --latest=1 --path /syn-cluster-backup-etcd-etcd-backup.tar.gz | jq -r '.[0].id')
+restic dump "${SNAPSHOT_ID}" /syn-cluster-backup-etcd-etcd-backup.tar.gz | tar xzv
+----
+
+== Connect to Master Node by SSH
+
+.Fetch the ssh key
+
+[source,bash,subs="attributes+"]
+----
+vault kv get -format=json clusters/kv/${TENANT_ID}/${CLUSTER_ID}/{provider}/ssh \
+  | jq -r '.data.data.private_key' | base64 --decode > ssh_key
+chmod 400 ssh_key
+----
+
+NOTE: The following steps are VSHN specific
+
+.Find load balancer host
+
+[source,bash]
+----
+LB_HOST=$(grep -E "^Host.*${CLUSTER_ID}" ~/.ssh/sshop_config | head -1 | awk '{print $2}')
+echo $LB_HOST
+----
+
+NOTE: Ensure your ssh config is up-to-date: `sshop_update`.
+
+.Upload recovery files to master node
+
+[source,bash]
+----
+MASTER_NODE=etcd-0
+scp -J "${LB_HOST}" -i ssh_key static_kuberesources_*.tar.gz snapshot_*.db "core@${MASTER_NODE}:"
+----
+
+.Connect to master node
+
+[source,bash]
+----
+ssh -J "${LB_HOST}" -i ssh_key "core@${MASTER_NODE}"
+----
+
+== Restore etcd
+
+You now should have
+
+* An SSH connection to a healthy master node
+* The etcd backup archive
+
+Refer to the https://docs.openshift.com/container-platform/4.8/backup_and_restore/disaster_recovery/scenario-2-restoring-cluster-state.html#dr-scenario-2-restoring-cluster-state_dr-restoring-cluster-state[Openshift 4 Disaster Recovery Guide] for further steps.

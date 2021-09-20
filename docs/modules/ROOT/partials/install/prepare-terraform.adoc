@@ -53,7 +53,7 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_
   ${CLUSTER_ID}.yml
 
 # Configure the OpenShift update channel
-yq eval -i ".parameters.openshift4_version.spec.channel = \"stable-4.8\" \
+yq eval -i ".parameters.openshift4_version.spec.channel = \"stable-4.8\"" \
   ${CLUSTER_ID}.yml
 
 # Configure default ingress controller with 3 replicas, so that the

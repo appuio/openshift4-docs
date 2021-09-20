@@ -26,8 +26,13 @@ export SSH_PUBLIC_KEY="${SSH_PRIVATE_KEY}.pub"
 
 ssh-keygen -C "vault@$CLUSTER_ID" -t ed25519 -f $SSH_PRIVATE_KEY -N ''
 
+BASE64_NO_WRAP='base64'
+if [[ "$OSTYPE" == "linux"* ]]; then
+  BASE64_NO_WRAP='base64 --wrap 0'
+fi
+
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/{provider}/ssh \
-  private_key=$(cat $SSH_PRIVATE_KEY | base64 --wrap 0)
+  private_key=$(cat $SSH_PRIVATE_KEY | eval "$BASE64_NO_WRAP")
 
 ssh-add $SSH_PRIVATE_KEY
 ----

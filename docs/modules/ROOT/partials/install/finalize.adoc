@@ -22,6 +22,41 @@ ls -l ${INSTALLER_DIR}/auth/
 
 . https://kb.vshn.ch/vshnsyn/how-tos/synthesize.html[Make the cluster Project Syn enabled]
 
+=== Setup acme-dns CNAME records for the cluster
+
+. Extract the acme-dns subdomain for the cluster after `cert-manager` has been deployed via Project Syn.
++
+[source,bash]
+----
+fulldomain=$(kubectl -n syn-cert-manager \
+  get secret acme-dns-client \
+  -o jsonpath='{.data.acmedns\.json}' | \
+  base64 -d  | \
+  jq -r '[.[]][0].fulldomain')
+echo "$fulldomain"
+----
+
+ifeval::["{provider}" == "cloudscale"]
+. Add the following CNAME records to the cluster's DNS zone
++
+[source,dns]
+----
+_acme-challenge.api  IN CNAME <fulldomain>. <1>
+_acme-challenge.apps IN CNAME <fulldomain>. <1>
+----
+<1> Replace `<fulldomain>` with the output of the previous step.
+endif::[]
+ifeval::["{provider}" == "exoscale"]
+. Setup the `_acme-challenge` CNAME records in the cluster's DNS zone
++
+[source,bash]
+----
+for cname in "api" "apps"; do
+  exo dns add CNAME "${CLUSTER_ID}.${BASE_DOMAIN}" -n "_acme-challenge.${cname}" -a "${fulldomain}." -t 600
+done
+----
+endif::[]
+
 === Finalize installation
 
 . Configure the apt-dater groups for the LBs.

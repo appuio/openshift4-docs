@@ -1,14 +1,3 @@
-. Create wildcard cert for router
-+
-[source,bash]
-----
-kubectl get secret router-certs-default \
-  -n openshift-ingress \
-  -o json | \
-    jq 'del(.metadata.ownerReferences) | .metadata.name = "router-certs-snakeoil"' | \
-  kubectl -n openshift-ingress apply -f -
-----
-
 . Save the admin credentials in the https://password.vshn.net[password manager].
 You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
 +

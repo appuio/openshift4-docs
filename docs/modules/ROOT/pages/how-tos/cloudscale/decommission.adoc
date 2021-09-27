@@ -41,7 +41,7 @@ include::partial$setup_terraform.adoc[]
 ----
 declare -a LB_FQDNS
 for id in 0 1; do
-  LB_FQDNS[$id]=$(terraform state show "module.cluster.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | sed -e 's/"//g')
+  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | sed -e 's/"//g')
 done
 for lb in ${LB_FQDNS[*]}; do
   ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf"
@@ -54,7 +54,7 @@ done
 +
 [source,console]
 ----
-terraform state rm module.cluster.gitfile_checkout.appuio_hieradata
+terraform state rm module.cluster.module.lb.module.hiera.gitfile_checkout.appuio_hieradata
 ----
 +
 NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.

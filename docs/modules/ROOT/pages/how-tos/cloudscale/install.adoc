@@ -311,7 +311,7 @@ terraform apply
 ----
 declare -a LB_FQDNS
 for id in 1 2; do
-  LB_FQDNS[$id]=$(terraform state show "module.cluster.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
+  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
 done
 ----
 +

@@ -158,6 +158,10 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
 # Copy the Dagobert OpenShift Node Collector Credentials
 vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
   | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/dagobert" -
+
+# Copy the VSHN acme-dns registration password
+vault kv get -format=json "clusters/kv/template/cert-manager" | jq '.data.data' \
+  | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cert-manager" -
 ----
 
 include::partial$get-hieradata-token-from-vault.adoc[]

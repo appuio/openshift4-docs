@@ -300,4 +300,6 @@ oc create secret generic image-registry-private-configuration-user \
 --from-literal=REGISTRY_STORAGE_S3_SECRETKEY=${EXOSCALE_S3_SECRETKEY}
 ----
 
-include::partial$install/finalize.adoc[]
+include::partial$install/finalize_part1.adoc[]
+
+include::partial$install/finalize_part2.adoc[]

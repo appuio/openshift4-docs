@@ -256,7 +256,7 @@ module "cluster" {
   additional_worker_groups = {}
 }
 EOF
-terraform apply -target "module.cluster.local_file.lb_hieradata[0]"
+terraform apply -target "module.cluster.module.lb.module.hiera.local_file.lb_hieradata"
 ----
 
 

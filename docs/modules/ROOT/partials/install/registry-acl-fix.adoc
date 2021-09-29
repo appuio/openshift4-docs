@@ -17,23 +17,18 @@ See https://tracker.ceph.com/issues/49135 for more information.
 $ pip install awscli
 ----
 +
-. Configure the S3 bucket access and secret keys
-+
-[source,bash]
-----
-$ aws configure
-AWS Access Key ID [****************56XS]: <REGISTRY_STORAGE_S3_ACCESSKEY>
-AWS Secret Access Key [****************sH2a]: <REGISTRY_STORAGE_S3_SECRETKEY>
-Default region name [eu-central-1]:
-Default output format [None]:
-----
-+
 . Check the current S3 bucket configuration
 +
 [source,bash]
 ----
-$ export REGION=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
-$ aws --endpoint-url https://objects.${REGION}.cloudscale.ch s3api get-public-access-block --bucket ${CLUSTER_ID}-image-registry
+export AWS_ACCESS_KEY_ID=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey)
+export AWS_SECRET_ACCESS_KEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
+export REGION=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
+aws --endpoint-url https://objects.${REGION}.cloudscale.ch s3api get-public-access-block --bucket ${CLUSTER_ID}-image-registry
+----
++
+[source,bash]
+----
 {
     "PublicAccessBlockConfiguration": {
         "BlockPublicAcls": true,

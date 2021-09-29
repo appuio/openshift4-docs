@@ -170,6 +170,11 @@ curl -i -H "$AUTH_HEADER" \
   -F user_data_handling=pass-through \
   https://api.cloudscale.ch/v1/custom-images/import
 ----
++
+[NOTE]
+====
+Make sure to upload the image to the zone lpg1 if you set up the cluster in Lupfig.
+====
 
 === Set secrets in Vault
 

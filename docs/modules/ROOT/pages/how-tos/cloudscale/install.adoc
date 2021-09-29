@@ -246,7 +246,7 @@ Most importantly you have the option to change node sizes or add additional spec
 
 Please look at the xref:oc4:ROOT:references/cloudscale/config.adoc[configuration reference] for the available options.
 ====
-
++
 [NOTE]
 ====
 If you use a custom "apps" domain, make sure to also change it in `parameters.openshift.appsDomain`.

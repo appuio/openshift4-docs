@@ -1,4 +1,4 @@
-=== Configure workaround for PublicAccessBlockConfiguration prevents upload of objects with private ACL
+=== Configure access for registry bucket
 
 [NOTE]
 --
@@ -56,3 +56,4 @@ The final configuration should look like this:
 }
 ----
 =====
+

@@ -14,7 +14,7 @@ See https://tracker.ceph.com/issues/49135 for more information.
 +
 [source,bash]
 ----
-$ pip install awscli
+pip install awscli
 ----
 +
 . Check the current S3 bucket configuration
@@ -27,30 +27,25 @@ export REGION=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMOD
 aws --endpoint-url https://objects.${REGION}.cloudscale.ch s3api get-public-access-block --bucket ${CLUSTER_ID}-image-registry
 ----
 +
-[source,bash]
-----
-{
-    "PublicAccessBlockConfiguration": {
-        "BlockPublicAcls": true,
-        "IgnorePublicAcls": true,
-        "BlockPublicPolicy": true,
-        "RestrictPublicBuckets": true
-    }
-}
-----
-+
 . Configure BlockPublicAcls to `false`
 +
 [source,bash]
 ----
-$ aws s3api put-public-access-block --endpoint-url https://objects.${REGION}.cloudscale.ch --bucket ${CLUSTER_ID}-image-registry --public-access-block-configuration BlockPublicAcls=false
+aws s3api put-public-access-block --endpoint-url https://objects.${REGION}.cloudscale.ch --bucket ${CLUSTER_ID}-image-registry --public-access-block-configuration BlockPublicAcls=false
 ----
 +
 . Verify the configuration BlockPublicAcls is `false`
 +
 [source,bash]
 ----
-$ aws s3api get-public-access-block --endpoint-url https://objects.${REGION}.cloudscale.ch --bucket ${CLUSTER_ID}-image-registry
+aws s3api get-public-access-block --endpoint-url https://objects.${REGION}.cloudscale.ch --bucket ${CLUSTER_ID}-image-registry
+----
++
+[NOTE]
+====
+The final configuration should look like this:
+[source,bash]
+----
 {
     "PublicAccessBlockConfiguration": {
         "BlockPublicAcls": false,
@@ -60,4 +55,4 @@ $ aws s3api get-public-access-block --endpoint-url https://objects.${REGION}.clo
     }
 }
 ----
-
+=====

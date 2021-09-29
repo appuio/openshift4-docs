@@ -56,6 +56,8 @@ EOF
 terraform apply
 ----
 
+. Add the DNS records for etcd shown in output variable `dns_entries` from the previous step to the cluster's parent zone
+
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +
 [source,bash]

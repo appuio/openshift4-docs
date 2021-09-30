@@ -164,17 +164,12 @@ The output should be `Access permission for `[…]-bootstrap-ignition/rhcos-{ocp
 curl -i -H "$AUTH_HEADER" \
   -F url="$(mc share download --json "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw" | jq -r .url)" \
   -F name='RHCOS {ocp-minor-version}' \
-  -F zones=rma1 \
+  -F zones="${REGION}1" \
   -F slug=rhcos-{ocp-minor-version} \
   -F source_format=raw \
   -F user_data_handling=pass-through \
   https://api.cloudscale.ch/v1/custom-images/import
 ----
-+
-[NOTE]
-====
-Make sure to upload the image to the zone lpg1 if you set up the cluster in Lupfig.
-====
 
 === Set secrets in Vault
 

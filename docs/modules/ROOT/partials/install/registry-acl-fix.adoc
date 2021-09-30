@@ -17,7 +17,7 @@ See https://tracker.ceph.com/issues/49135 for more information.
 pip install awscli
 ----
 +
-. Check the current S3 bucket configuration
+. Check the current S3 bucket configuration after `openshift4-registry` has been deployed via Project Syn.
 +
 [source,bash]
 ----

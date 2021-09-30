@@ -24,21 +24,21 @@ pip install awscli
 export AWS_ACCESS_KEY_ID=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey)
 export AWS_SECRET_ACCESS_KEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
 export REGION=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
-aws --endpoint-url https://objects.${REGION}.cloudscale.ch s3api get-public-access-block --bucket ${CLUSTER_ID}-image-registry
+aws --endpoint-url "https://objects.${REGION}.cloudscale.ch" s3api get-public-access-block --bucket "${CLUSTER_ID}-image-registry"
 ----
 +
 . Configure BlockPublicAcls to `false`
 +
 [source,bash]
 ----
-aws s3api put-public-access-block --endpoint-url https://objects.${REGION}.cloudscale.ch --bucket ${CLUSTER_ID}-image-registry --public-access-block-configuration BlockPublicAcls=false
+aws s3api put-public-access-block --endpoint-url "https://objects.${REGION}.cloudscale.ch" --bucket "${CLUSTER_ID}-image-registry" --public-access-block-configuration BlockPublicAcls=false
 ----
 +
 . Verify the configuration BlockPublicAcls is `false`
 +
 [source,bash]
 ----
-aws s3api get-public-access-block --endpoint-url https://objects.${REGION}.cloudscale.ch --bucket ${CLUSTER_ID}-image-registry
+aws s3api get-public-access-block --endpoint-url "https://objects.${REGION}.cloudscale.ch" --bucket "${CLUSTER_ID}-image-registry"
 ----
 +
 [NOTE]

@@ -147,4 +147,4 @@ You now should have
 * An SSH connection to a healthy master node
 * The etcd backup archive
 
-Refer to the https://docs.openshift.com/container-platform/4.8/backup_and_restore/disaster_recovery/scenario-2-restoring-cluster-state.html#dr-scenario-2-restoring-cluster-state_dr-restoring-cluster-state[Openshift 4 Disaster Recovery Guide] for further steps.
+Refer to the https://docs.openshift.com/container-platform/4.8/backup_and_restore/control_plane_backup_and_restore/disaster_recovery/scenario-2-restoring-cluster-state.html#dr-scenario-2-restoring-cluster-state_dr-restoring-cluster-state[Openshift 4 Disaster Recovery Guide] for further steps.

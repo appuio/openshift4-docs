@@ -1,5 +1,4 @@
 = Release Notes
-:toc:
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 

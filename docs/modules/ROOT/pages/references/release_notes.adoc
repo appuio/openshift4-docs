@@ -18,7 +18,7 @@ OpenShift 4.9 ships with Kubernetes 1.22.
 Prior to Kubernetes 1.22 a bunch of resource version were marked as deprecated.
 In version 1.22, those deprecated versions got removed.
 Before you upgrade a cluster to OpenShift 4.9, one has to ensure that none of the deprecated resource versions are used.
-If this is ignored, things might brake.
+If this is ignored, things might break.
 See https://access.redhat.com/articles/6329921[Preparing to upgrade to OpenShift Container Platform 4.9] for more details.
 +
 .Administrator acknowledgment
@@ -30,8 +30,7 @@ Check https://access.redhat.com/articles/6329921[Preparing to upgrade to OpenShi
 
 Ingress controller timeout configuration parameters::
 +
-https://docs.openshift.com/container-platform/4.9/release_notes/ocp-4-9-release-notes.html#ocp-4-9-nw-timeout-configuration-parameters[Mor options to configure timeout behaviour of the ingress]
-
+https://docs.openshift.com/container-platform/4.9/release_notes/ocp-4-9-release-notes.html#ocp-4-9-nw-timeout-configuration-parameters[More options to configure timeout behaviour of the ingress]
 
 Mutual TLS Authentication::
 +

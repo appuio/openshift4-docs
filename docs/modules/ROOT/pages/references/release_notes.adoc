@@ -1,6 +1,41 @@
 = Release Notes
+:toc:
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
+
+== OpenShift 4.9
+
+OpenShift 4.9 was released on 2021-10-18.
+See the official release blog post https://cloud.redhat.com/blog/red-hat-openshift-4.9-is-now-generally-available[Red Hat OpenShift 4.9 Is Now Generally Available] for more information.
+
+The release notes are available in the upstream documentation under https://docs.openshift.com/container-platform/4.9/release_notes/ocp-4-9-release-notes.html[OpenShift Container Platform 4.9 release notes].
+
+Notable changes with a possible user-visible and operational impact:
+
+Kubernetes 1.22 removed deprecated resource versions::
++
+OpenShift 4.9 ships with Kubernetes 1.22.
+Prior to Kubernetes 1.22 a bunch of resource version were marked as deprecated.
+In version 1.22, those deprecated versions got removed.
+Before you upgrade a cluster to OpenShift 4.9, one has to ensure that none of the deprecated resource versions are used.
+If this is ignored, things might brake.
+See https://access.redhat.com/articles/6329921[Preparing to upgrade to OpenShift Container Platform 4.9] for more details.
++
+.Administrator acknowledgment
+[important]
+====
+Upgrade to OpenShift 4.9 requires a special administrator acknowledgment.
+Check https://access.redhat.com/articles/6329921[Preparing to upgrade to OpenShift Container Platform 4.9] for instructions on how to do so.
+====
+
+Ingress controller timeout configuration parameters::
++
+https://docs.openshift.com/container-platform/4.9/release_notes/ocp-4-9-release-notes.html#ocp-4-9-nw-timeout-configuration-parameters[Mor options to configure timeout behaviour of the ingress]
+
+
+Mutual TLS Authentication::
++
+https://docs.openshift.com/container-platform/4.9/release_notes/ocp-4-9-release-notes.html#ocp-4-9-nw-mutual-TLS-authentication[Mutual TLS can be offloaded to ingress]
 
 == OpenShift 4.8
 

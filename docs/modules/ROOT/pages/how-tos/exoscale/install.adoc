@@ -196,7 +196,7 @@ Please look at the xref:oc4:ROOT:references/exoscale/config.adoc[configuration r
 # Exoscale-specific config
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${RHCOS_TEMPLATE}\"" \
   ${CLUSTER_ID}.yml
-yq eval -i ".parameters.openshift4_local_storage.local_storage_operator = \"{ocp-minor-version}\"" \
+yq eval -i ".parameters.openshift4_local_storage.local_storage_operator.channel = \"{ocp-minor-version}\"" \
   ${CLUSTER_ID}.yml <1>
 
 # Have a look at the file ${CLUSTER_ID}.yml.

@@ -240,8 +240,6 @@ EOF
 terraform apply
 ----
 
-. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
-
 . Create LB hieradata
 +
 [source,bash]
@@ -256,9 +254,10 @@ module "cluster" {
   additional_worker_groups = {}
 }
 EOF
-terraform apply -target "module.cluster.module.lb.module.hiera.local_file.lb_hieradata"
+terraform apply -target "module.cluster.local_file.lb_hieradata"
 ----
 
+. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
 
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and wait until the deploy pipeline after the merge is completed.
 

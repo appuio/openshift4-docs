@@ -1,9 +1,26 @@
 .Access to cloud API
 [source,bash]
 ----
-export EXOSCALE_ACCOUNT=<exoscale-account>
+
 export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
-export EXOSCALE_REGION=<exoscale-zone>
+export EXOSCALE_REGION=<exoscale-zone> <1>
+
+export EXOSCALE_CONFIG=`pwd`/exoscale.toml
 export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
+
+cat <<EOF > "$EXOSCALE_CONFIG"
+defaultaccount = "cluster-setup"
+
+[[accounts]]
+  name = "cluster-setup"
+
+  defaultZone = "${EXOSCALE_REGION}"
+  endpoint = "https://api.exoscale.ch/v1"
+  key = "${EXOSCALE_API_KEY}"
+  secret = "${EXOSCALE_API_SECRET}"
+EOF
+
+unset EXOSCALE_API_KEY EXOSCALE_API_SECRET
 ----
+<1> All lower case. For example `ch-dk-2`.

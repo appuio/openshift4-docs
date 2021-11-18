@@ -89,7 +89,7 @@ export TF_VAR_lb_exoscale_api_key=$(exo iam apikey show "${CLUSTER_ID}_floaty" \
 +
 [source,bash]
 ----
-exo storage create "sos://${CLUSTER_ID}-bootstrap"
+exo storage create "sos://${CLUSTER_ID}-bootstrap" --zone "${EXOSCALE_ZONE}"
 ----
 
 === Upload Red Hat CoreOS image
@@ -109,6 +109,7 @@ virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
 exo storage upload rhcos-${RHCOS_VERSION}.qcow2 "sos://${CLUSTER_ID}-bootstrap" --acl public-read
 
 exo vm template register "rhcos-${RHCOS_VERSION}" \
+  --zone "${EXOSCALE_ZONE}" \
   --checksum $(md5sum rhcos-${RHCOS_VERSION}.qcow2 | awk '{ print $1 }') \
   --boot-mode uefi \
   --disable-password \

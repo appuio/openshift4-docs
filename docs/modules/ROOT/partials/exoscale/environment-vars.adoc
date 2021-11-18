@@ -6,7 +6,7 @@ export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
 export EXOSCALE_REGION=<exoscale-zone> <1>
 
-export EXOSCALE_CONFIG=`pwd`/exoscale.toml
+export EXOSCALE_CONFIG=$(pwd)/exoscale.toml
 export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_REGION}.exo.io"
 
 cat <<EOF > "$EXOSCALE_CONFIG"

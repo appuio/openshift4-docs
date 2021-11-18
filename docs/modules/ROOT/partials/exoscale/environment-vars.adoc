@@ -1,11 +1,9 @@
 .Access to cloud API
 [source,bash]
 ----
-
 export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
 export EXOSCALE_ZONE=<exoscale-zone> <1>
-
 export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_ZONE}.exo.io"
 ----
 <1> All lower case. For example `ch-dk-2`.

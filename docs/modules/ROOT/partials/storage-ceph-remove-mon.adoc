@@ -36,12 +36,6 @@ endif::[]
 . Temporarily adjust the Rook MON failover timeout.
 This tells the operator to perform the MON failover after less time than the default 10 minutes.
 +
-[NOTE]
-====
-We currently have to restart the operator to force it to pick up the new MON health check configuration.
-Once https://github.com/rook/rook/issues/8363[Rook.io GitHub issue #8363] is fixed, the operator restart shouldn't be necessary anymore.
-====
-+
 [source,bash]
 ----
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
@@ -54,17 +48,6 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --
       "timeout": "10s"
     }
   }]'
-kubectl --as=cluster-admin -n syn-rook-ceph-operator delete pods \
-  -l app=rook-ceph-operator
-----
-
-. Wait for operator to settle.
-Wait for a log message saying `done reconciling ceph cluster in namespace "syn-rook-ceph-cluster"`
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-operator logs -f \
-  deploy/rook-ceph-operator
 ----
 
 . Cordon node(s) to {mon-operation}
@@ -103,12 +86,6 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy -l app=rook-ceph-
 
 . Reset the MON failover timeout
 +
-[NOTE]
-====
-We currently have to restart the operator to force it to pick up the new MON health check configuration.
-Once https://github.com/rook/rook/issues/8363[Rook.io GitHub issue #8363] is fixed, the operator restart shouldn't be necessary anymore.
-====
-+
 [source,bash]
 ----
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
@@ -117,8 +94,6 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --
     "path": "/spec/healthCheck/daemonHealth/mon",
     "value": {}
   }]'
-kubectl --as=cluster-admin -n syn-rook-ceph-operator delete pods \
-  -l app=rook-ceph-operator
 ----
 
 ifeval::["{mon-argocd-autosync-already-disabled}" != "yes"]

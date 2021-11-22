@@ -7,6 +7,17 @@ for node in $(echo -n {node-delete-list}); do
     --delete-emptydir-data --ignore-daemonsets
 done
 ----
++
+ifeval::["{cloud_provider}" == "cloudscale"]
+[TIP]
+====
+On cloudscale.ch, we configure Rook Ceph to setup the OSDs in "portable" mode.
+This configuration enables OSDs to be scheduled on any storage node.
+
+With this configuration, we don't have to migrate OSDs hosted on the old node(s) manually. 
+Instead, draining a node will cause any OSDs hosted on that node to be rescheduled on other storage nodes.
+====
+endif::[]
 
 . Delete the node(s) to replace from the cluster
 +

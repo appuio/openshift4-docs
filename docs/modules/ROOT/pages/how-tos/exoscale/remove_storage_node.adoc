@@ -150,7 +150,7 @@ include::partial$storage-ceph-remove-mon.adoc[]
 
 === Remove VM
 
-include::partial$exoscale/delete-node.adoc[]
+include::partial$delete-storage-node.adoc[]
 
 == Finish up
 

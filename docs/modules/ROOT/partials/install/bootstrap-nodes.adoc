@@ -146,7 +146,7 @@ include::partial$install/approve-node-csrs.adoc[]
 
 . Label and taint storage nodes
 +
-include::partial$exoscale/label-taint-storage-nodes.adoc[]
+include::partial$label-taint-storage-nodes.adoc[]
 endif::[]
 
 . Provision worker nodes

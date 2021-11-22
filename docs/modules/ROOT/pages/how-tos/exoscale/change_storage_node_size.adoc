@@ -115,7 +115,7 @@ include::partial$install/approve-node-csrs.adoc[]
 
 . Label and taint the new storage nodes
 +
-include::partial$exoscale/label-taint-storage-nodes.adoc[]
+include::partial$label-taint-storage-nodes.adoc[]
 
 . Wait for the localstorage PVs on the new nodes to be created
 +
@@ -196,7 +196,7 @@ include::partial$storage-ceph-remove-mon.adoc[]
 
 === Clean up the old nodes
 
-include::partial$exoscale/delete-node.adoc[]
+include::partial$delete-storage-node.adoc[]
 
 == Finish up
 

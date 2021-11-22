@@ -300,7 +300,7 @@ module "cluster" {
   additional_worker_groups = {}
 }
 EOF
-terraform apply -target "module.cluster.module.lb.module.hiera.local_file.lb_hieradata"
+terraform apply -target "module.cluster.module.lb.module.hiera"
 ----
 
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and wait until the deploy pipeline after the merge is completed.

@@ -1,0 +1,358 @@
+= Enable `LoadBalancer` serivces on cloudscale.ch
+
+[abstract]
+--
+Steps to enable `LoadBalancer` serivces on an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch].
+--
+
+[NOTE]
+--
+- In the future, this procedure will be mostly automated
+--
+
+== Starting situation
+
+* You already have a OpenShift 4 cluster on cloudscale.ch
+* You have admin-level access to the cluster
+* The cluster is using https://cilium.io[Cilium] as the network plugin
+* You want to enable LoadBalancer services
+
+== Prerequisites
+
+* `ssh`
+* `curl`
+* `kubectl`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+* `whois`
+
+== Prepare IP range
+
+. Get a suitable public IP range.
+You can find all IP ranges owned by VSHN
++
+[source,console]
+----
+whois -i mnt-by MNT-VSHN -T inetnum -r
+----
+Please coordinate with other VSHNeers before using an IP range.
+
+. Update RIPE DB to reflect the new usage of the IP range.
+
+. Create a ticket at cloudscale.ch to make the range available as a Floating Network in the project of the cluster.
+
+== Configure Loadbalancers
+
+Add the chosen IP range as a loadbalancer address pool in the https://git.vshn.net/appuio/appuio_hieradata/-/tree/master/lbaas[APPUiO hieradata].
+Assuming you want to add the IP range `203.0.113.128/25` to the cluster `c-cold-bush-7254`:
+
+[source,console]
+----
+export CLUSTER_ID="c-cold-bush-7254"
+export IP_RANGE="203.0.113.128/25"
+
+mkdir -p lbaas/${CLUSTER_ID}
+touch lbaas/${CLUSTER_ID}/lb.yaml
+yq eval -i '."profile_openshift4_gateway::loadbalancer_ip_address_pools" += [${IP_RANGE}]' lbaas/${CLUSTER_ID}/lb.yaml
+
+git commit -a -m "Add loadbalancer IP range ${IP_RANGE} to ${CLUSTER_ID}"
+git push
+----
+ 
+
+=== Setup BGP speaker
+
+The following steps need to be done manually on both loadbalancer VMs
+
+. Install FRR
++
+[source,console]
+----
+apt install frr
+----
+
+. Enable bgp by setting `bgpd=yes` in `/etc/frr/daemon`
++
+[source]
+----
+...
+bgpd=yes
+ospfd=no
+ospf6d=no
+ripd=no
+ripngd=no
+...
+----
+
+. Restart FRR
++
+[source,console]
+----
+systemctl restart frr
+----
+  
+. Configure FRR
++
+Enter the FRR shell with
++
+[source,console]
+----
+vtysh
+----
++
+Configure BGP neighbors
++
+[source]
+----
+conf t
+router bgp 64512
+  neighbor <ip-infra-node-0> remote-as 64512 <1>
+  neighbor <ip-infra-node-1> remote-as 64512
+  neighbor <ip-infra-node-2> remote-as 64512
+  end
+write <2>
+----
+<1> You can add any of the cluster node IPs.
+We propose to peer with each of the infrastructure nodes.
+<2> You need to write the configuration to persist 
+
+== Configure Cilium
+
+. Add a ConfigMap called `bgp-config` in the namespace `cilium`.
+This ConfigMap contains https://metallb.universe.tf/usage/#bgp[MetalLB] configuration.
++
+Here's an example ConfigMap.
++
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bgp-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    peers:
+      - peer-address: 10.0.0.1 <1>
+        peer-asn: 64512
+        my-asn: 64512
+      - peer-address: 10.0.0.2 <1>
+        peer-asn: 64512
+        my-asn: 64512
+    address-pools:
+      - name: default
+        protocol: bgp
+        addresses:
+          - 203.0.113.128/25 <2>
+----
+<1> IP of the loadbalancers
+<2> Public IP range chosen
+
+. Update the Cilium configuration to enable BGP.
+Our Cilium setup is configured through the `CiliumConfig` CRD called `cilium` in namespace `cilium`.
+The CRD contains helm values.
+Update the CRD `spec` with
++
+[source,yaml]
+----
+apiVersion: cilium.io/v1alpha1
+kind: CiliumConfig
+metadata:
+  ...
+  name: cilium
+  namespace: cilium
+  ...
+spec:
+  bgp:
+    announce:
+      loadbalancerIP: true
+    enabled: true
+  ...
+----
+
+== Test `LoadBalancer` service
+
+. Apply a `LoadBalancer` service and a deployment:
++
+[source,yaml]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-lb
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    svc: test-lb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      svc: test-lb
+  template:
+    metadata:
+      labels:
+        svc: test-lb
+    spec:
+      containers:
+      - name: web
+        image: vshn/nginx
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+----
+
+. Observe that the Operator allocates an external IP for `test-lb`
++
+[source,console]
+----
+kubectl get svc
+
+NAME        TYPE          CLUSTER-IP  EXTERNAL-IP   PORT(S)       AGE
+test-lb     LoadBalancer  172.20.0.5  203.0.113.132 80:30724/TCP  10s
+----
+
+. Access the external IP
++
+[source,console]
+----
+curl 203.0.113.132
+----
+
+
+[NOTE]
+--
+Check the `NetworkPolicy` in the target namespace.
+It the namespace doesn't allow access from external nodes, everything will seem to work, but you can't access the service.
+--
+
+== Troubleshoot
+
+=== Check BGP peering
+
+You can check if the BGP peering was successful, by connecting to the loadbalancer VMs.
+
+. Enter the FRR shell with
++
+[source,console]
+----
+vtysh
+----
+
+. Show BGP summary.
++
+[source]
+----
+show bgp summary
+----
++
+This should show you something similar to
++
+[source]
+----
+BGP router identifier XXXX, local AS number 64512 vrf-id 0
+BGP table version 6
+RIB entries 5, using 920 bytes of memory
+Peers 3, using 61 KiB of memory
+
+Neighbor        V         AS MsgRcvd MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd
+172.18.200.137  4      64512   11120   11117        0    0    0 3d20h37m            3
+172.18.200.157  4      64512   11120   11117        0    0    0 3d20h37m            3
+172.18.200.218  4      64512   11119   11116        0    0    0 3d20h37m            3
+
+Total number of neighbors 3
+----
+
+. Show available routes 
++
+[source]
+----
+show ip route
+----
++
+This should include routes for the created LoadBalancer service.
+
+
+If these checks look correct, the BGP setup works as expected.
+If you still can't connect to the service, re-check the network policies and check if the Floating Network is assigned correctly.
+
+If the neighbors or routes don't show up correctly, follow the other troubleshooting steps.'
+
+=== Check BGP announcements 
+
+Next, check if Cilium sends out BGP announcements and whether they arrive at the loadbalancer VMs.
+
+. Check if Cilium sends out BGP announcements.
+In one of the Cilium pods run
++
+[source,console]
+----
+tcpdump -n -i any tcp port 179
+----
++
+If Cilium sends out announcements to the correct IPs, it's most likely setup correctly.
+If it doesn't, there is an issue with Cilium.
+One thing to consider it, that Cilium doesn't pick up updates of the `bgp-config` ConfigMap.
+Make sure to restart the Cilium Pods it you change the configuration.
+
+. Check if any BGP announcements arrive and are accepted.
+On one of the loadbalancer VMs run
++
+[source,console]
+----
+tcpdump -n -i any tcp port 179
+----
++
+There should be packets coming in from the cluster nodes and they should be answered.
+
+.. If no packets come in, check the connection between the cluster nodes and the loadbalancer VM.
+
+.. If packets come in but aren't answered the issue might be the firewall setup.
+Check if the BGP port is open with
++
+[source,console]
+----
+iptables -L
+----
+
+.. If the firewall accepts BGP announcements, check the FRR configuration.
+In the FRR shell run
++
+[source]
+----
+show run
+----
++
+It should show the current running configuration which should look similar to
++
+[source]
+----
+!
+frr version 7.2.1
+frr defaults traditional
+hostname lb-1c
+log syslog informational
+no ipv6 forwarding
+service integrated-vtysh-config
+!
+router bgp 64512
+ neighbor 172.18.200.137 remote-as 64512
+ neighbor 172.18.200.157 remote-as 64512
+ neighbor 172.18.200.218 remote-as 64512
+!
+line vty
+!
+end
+----

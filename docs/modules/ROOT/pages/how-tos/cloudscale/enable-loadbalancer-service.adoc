@@ -1,8 +1,8 @@
-= Enable `LoadBalancer` serivces on cloudscale.ch
+= Enable `LoadBalancer` services on cloudscale.ch
 
 [abstract]
 --
-Steps to enable `LoadBalancer` serivces on an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
+Steps to enable `LoadBalancer` services on an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
 --
 
 [NOTE]
@@ -295,7 +295,6 @@ If these checks look correct, the BGP setup works as expected.
 If you still can't connect to the service, re-check the network policies and check if the Floating Network is assigned correctly.
 
 If the neighbors or routes don't show up correctly, follow the other troubleshooting steps.
-``
 
 === Check BGP announcements 
 

@@ -161,5 +161,5 @@ include::partial$enable-argocd-autosync.adoc[]
 == Upstream documentation
 
 * Rook documentation
-** https://rook.io/docs/rook/v1.6/ceph-osd-mgmt.html#remove-an-osd[Remove an OSD]
-** https://rook.io/docs/rook/v1.6/ceph-mon-health.html#failing-over-a-monitor[MON failover]
+** https://rook.io/docs/rook/v1.7/ceph-osd-mgmt.html#remove-an-osd[Remove an OSD]
+** https://rook.io/docs/rook/v1.7/ceph-mon-health.html#failing-over-a-monitor[MON failover]

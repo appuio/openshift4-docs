@@ -5,11 +5,6 @@
 Steps to enable `LoadBalancer` services on an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
 --
 
-[NOTE]
---
-- In the future, this procedure will be mostly automated
---
-
 == Starting situation
 
 * You already have an OpenShift 4 cluster on cloudscale.ch
@@ -36,7 +31,8 @@ whois -i mnt-by MNT-VSHN -T inetnum -r
 ----
 Please coordinate with other VSHNeers before using an IP range.
 
-. Update RIPE DB to reflect the new usage of the IP range.
+. Update https://www.ripe.net/manage-ips-and-asns/db[RIPE DB] to reflect the new usage of the IP range.
+Add the IP range with a descriptive name.
 
 . Create a ticket with cloudscale.ch to make the range available as a Floating Network in the project of the cluster.
 
@@ -301,7 +297,7 @@ If the neighbors or routes don't show up correctly, follow the other troubleshoo
 Next, check if Cilium sends out BGP announcements and whether they arrive at the loadbalancer VMs.
 
 . Check if Cilium sends out BGP announcements.
-In one of the Cilium pods run
+In one of the Cilium DaemonSet pods run
 +
 [source,console]
 ----
@@ -311,7 +307,7 @@ tcpdump -n -i any tcp port 179
 If Cilium sends out announcements to the correct IPs, it's most likely setup correctly.
 If it doesn't, there is an issue with Cilium.
 One thing to consider is that Cilium doesn't automatically pick up updates of the `bgp-config` ConfigMap.
-Make sure to restart the Cilium pods it you change the configuration.
+Make sure to restart the Cilium DaemonSet pods if you change the configuration.
 
 . Check if any BGP announcements arrive and are accepted.
 On one of the loadbalancer VMs run

@@ -71,8 +71,6 @@ include::partial$delete-storage-node.adoc[]
 
 include::partial$remove-alertmanager-silence.adoc[]
 
-include::partial$enable-argocd-autosync.adoc[]
-
 == Upstream documentation
 
 * Rook documentation

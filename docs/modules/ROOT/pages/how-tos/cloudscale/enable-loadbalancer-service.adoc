@@ -50,13 +50,18 @@ Assuming you want to add the IP range `203.0.113.128/25` to the cluster `c-cold-
 export CLUSTER_ID="c-cold-bush-7254"
 export IP_RANGE="203.0.113.128/25"
 
+git checkout -b feat/lbaas/loadbalancer-ip/${CLUSTER_ID}
+
 mkdir -p lbaas/${CLUSTER_ID}
 touch lbaas/${CLUSTER_ID}/lb.yaml
-yq eval -i '."profile_openshift4_gateway::loadbalancer_ip_address_pools" += [${IP_RANGE}]' lbaas/${CLUSTER_ID}/lb.yaml
+yq eval -i ".\"profile_openshift4_gateway::loadbalancer_ip_address_pools\" += [${IP_RANGE}]" lbaas/${CLUSTER_ID}/lb.yaml
 
+git add lbass/
 git commit -a -m "Add loadbalancer IP range ${IP_RANGE} to ${CLUSTER_ID}"
-git push
+git push --set-upstream origin feat/lbaas/loadbalancer-ip/${CLUSTER_ID}
 ----
+
+Finally review and merge the MR in the https://git.vshn.net/appuio/appuio_hieradata/-/tree/master/lbaas[APPUiO hieradata].
  
 
 === Setup BGP speaker

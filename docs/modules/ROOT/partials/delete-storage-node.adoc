@@ -29,6 +29,7 @@ done
 ----
 
 ifeval::["{delete-nodes-manually}" == "yes"]
+ifeval::["{cloud_provider}" == "exoscale"]
 . Remove the Exoscale VM(s)
 +
 [source,bash,subs="attributes+"]
@@ -44,6 +45,28 @@ for node in $(echo -n {node-delete-list}); do
   exo vm delete "${node_id}"
 done
 ----
+endif::[]
+ifeval::["{cloud_provider}" == "cloudscale"]
+. Remove the cloudscale.ch VM(s)
++
+[source,bash,subs="attributes+"]
+----
+for node in $(echo -n {node-delete-list}); do
+  node_id=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+    https://api.cloudscale.ch/v1/servers | \
+    jq --arg storage_node "$node" -r \
+    '.[] | select(.name|startswith($storage_node)) | .uuid')
+
+  echo "Removing node:"
+  curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+    "https://api.cloudscale.ch/v1/servers/${node_id}" |\
+    jq -r '.name'
+
+  curl -XDELETE -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+    "https://api.cloudscale.ch/v1/servers/${node_id}"
+done
+----
+endif::[]
 endif::[]
 
 ifeval::["{delete-nodes-manually}" != "yes"]
@@ -63,6 +86,7 @@ terraform apply
 
 endif::[]
 
+ifeval::["{cloud_provider}" == "exoscale]
 . Clean up localstorage PV(s) of decommissioned node(s)
 +
 [source,bash,subs="attributes+"]
@@ -71,3 +95,4 @@ for pv_name in $(echo -n ${delete-pvs}); do
   kubectl --as=cluster-admin delete pv "${pv_name}"
 done
 ----
+endif::[]

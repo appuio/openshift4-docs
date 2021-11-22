@@ -2,13 +2,28 @@
 
 . Find Terraform resource index of the node to replace
 +
+ifeval::["{cloud_provider}" == "exoscale"]
+[source,bash]
+----
+TF_MODULE="module.cluster.module.storage"
+----
+endif::[]
+ifeval::["{cloud_provider}" == "cloudscale"]
+[source,bash]
+----
+TF_MODULE='module.cluster.module.additional_worker["storage"]' <1>
+----
+<1> Select the correct worker group.
+This guide assumes that your storage nodes are part of an additional worker group called "storage".
+endif::[]
++
 [source,bash]
 ----
 # Grab JSON copy of current Terraform state
 terraform state pull > .tfstate.json
-node_index=$(jq --arg storage_node "${NODE_TO_REPLACE}" -r \
+node_index=$(jq --arg tfmodule "${TF_MODULE}" --arg storage_node "${NODE_TO_REPLACE}" -r \
   '.resources[] |
-   select(.module=="module.cluster.module.storage" and .type=="random_id") |
+   select(.module==$tfmodule and .type=="random_id") |
    .instances[] |
    select(.attributes.hex==$storage_node) |
    .index_key' \
@@ -17,23 +32,45 @@ node_index=$(jq --arg storage_node "${NODE_TO_REPLACE}" -r \
 
 . Verify that resource index is correct
 +
+ifeval::["{cloud_provider}" == "cloudscale"]
 [source,bash]
 ----
-jq --arg index "${node_index}" -r \
+jq --arg tfmodule "${TF_MODULE}" --arg index "${node_index}" -r \
   '.resources[] |
-   select(.module=="module.cluster.module.storage" and .type=="exoscale_compute") |
+   select(.module==$tfmodule and .type=="cloudscale_server") |
+   .instances[$index|tonumber] |
+   .attributes.name' \
+   .tfstate.json
+----
+endif::[]
+ifeval::["{cloud_provider}" == "exoscale"]
+[source,bash]
+----
+jq --arg tfmodule "${TF_MODULE}" --arg index "${node_index}" -r \
+  '.resources[] |
+   select(.module==$tfmodule and .type=="exoscale_compute") |
    .instances[$index|tonumber] |
    .attributes.hostname' \
    .tfstate.json
 ----
+endif::[]
 
 . Remove node ID and node resource for node that we want to replace from the Terraform state
 +
+ifeval::["{cloud_provider}" == "exoscale"]
 [source,bash]
 ----
 terraform state rm "module.cluster.module.storage.random_id.node_id[$node_index]"
 terraform state rm "module.cluster.module.storage.exoscale_compute.nodes[$node_index]"
 ----
+endif::[]
+ifeval::["{cloud_provider}" == "cloudscale"]
+[source,bash]
+----
+terraform state rm "${TF_MODULE}.random_id.node[$node_index]"
+terraform state rm "${TF_MODULE}.cloudscale_server.node[$node_index]"
+----
+endif::[]
 
 . Run Terraform to spin up a replacement node
 +

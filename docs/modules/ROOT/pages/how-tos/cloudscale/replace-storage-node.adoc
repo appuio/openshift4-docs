@@ -13,7 +13,6 @@
 
 :node-delete-list: ${NODE_TO_REPLACE}
 :delete-nodes-manually: yes
-:delete-pvs: old_pv_names
 
 [abstract]
 --

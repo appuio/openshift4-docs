@@ -1,0 +1,76 @@
+= Replace a storage node
+
+:cloud_provider: cloudscale
+:kubectl_extra_args: --as=cluster-admin
+:delabel_app_nodes: yes
+:argo_app: rook-ceph
+
+:osd-replace-list: $NODE_TO_REPLACE
+
+:mon-operation: replace
+:mon-argocd-autosync-already-disabled: yes
+:mon-replace-list: $NODE_TO_REPLACE
+
+:node-delete-list: ${NODE_TO_REPLACE}
+:delete-nodes-manually: yes
+
+[abstract]
+--
+Steps to replace a storage node of an OpenShift 4 cluster on https://www.cloudscale.ch/[cloudscale.ch].
+--
+
+== Starting situtation
+
+* You already have a OpenShift 4 cluster on cloudscale.ch
+* You have admin-level access to the cluster
+* The cluster is already running the https://products.docs.vshn.ch/products/appuio/managed/storage_cluster.html[APPUiO Managed Storage Cluster] addon (Rook Ceph).
+* You want to replace an existing storage node in the storage cluster with a new storage node
+
+== Prerequisites
+
+include::partial$cloudscale/prerequisites.adoc[]
+
+== Prepare local environment
+
+include::partial$cloudscale/setup-local-env.adoc[]
+
+== Prepare Terraform environment
+
+include::partial$cloudscale/configure-terraform-secrets.adoc[]
+
+include::partial$setup_terraform.adoc[]
+
+== Set alert silence
+
+:duration: +60 minutes
+include::partial$create-alertmanager-silence.adoc[]
+
+== Replace node
+
+. Make a note of the node you want to replace
++
+[source,bash]
+----
+export NODE_TO_REPLACE=storage-XXXX
+----
+
+// Create new node by removing old node from TF state and letting TF spin up a
+// new node
+include::partial$create-replacement-storage-node.adoc[]
+
+=== Remove the old MON
+
+include::partial$storage-ceph-remove-mon.adoc[]
+
+=== Clean up the old node
+
+include::partial$delete-storage-node.adoc[]
+
+== Finish up
+
+include::partial$remove-alertmanager-silence.adoc[]
+
+== Upstream documentation
+
+* Rook documentation
+** https://rook.io/docs/rook/v1.7/ceph-mon-health.html#failing-over-a-monitor[MON failover]

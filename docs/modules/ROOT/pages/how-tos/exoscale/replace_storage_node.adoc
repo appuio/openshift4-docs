@@ -1,5 +1,6 @@
 = Replace a storage node
 
+:cloud_provider: exoscale
 :kubectl_extra_args: --as=cluster-admin
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
@@ -53,97 +54,7 @@ include::partial$create-alertmanager-silence.adoc[]
 export NODE_TO_REPLACE=storage-XXXX
 ----
 
-=== Create a new node
-
-. Find Terraform resource index of the node to replace
-+
-[source,bash]
-----
-# Grab JSON copy of current Terraform state
-terraform state pull > .tfstate.json
-node_index=$(jq --arg storage_node "${NODE_TO_REPLACE}" -r \
-  '.resources[] |
-   select(.module=="module.cluster.module.storage" and .type=="random_id") |
-   .instances[] |
-   select(.attributes.hex==$storage_node) |
-   .index_key' \
-  .tfstate.json)
-----
-
-. Verify that resource index is correct
-+
-[source,bash]
-----
-jq --arg index "${node_index}" -r \
-  '.resources[] |
-   select(.module=="module.cluster.module.storage" and .type=="exoscale_compute") |
-   .instances[$index|tonumber] |
-   .attributes.hostname' \
-   .tfstate.json
-----
-
-. Remove node ID and node resource for node that we want to replace from the Terraform state
-+
-[source,bash]
-----
-terraform state rm "module.cluster.module.storage.random_id.node_id[$node_index]"
-terraform state rm "module.cluster.module.storage.exoscale_compute.nodes[$node_index]"
-----
-
-. Run Terraform to spin up a replacement node
-+
-[source,bash]
-----
-terraform apply
-----
-
-. Approve node cert for new storage node
-+
-include::partial$install/approve-node-csrs.adoc[]
-
-. Label and taint the new storage node
-+
-include::partial$exoscale/label-taint-storage-nodes.adoc[]
-
-. Wait for the localstorage PV on the new node to be created
-+
-[source,bash]
-----
-kubectl --as=cluster-admin get pv \
-  -l storage.openshift.com/local-volume-owner-name=storagevolumes -w
-----
-
-. Disable auto sync for component `rook-ceph`.
-This allows us to temporarily make manual changes to the Rook Ceph cluster.
-+
-include::partial$disable-argocd-autosync.adoc[]
-
-. Make a note of the original count of OSDs in the Ceph cluster
-+
-[source,bash]
-----
-orig_osd_count=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
-  get cephcluster cluster -o jsonpath='{.spec.storage.storageClassDeviceSets[0].count}')
-----
-
-. Change Ceph cluster to have one more OSD
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
-  -p "[{
-    \"op\": \"replace\",
-    \"path\": \"/spec/storage/storageClassDeviceSets/0/count\",
-    \"value\": $(expr ${orig_osd_count} + 1)
-  }]"
-----
-
-. Wait until the new OSD is launched
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
-----
+include::partial$create-replacement-storage-node.adoc[]
 
 === Remove old OSD
 
@@ -185,7 +96,7 @@ include::partial$storage-ceph-remove-mon.adoc[]
 
 === Clean up the old node
 
-include::partial$exoscale/delete-node.adoc[]
+include::partial$delete-storage-node.adoc[]
 
 == Finish up
 
@@ -196,5 +107,5 @@ include::partial$enable-argocd-autosync.adoc[]
 == Upstream documentation
 
 * Rook documentation
-** https://rook.io/docs/rook/v1.6/ceph-osd-mgmt.html#remove-an-osd[Remove an OSD]
-** https://rook.io/docs/rook/v1.6/ceph-mon-health.html#failing-over-a-monitor[MON failover]
+** https://rook.io/docs/rook/v1.7/ceph-osd-mgmt.html#remove-an-osd[Remove an OSD]
+** https://rook.io/docs/rook/v1.7/ceph-mon-health.html#failing-over-a-monitor[MON failover]

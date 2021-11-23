@@ -87,7 +87,7 @@ include::partial$install/approve-node-csrs.adoc[]
 
 . Label and taint the new storage node
 +
-include::partial$exoscale/label-taint-storage-nodes.adoc[]
+include::partial$label-taint-storage-nodes.adoc[]
 
 . Wait until the new OSD is launched.
 This requires ArgoCD to have run and the Rook-Ceph operator to notice the change.

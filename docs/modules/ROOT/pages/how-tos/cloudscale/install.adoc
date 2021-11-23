@@ -270,20 +270,7 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 
 === Provision Infrastructure
 
-. Configure Terraform secrets
-+
-[source,bash]
-----
-cat <<EOF > ./terraform.env
-CLOUDSCALE_TOKEN
-TF_VAR_ignition_bootstrap
-TF_VAR_lb_cloudscale_api_secret
-TF_VAR_control_vshn_net_token
-GIT_AUTHOR_NAME
-GIT_AUTHOR_EMAIL
-HIERADATA_REPO_TOKEN
-EOF
-----
+include::partial$cloudscale/configure-terraform-secrets.adoc[]
 
 include::partial$setup_terraform.adoc[]
 

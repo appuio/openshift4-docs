@@ -1,0 +1,6 @@
+.Access to cloud API
+[source,bash]
+----
+# From https://control.cloudscale.ch/service/<your-project>/api-token
+export CLOUDSCALE_TOKEN=<cloudscale-api-token>
+----

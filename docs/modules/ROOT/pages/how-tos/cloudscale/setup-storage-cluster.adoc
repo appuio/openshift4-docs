@@ -1,0 +1,363 @@
+= Setup a storage cluster
+
+:delabel_app_nodes: yes
+
+[abstract]
+--
+Steps to deploy an https://products.docs.vshn.ch/products/appuio/managed/storage_cluster.html[APPUiO Managed Storage Cluster] on an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
+--
+
+== Starting situation
+
+* You already have an OpenShift 4 cluster on cloudscale.ch
+* You want to deploy the APPUiO Managed Storage Cluster addon on that OpenShift 4 cluster.
+* You have admin-level access to the OpenShift 4 cluster on which you want to setup a storage cluster.
+
+== Prerequisites
+
+* `kubectl`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+
+== Steps
+
+. Configure API access
++
+[source,bash]
+----
+export COMMODORE_API_URL=https://api.syn.vshn.net <1>
+export COMMODORE_API_TOKEN=<your lieutenant token>
+
+# Set Project Syn cluster and tenant ID
+export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-cluster-id-1234
+export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+----
+<1> Replace with the API URL of the desired Lieutenant instance.
+
+. Create a local directory to work in and compile the cluster catalog
++
+[source,bash]
+----
+export WORK_DIR=/path/to/work/dir
+mkdir -p "${WORK_DIR}"
+pushd "${WORK_DIR}"
+
+commodore catalog compile "${CLUSTER_ID}"
+----
++
+[TIP]
+====
+We strongly recommend creating an empty directory, unless you already have a work directory for the cluster you’re about to work on.
+This guide will run Commodore in the directory created in this step.
+====
+
+. Configure a new worker group called `storage` for the cluster
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}"
+yq -i e '.parameters.openshift4_terraform.terraform_variables.additional_worker_groups=
+  {
+    "storage": {
+      "count": 3,
+      "flavor": "plus-32"
+    }
+  }' "${CLUSTER_ID}.yml" 
+
+git commit -am"Configure storage cluster nodes for ${CLUSTER_ID}"
+git push origin master
+popd
+----
+
+. Compile and push the cluster catalog
++
+[source,bash]
+----
+commodore catalog compile "${CLUSTER_ID}" --push -i
+----
+
+. Navigate to the cluster catalog repository and trigger the Terraform apply step if the plan output looks ok.
++
+++++
+<style>
+.listingblock.limit-height code {
+  max-height: 80ex;
+}
+</style>
+++++
++
+A typical plan output should look something like
++
+[source,role=limit-height]
+----
+Terraform will perform the following actions:
+  # module.cluster.module.additional_worker["storage"].cloudscale_server.node[0] will be created
+  + resource "cloudscale_server" "node" {
+      + flavor_slug                    = "plus-32"
+      + href                           = (known after apply)
+      + id                             = (known after apply)
+      + image_slug                     = "custom:rhcos-4.8"
+      + name                           = (known after apply)
+      + private_ipv4_address           = (known after apply)
+      + public_ipv4_address            = (known after apply)
+      + public_ipv6_address            = (known after apply)
+      + server_group_ids               = (known after apply)
+      + server_groups                  = (known after apply)
+      + skip_waiting_for_ssh_host_keys = false
+      + ssh_fingerprints               = (known after apply)
+      + ssh_host_keys                  = (known after apply)
+      + status                         = (known after apply)
+      + user_data                      = (known after apply)
+      + volume_size_gb                 = 128
+      + volumes                        = (known after apply)
+      + zone_slug                      = "lpg1"
+      + interfaces {
+          + network_href = (known after apply)
+          + network_name = (known after apply)
+          + network_uuid = (known after apply)
+          + type         = "private"
+          + addresses {
+              + address       = (known after apply)
+              + gateway       = (known after apply)
+              + prefix_length = (known after apply)
+              + reverse_ptr   = (known after apply)
+              + subnet_cidr   = (known after apply)
+              + subnet_href   = (known after apply)
+              + subnet_uuid   = "06f817f6-e109-4d30-886f-3151bb4e1298"
+              + version       = (known after apply)
+            }
+        }
+    }
+  # module.cluster.module.additional_worker["storage"].cloudscale_server.node[1] will be created
+  + resource "cloudscale_server" "node" {
+      + flavor_slug                    = "plus-32"
+      + href                           = (known after apply)
+      + id                             = (known after apply)
+      + image_slug                     = "custom:rhcos-4.8"
+      + name                           = (known after apply)
+      + private_ipv4_address           = (known after apply)
+      + public_ipv4_address            = (known after apply)
+      + public_ipv6_address            = (known after apply)
+      + server_group_ids               = (known after apply)
+      + server_groups                  = (known after apply)
+      + skip_waiting_for_ssh_host_keys = false
+      + ssh_fingerprints               = (known after apply)
+      + ssh_host_keys                  = (known after apply)
+      + status                         = (known after apply)
+      + user_data                      = (known after apply)
+      + volume_size_gb                 = 128
+      + volumes                        = (known after apply)
+      + zone_slug                      = "lpg1"
+      + interfaces {
+          + network_href = (known after apply)
+          + network_name = (known after apply)
+          + network_uuid = (known after apply)
+          + type         = "private"
+          + addresses {
+              + address       = (known after apply)
+              + gateway       = (known after apply)
+              + prefix_length = (known after apply)
+              + reverse_ptr   = (known after apply)
+              + subnet_cidr   = (known after apply)
+              + subnet_href   = (known after apply)
+              + subnet_uuid   = "06f817f6-e109-4d30-886f-3151bb4e1298"
+              + version       = (known after apply)
+            }
+        }
+    }
+  # module.cluster.module.additional_worker["storage"].cloudscale_server.node[2] will be created
+  + resource "cloudscale_server" "node" {
+      + flavor_slug                    = "plus-32"
+      + href                           = (known after apply)
+      + id                             = (known after apply)
+      + image_slug                     = "custom:rhcos-4.8"
+      + name                           = (known after apply)
+      + private_ipv4_address           = (known after apply)
+      + public_ipv4_address            = (known after apply)
+      + public_ipv6_address            = (known after apply)
+      + server_group_ids               = (known after apply)
+      + server_groups                  = (known after apply)
+      + skip_waiting_for_ssh_host_keys = false
+      + ssh_fingerprints               = (known after apply)
+      + ssh_host_keys                  = (known after apply)
+      + status                         = (known after apply)
+      + user_data                      = (known after apply)
+      + volume_size_gb                 = 128
+      + volumes                        = (known after apply)
+      + zone_slug                      = "lpg1"
+      + interfaces {
+          + network_href = (known after apply)
+          + network_name = (known after apply)
+          + network_uuid = (known after apply)
+          + type         = "private"
+          + addresses {
+              + address       = (known after apply)
+              + gateway       = (known after apply)
+              + prefix_length = (known after apply)
+              + reverse_ptr   = (known after apply)
+              + subnet_cidr   = (known after apply)
+              + subnet_href   = (known after apply)
+              + subnet_uuid   = "06f817f6-e109-4d30-886f-3151bb4e1298"
+              + version       = (known after apply)
+            }
+        }
+    }
+  # module.cluster.module.additional_worker["storage"].cloudscale_server_group.nodes[0] will be created
+  + resource "cloudscale_server_group" "nodes" {
+      + href      = (known after apply)
+      + id        = (known after apply)
+      + name      = "storage-group"
+      + type      = "anti-affinity"
+      + zone_slug = "lpg1"
+    }
+  # module.cluster.module.additional_worker["storage"].random_id.node[0] will be created
+  + resource "random_id" "node" {
+      + b64_std     = (known after apply)
+      + b64_url     = (known after apply)
+      + byte_length = 2
+      + dec         = (known after apply)
+      + hex         = (known after apply)
+      + id          = (known after apply)
+      + prefix      = "storage-"
+    }
+  # module.cluster.module.additional_worker["storage"].random_id.node[1] will be created
+  + resource "random_id" "node" {
+      + b64_std     = (known after apply)
+      + b64_url     = (known after apply)
+      + byte_length = 2
+      + dec         = (known after apply)
+      + hex         = (known after apply)
+      + id          = (known after apply)
+      + prefix      = "storage-"
+    }
+  # module.cluster.module.additional_worker["storage"].random_id.node[2] will be created
+  + resource "random_id" "node" {
+      + b64_std     = (known after apply)
+      + b64_url     = (known after apply)
+      + byte_length = 2
+      + dec         = (known after apply)
+      + hex         = (known after apply)
+      + id          = (known after apply)
+      + prefix      = "storage-"
+    }
+  # module.cluster.module.lb.module.hiera[0].data.local_file.hieradata_mr_url[0] will be read during apply
+  # (config refers to values not yet known)
+ <= data "local_file" "hieradata_mr_url"  {
+      + content        = (known after apply)
+      + content_base64 = (known after apply)
+      + filename       = "/builds/syn/cluster-catalogs/c-cluster-id-1234/manifests/openshift4-terraform/.mr_url.txt"
+      + id             = (known after apply)
+    }
+  # module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata will be created
+  + resource "gitfile_checkout" "appuio_hieradata" {
+      + branch = "master"
+      + head   = (known after apply)
+      + id     = (known after apply)
+      + path   = "./appuio_hieradata"
+      + repo   = "https://project_368_bot@git.vshn.net/appuio/appuio_hieradata.git"
+    }
+  # module.cluster.module.lb.module.hiera[0].local_file.lb_hieradata will be created
+  + resource "local_file" "lb_hieradata" {
+      + content              = <<-EOT
+            # Managed by Terraform for Project Syn cluster c-cluster-id-1234
+            profile_openshift4_gateway::nodes:
+              - lb-XX.cluster-id-1234.example.com
+              - lb-YY.cluster-id-1234.example.com
+            profile_openshift4_gateway::public_interface: ens3
+            profile_openshift4_gateway::private_interfaces:
+              - ens4
+            profile_openshift4_gateway::floating_addresses:
+              api: <API VIP>
+              nat: <NAT VIP>
+              router: <ROUTER VIP>
+            profile_openshift4_gateway::floating_address_provider: cloudscale
+            profile_openshift4_gateway::internal_vip: 172.18.200.100
+            profile_openshift4_gateway::floating_address_settings:
+              token: [MASKED]
+            profile_openshift4_gateway::backends:
+              'api':
+                - etcd-0.c-cluster-id-1234.example.com
+                - etcd-1.c-cluster-id-1234.example.com
+                - etcd-2.c-cluster-id-1234.example.com
+              'router':
+                - 172.18.200.175
+                - 172.18.200.112
+                - 172.18.200.160
+        EOT
+      + directory_permission = "0755"
+      + file_permission      = "0644"
+      + filename             = "/builds/syn/cluster-catalogs/c-cluster-id-1234/manifests/openshift4-terraform/appuio_hieradata/lbaas/c-cluster-id-1234.yaml"
+      + id                   = (known after apply)
+    }
+Plan: 9 to add, 0 to change, 0 to destroy.
+----
+
+. Approve node certificates for the storage nodes
++
+include::partial$install/approve-node-csrs.adoc[]
+
+. Label and taint the storage nodes
++
+include::partial$label-taint-storage-nodes.adoc[]
+
+. Configure the storage cluster
++
+[TIP]
+====
+The bulk of the configuration for the `rook-ceph` component is done in the https://git.vshn.net/syn/commodore-defaults/-/blob/master/cloud/cloudscale/config/rook-ceph.yml[VSHN global defaults repo (internal)].
+====
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}"
+
+# Enable the rook-ceph Commodore component
+yq -i e '.applications += ["rook-ceph"]' "${CLUSTER_ID}.yml"
+
+# Configure the rook-ceph Commodore component for cloudscale.ch
+yq -i e '.parameters.rook_ceph =
+  {
+    "ceph_cluster": {
+      "block_volume_size": "100Gi" <1>
+    }
+  }' "${CLUSTER_ID}.yml"
+
+git commit -am "Configure storage cluster for ${CLUSTER_ID}"
+git push origin master
+popd
+----
+<1> This parameter controls the size of each OSD disk.
+
+. Compile and push the cluster catalog
++
+[source,bash]
+----
+commodore catalog compile "${CLUSTER_ID}" --push -i
+----
+
+. Wait until ArgoCD and Rook have deployed the storage cluster
+If you want, you can observe progress in a few different ways:
++
+.Read the Rook-Ceph operator logs
+[source,bash]
+----
+kubectl -n syn-rook-ceph-operator logs -f deploy/rook-ceph-operator
+----
++
+.Watch as the Ceph pods are created
+[source,bash]
+----
+kubectl -n syn-rook-ceph-cluster get pods -w
+----
+
+. Finally you can verify the Ceph cluster is healthy with
++
+[source,bash]
+----
+# Check overall Ceph health
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools \
+  ceph status
+# Check CephFS health
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools \
+  ceph fs status
+----

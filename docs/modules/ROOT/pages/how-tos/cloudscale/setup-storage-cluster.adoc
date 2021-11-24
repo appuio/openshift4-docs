@@ -64,7 +64,7 @@ yq -i e '.parameters.openshift4_terraform.terraform_variables.additional_worker_
     }
   }' "${CLUSTER_ID}.yml" 
 
-git commit -am"Configure storage cluster nodes for ${CLUSTER_ID}"
+git commit -am "Configure storage cluster nodes for ${CLUSTER_ID}"
 git push origin master
 popd
 ----

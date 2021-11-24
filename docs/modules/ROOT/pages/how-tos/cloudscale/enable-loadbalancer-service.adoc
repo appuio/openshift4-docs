@@ -29,7 +29,7 @@ You can find all IP ranges owned by VSHN
 ----
 whois -i mnt-by MNT-VSHN -T inetnum -r
 ----
-Please coordinate with other VSHNeers before using an IP range.
+Please coordinate with VSHN Corporate IT before using an IP range.
 
 . Update https://www.ripe.net/manage-ips-and-asns/db[RIPE DB] to reflect the new usage of the IP range.
 Add the IP range with a descriptive name.

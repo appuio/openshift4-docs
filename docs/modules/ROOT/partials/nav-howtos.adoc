@@ -14,6 +14,7 @@
 ** xref:oc4:ROOT:how-tos/cloudscale/replace-storage-node.adoc[Replace a storage node]
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
 ** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd from Backup]
+** xref:oc4:ROOT:how-tos/cloudscale/enable-loadbalancer-service.adoc[Enable LoadBalancer Services]
 
 * Exoscale
 ** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Cluster Setup]

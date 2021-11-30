@@ -89,7 +89,7 @@ yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
 ====
 [source,bash]
 ----
-cp catalog/manifests/cilium/01_cilium_helmchart/cilium-enterprise/charts/cilium/templates/* target/manifests/
+cp catalog/manifests/cilium/olm/* target/manifests/
 ----
 ====
 

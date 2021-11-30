@@ -52,7 +52,7 @@ mkdir -p lbaas/${CLUSTER_ID}
 touch lbaas/${CLUSTER_ID}/lb.yaml
 yq eval -i ".\"profile_openshift4_gateway::loadbalancer_ip_address_pools\" += [${IP_RANGE}]" lbaas/${CLUSTER_ID}/lb.yaml
 
-git add lbass/
+git add lbaas/
 git commit -a -m "Add loadbalancer IP range ${IP_RANGE} to ${CLUSTER_ID}"
 git push --set-upstream origin feat/lbaas/loadbalancer-ip/${CLUSTER_ID}
 ----

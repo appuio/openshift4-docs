@@ -56,6 +56,7 @@ pullSecret: |
 sshKey: "$(cat $SSH_PUBLIC_KEY)"
 EOF
 ----
+ifeval::["{provider}" == "cloudscale"]
 +
 . Cilium Optional: Add cilium
 +
@@ -66,6 +67,7 @@ EOF
 yq eval -i '.networking.networkType = "Cilium"' "${INSTALLER_DIR}/install-config.yaml"
 ----
 ====
+endif::[]
 
 . Render install manifests (this will consume the `install-config.yaml`)
 +
@@ -82,6 +84,7 @@ openshift-install --dir "${INSTALLER_DIR}" \
 yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
   spec.domain apps.example.com
 ----
+ifeval::["{provider}" == "cloudscale"]
 +
 . Cilium Optional: Copy pre-rendered Cilium manifests
 +
@@ -92,6 +95,7 @@ yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
 cp catalog/manifests/cilium/olm/* target/manifests/
 ----
 ====
+endif::[]
 
 . Prepare install manifests and ignition config
 +

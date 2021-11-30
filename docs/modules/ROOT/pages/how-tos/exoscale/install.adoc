@@ -167,6 +167,8 @@ vault kv get -format=json "clusters/kv/template/cert-manager" | jq '.data.data' 
 
 include::partial$get-hieradata-token-from-vault.adoc[]
 
+include::partial$install/prepare-commodore.adoc[]
+
 === OpenShift Installer Setup
 
 include::partial$install/prepare-installer.adoc[]

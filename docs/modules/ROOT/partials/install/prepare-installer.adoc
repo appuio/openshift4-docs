@@ -66,6 +66,11 @@ ifeval::["{provider}" == "cloudscale"]
 ----
 yq eval -i '.networking.networkType = "Cilium"' "${INSTALLER_DIR}/install-config.yaml"
 ----
+
+[WARNING]
+If setting custom CIDR for the OpenShift networking, the corresponding values should be updated in your Commodore cluster definitions.
+See https://github.com/projectsyn/component-cilium/blob/master/class/defaults.yml[Cilium Component Defaults] and https://hub.syn.tools/cilium/references/parameters.html[Parameter Reference].
+Verify with `less catalog/manifests/cilium/olm/*ciliumconfig.yaml`.
 ====
 endif::[]
 

@@ -13,7 +13,7 @@ done
 ----
 # Wait for Puppet provisioning to complete
 while true; do
-  curl --connect-timeout 1 "http://api.${CLUSTER_ID}.${BASE_DOMAIN}:6443"
+  curl --connect-timeout 1 "http://api.${CLUSTER_DOMAIN}:6443"
   if [ $? -eq 52 ]; then
     echo -e "\nHAproxy up"
     break

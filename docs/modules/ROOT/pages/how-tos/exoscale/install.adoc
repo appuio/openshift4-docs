@@ -202,32 +202,41 @@ Most importantly you have the option to change node sizes or add additional spec
 Please look at the xref:oc4:ROOT:references/exoscale/config.adoc[configuration reference] for the available options.
 ====
 
-. Review and commit
+. Configure Exoscale-specific Terraform variables
 +
 [source,bash,subs="attributes+"]
 ----
-# Exoscale-specific config
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${RHCOS_TEMPLATE}\"" \
   ${CLUSTER_ID}.yml
 yq eval -i ".parameters.openshift4_local_storage.local_storage_operator.channel = \"{ocp-minor-version}\"" \
   ${CLUSTER_ID}.yml <1>
+----
+<1> Can be removed as soon as Project Syn is Kubernetes version aware and we can set this automatically.
 
-# Have a look at the file ${CLUSTER_ID}.yml.
-# Override any default parameters or add more component configuration.
+[#_compile_catalog]
+=== Commit changes and compile cluster catalog
 
+. Review changes.
+Have a look at the file `${CLUSTER_ID}.yml`.
+Override default parameters or add more component configurations as required for your cluster.
+
+. Commit changes
++
+[source,bash]
+----
 git commit -a -m "Setup cluster ${CLUSTER_ID}"
 git push
 
 popd
 ----
-<1> Can be removed as soon as Project Syn is Kubernetes version aware and we can set this automatically.
 
-. Compile and push Terraform setup
+. Compile and push cluster catalog
 +
 [source,bash]
 ----
 commodore catalog compile ${CLUSTER_ID} --push -i
 ----
+
 
 === Provision Infrastructure
 

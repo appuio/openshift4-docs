@@ -1,5 +1,3 @@
-For the following steps, change into a clean directory (for example a directory in your home).
-
 [CAUTION]
 These are the only steps which aren't idempotent and have to be completed uninterrupted in one go.
 If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
@@ -58,6 +56,23 @@ pullSecret: |
 sshKey: "$(cat $SSH_PUBLIC_KEY)"
 EOF
 ----
+ifeval::["{provider}" == "cloudscale"]
++
+. Cilium Optional: Add cilium
++
+[%collapsible]
+====
+[source,bash]
+----
+yq eval -i '.networking.networkType = "Cilium"' "${INSTALLER_DIR}/install-config.yaml"
+----
+
+[WARNING]
+If setting custom CIDR for the OpenShift networking, the corresponding values should be updated in your Commodore cluster definitions.
+See https://github.com/projectsyn/component-cilium/blob/master/class/defaults.yml[Cilium Component Defaults] and https://hub.syn.tools/cilium/references/parameters.html[Parameter Reference].
+Verify with `less catalog/manifests/cilium/olm/*ciliumconfig.yaml`.
+====
+endif::[]
 
 . Render install manifests (this will consume the `install-config.yaml`)
 +
@@ -74,6 +89,18 @@ openshift-install --dir "${INSTALLER_DIR}" \
 yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
   spec.domain apps.example.com
 ----
+ifeval::["{provider}" == "cloudscale"]
++
+. Cilium Optional: Copy pre-rendered Cilium manifests
++
+[%collapsible]
+====
+[source,bash]
+----
+cp catalog/manifests/cilium/olm/* target/manifests/
+----
+====
+endif::[]
 
 . Prepare install manifests and ignition config
 +

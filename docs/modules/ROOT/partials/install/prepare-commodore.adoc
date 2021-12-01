@@ -1,0 +1,48 @@
+=== Prepare Cluster Repository
+
+For the following steps, change into a clean directory (for example a directory in your home).
+
+[NOTE]
+====
+Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for details on how to run commodore.
+====
+
+. Prepare Commodore inventory.
++
+[source,bash]
+----
+mkdir -p inventory/classes/
+git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
+----
+
+ifeval::["{provider}" == "cloudscale"]
+==== Cilium Optional: Prepare Cilium Configuration
+[%collapsible]
+====
+. Add Cilium to cluster configuration
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i '.applications += ["cilium"]' ${CLUSTER_ID}.yml
+
+yq eval -i '.parameters.networkpolicy.networkPlugin = "cilium"' ${CLUSTER_ID}.yml
+yq eval -i '.parameters.networkpolicy.ignoredNamespaces = ["openshift-oauth-apiserver"]' ${CLUSTER_ID}.yml
+
+yq eval -i '.parameters.openshift.infraID = "TO_BE_DEFINED"' ${CLUSTER_ID}.yml
+yq eval -i '.parameters.openshift.clusterID = "TO_BE_DEFINED"' ${CLUSTER_ID}.yml
+
+git commit -a -m "Add Cilium addon to ${CLUSTER_ID}"
+git push
+popd
+----
++
+. Compile catalog
++
+[source,bash]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i
+----
+====
+endif::[]

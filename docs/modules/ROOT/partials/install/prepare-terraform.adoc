@@ -1,17 +1,3 @@
-
-[NOTE]
-====
-Check https://syn.tools/commodore/running-commodore.html[Running Commodore] for details on how to run commodore.
-====
-
-. Prepare Commodore inventory.
-+
-[source,bash]
-----
-mkdir -p inventory/classes/
-git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
-----
-
 . Set team responsible for handling Icinga alerts
 +
 [source,bash]

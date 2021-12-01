@@ -11,6 +11,11 @@ These steps follow the https://docs.openshift.com/container-platform/latest/inst
 https://www.terraform.io[Terraform] is used to provision the cloud infrastructure.
 --
 
+[CAUTION]
+This guide describes the installation with https://cilium.io/[Cilium] as the network provider.
+Cilium is an optional add-on and marked sections should be skipped for clusters which don't require Cilium.
+Optional sections are marked with _Cilium Optional_.
+
 [NOTE]
 --
 The commands are idempotent and can be retried if any of the steps fail.
@@ -214,6 +219,8 @@ vault kv get -format=json "clusters/kv/template/cert-manager" | jq '.data.data' 
 ----
 
 include::partial$get-hieradata-token-from-vault.adoc[]
+
+include::partial$install/prepare-commodore.adoc[]
 
 === OpenShift Installer Setup
 

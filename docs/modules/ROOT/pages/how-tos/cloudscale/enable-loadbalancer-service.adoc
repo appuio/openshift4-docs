@@ -50,9 +50,9 @@ git checkout -b feat/lbaas/loadbalancer-ip/${CLUSTER_ID}
 
 mkdir -p lbaas/${CLUSTER_ID}
 touch lbaas/${CLUSTER_ID}/lb.yaml
-yq eval -i ".\"profile_openshift4_gateway::loadbalancer_ip_address_pools\" += [${IP_RANGE}]" lbaas/${CLUSTER_ID}/lb.yaml
+yq eval -i ".\"profile_openshift4_gateway::loadbalancer_ip_address_pools\" += [\"${IP_RANGE}\"]" lbaas/${CLUSTER_ID}/lb.yaml
 
-git add lbass/
+git add lbaas/
 git commit -a -m "Add loadbalancer IP range ${IP_RANGE} to ${CLUSTER_ID}"
 git push --set-upstream origin feat/lbaas/loadbalancer-ip/${CLUSTER_ID}
 ----
@@ -71,7 +71,7 @@ The following steps need to be done manually on both loadbalancer VMs
 apt install frr
 ----
 
-. Enable bgp by setting `bgpd=yes` in `/etc/frr/daemon`
+. Enable bgp by setting `bgpd=yes` in `/etc/frr/daemons`
 +
 [source]
 ----
@@ -129,7 +129,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: bgp-config
-  namespace: kube-system
+  namespace: cilium
 data:
   config.yaml: |
     peers:

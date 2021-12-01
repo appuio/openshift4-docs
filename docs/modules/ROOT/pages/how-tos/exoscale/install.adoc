@@ -173,9 +173,15 @@ include::partial$get-hieradata-token-from-vault.adoc[]
 
 include::partial$install/prepare-commodore.adoc[]
 
-=== OpenShift Installer Setup
+[#_prepare_installer_config]
+=== Prepare OpenShift Installer Config
 
 include::partial$install/prepare-installer.adoc[]
+
+[#_run_installer]
+=== Run OpenShift Installer
+
+include::partial$install/run-installer.adoc[]
 
 . Upload ignition config
 +

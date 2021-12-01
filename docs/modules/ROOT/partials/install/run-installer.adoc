@@ -1,0 +1,47 @@
+[CAUTION]
+The steps in this section aren't idempotent and have to be completed uninterrupted in one go.
+If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
+
+. Render install manifests (this will consume the `install-config.yaml`)
++
+[source,bash]
+----
+openshift-install --dir "${INSTALLER_DIR}" \
+  create manifests
+----
+
+.. If you want to change the default "apps" domain for the cluster:
++
+[source,bash]
+----
+yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
+  spec.domain apps.example.com
+----
+
+ifeval::["{provider}" == "cloudscale"]
+. Cilium Optional: Copy pre-rendered Cilium manifests
++
+[%collapsible]
+====
+[source,bash]
+----
+cp catalog/manifests/cilium/olm/* target/manifests/
+----
+====
+endif::[]
+
+. Extract the cluster domain from the generated manifests
++
+[source,bash]
+----
+export CLUSTER_DOMAIN=$(yq e '.spec.baseDomain' \
+  "${INSTALLER_DIR}/manifests/cluster-dns-02-config.yml")
+----
+
+. Prepare install manifests and ignition config
++
+[source,bash]
+----
+openshift-install --dir "${INSTALLER_DIR}" \
+  create ignition-configs
+----

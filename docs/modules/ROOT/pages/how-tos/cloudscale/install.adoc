@@ -69,6 +69,7 @@ export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 
 include::partial$install/vshn-input.adoc[]
 
+[#_bootstrap_bucket]
 === Set up S3 bucket for cluster bootstrap
 
 . Create S3 bucket
@@ -107,6 +108,7 @@ mc mb --ignore-existing \
   "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
 ----
 
+[#_upload_coreos_image]
 === Upload Red Hat CoreOS image
 
 . Export the Authorization header for the Cloudscale API.
@@ -176,6 +178,7 @@ curl -i -H "$AUTH_HEADER" \
   https://api.cloudscale.ch/v1/custom-images/import
 ----
 
+[#_set_vault_secrets]
 === Set secrets in Vault
 
 include::partial$connect-to-vault.adoc[]

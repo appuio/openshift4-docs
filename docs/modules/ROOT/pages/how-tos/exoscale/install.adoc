@@ -55,6 +55,7 @@ include::partial$exoscale/environment-vars.adoc[]
 
 include::partial$install/vshn-input.adoc[]
 
+[#_create_iam_keys]
 === Create restricted Exoscale IAM keys for the LBs and object storage
 
 . Create restricted API keys
@@ -83,6 +84,7 @@ export TF_VAR_lb_exoscale_api_key=$(exo iam apikey show "${CLUSTER_ID}_floaty" \
   -O json | jq -r '.key')
 ----
 
+[#_bootstrap_bucket]
 === Set up S3 bucket for cluster bootstrap
 
 . Create S3 bucket
@@ -92,6 +94,7 @@ export TF_VAR_lb_exoscale_api_key=$(exo iam apikey show "${CLUSTER_ID}_floaty" \
 exo storage create "sos://${CLUSTER_ID}-bootstrap" --zone "${EXOSCALE_ZONE}"
 ----
 
+[#_upload_coreos_image]
 === Upload Red Hat CoreOS image
 
 . Fetch and convert the latest Red Hat CoreOS image
@@ -123,6 +126,7 @@ export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
 ----
 
 
+[#_set_vault_secrets]
 === Set secrets in Vault
 
 include::partial$connect-to-vault.adoc[]

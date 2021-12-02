@@ -69,6 +69,7 @@ export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 
 include::partial$install/vshn-input.adoc[]
 
+[#_bootstrap_bucket]
 === Set up S3 bucket for cluster bootstrap
 
 . Create S3 bucket
@@ -107,6 +108,7 @@ mc mb --ignore-existing \
   "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
 ----
 
+[#_upload_coreos_image]
 === Upload Red Hat CoreOS image
 
 . Export the Authorization header for the Cloudscale API.
@@ -176,6 +178,7 @@ curl -i -H "$AUTH_HEADER" \
   https://api.cloudscale.ch/v1/custom-images/import
 ----
 
+[#_set_vault_secrets]
 === Set secrets in Vault
 
 include::partial$connect-to-vault.adoc[]
@@ -222,9 +225,15 @@ include::partial$get-hieradata-token-from-vault.adoc[]
 
 include::partial$install/prepare-commodore.adoc[]
 
-=== OpenShift Installer Setup
+[#_configure_installer]
+=== Configure the OpenShift Installer
 
-include::partial$install/prepare-installer.adoc[]
+include::partial$install/configure-installer.adoc[]
+
+[#_run_installer]
+=== Run the OpenShift Installer
+
+include::partial$install/run-installer.adoc[]
 
 . Upload ignition config
 +
@@ -254,21 +263,24 @@ Please look at the xref:oc4:ROOT:references/cloudscale/config.adoc[configuration
 If you use a custom "apps" domain, make sure to also change it in `parameters.openshift.appsDomain`.
 ====
 
+[#_compile_catalog]
+=== Commit changes and compile cluster catalog
 
-. Review and commit
+. Review changes.
+Have a look at the file `${CLUSTER_ID}.yml`.
+Override default parameters or add more component configurations as required for your cluster.
+
+. Commit changes
 +
 [source,bash]
 ----
-# Have a look at the file ${CLUSTER_ID}.yml.
-# Override any default parameters or add more component configuration.
-
 git commit -a -m "Setup cluster ${CLUSTER_ID}"
 git push
 
 popd
 ----
 
-. Compile and push Terraform setup
+. Compile and push cluster catalog
 +
 [source,bash]
 ----

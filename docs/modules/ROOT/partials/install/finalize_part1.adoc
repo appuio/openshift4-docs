@@ -41,7 +41,7 @@ ifeval::["{provider}" == "exoscale"]
 [source,bash]
 ----
 for cname in "api" "apps"; do
-  exo dns add CNAME "${CLUSTER_ID}.${BASE_DOMAIN}" -n "_acme-challenge.${cname}" -a "${fulldomain}." -t 600
+  exo dns add CNAME "${CLUSTER_DOMAIN}" -n "_acme-challenge.${cname}" -a "${fulldomain}." -t 600
 done
 ----
 endif::[]

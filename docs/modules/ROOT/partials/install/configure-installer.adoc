@@ -1,16 +1,9 @@
-[CAUTION]
-These are the only steps which aren't idempotent and have to be completed uninterrupted in one go.
-If you have to recreate the install config or any of the generated manifests you need to rerun all of the subsequent steps.
+[TIP]
+====
+Starting with this section, we recommend that you change into a clean directory (for example a directory in your home).
+====
 
-[NOTE]
---
-You can add more options to the `install-config.yaml` file.
-Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
-
-For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
---
-
-. Prepare SSH key
+. Generate SSH key
 +
 [NOTE]
 ====
@@ -37,6 +30,14 @@ ssh-add $SSH_PRIVATE_KEY
 
 . Prepare `install-config.yaml`
 +
+[NOTE]
+--
+You can add more options to the `install-config.yaml` file.
+Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
+
+For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
+--
++
 [source,bash]
 ----
 export INSTALLER_DIR="$(pwd)/target"
@@ -56,6 +57,7 @@ pullSecret: |
 sshKey: "$(cat $SSH_PUBLIC_KEY)"
 EOF
 ----
+
 ifeval::["{provider}" == "cloudscale"]
 +
 . Cilium Optional: Add cilium
@@ -73,39 +75,3 @@ See https://github.com/projectsyn/component-cilium/blob/master/class/defaults.ym
 Verify with `less catalog/manifests/cilium/olm/*ciliumconfig.yaml`.
 ====
 endif::[]
-
-. Render install manifests (this will consume the `install-config.yaml`)
-+
-[source,bash]
-----
-openshift-install --dir "${INSTALLER_DIR}" \
-  create manifests
-----
-
-.. If you want to change the default "apps" domain for the cluster:
-+
-[source,bash]
-----
-yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
-  spec.domain apps.example.com
-----
-ifeval::["{provider}" == "cloudscale"]
-+
-. Cilium Optional: Copy pre-rendered Cilium manifests
-+
-[%collapsible]
-====
-[source,bash]
-----
-cp catalog/manifests/cilium/olm/* target/manifests/
-----
-====
-endif::[]
-
-. Prepare install manifests and ignition config
-+
-[source,bash]
-----
-openshift-install --dir "${INSTALLER_DIR}" \
-  create ignition-configs
-----

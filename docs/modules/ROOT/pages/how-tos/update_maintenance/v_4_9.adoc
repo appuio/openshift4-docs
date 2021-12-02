@@ -37,8 +37,10 @@ kubectl get apirequestcounts customresourcedefinitions.v1beta1.apiextensions.k8s
 ----
 +
 [NOTE]
+====
 Some services autodiscover supported APIs, notably https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/[kube-controller-manager] (`system:kube-controller-manager`) and ArgoCD (`system:serviceaccount:syn:argocd-application-controller`).
 These services will show up as using deprecated APIs.
+====
 
 . Provide the Acknowledgment
 +

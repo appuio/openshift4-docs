@@ -16,7 +16,7 @@ kubectl get apirequestcounts \
   -o jsonpath='{range .items[?(@.status.removedInRelease!="")]}{.status.removedInRelease}{"\t"}{.metadata.name}{"\t"}{.status.requestCount}{"\n"}{end}'
 ----
 +
-Should print something like the sample below.
+Should print a report like the sample below.
 The last column is requests in the last 24 hours.
 +
 [source,bash]

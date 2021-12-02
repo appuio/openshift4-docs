@@ -1,5 +1,10 @@
 = Maintenance and Update of an OpenShift 4 cluster
 
+[IMPORTANT]
+====
+For an upgrade to `4.9`, see xref:oc4:ROOT:how-tos/update_maintenance/v_4_9.adoc[Upgrade to OpenShift 4.9] first.
+====
+
 . Get list of available updates:
 +
 [source,console]

@@ -1,4 +1,4 @@
-= Upgrade to OpenShift 4.9
+= Upgrade to OpenShift 4.9 / Administrator Acknowledgment
 
 OpenShift Container Platform 4.9 uses Kubernetes 1.22, which removed a significant number of deprecated `v1beta1` APIs.
 A manual acknowledgment must be provided before the cluster can be upgraded to 4.9.

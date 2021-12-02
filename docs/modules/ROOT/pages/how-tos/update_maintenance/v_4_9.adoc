@@ -36,10 +36,9 @@ kubectl get apirequestcounts customresourcedefinitions.v1beta1.apiextensions.k8s
   | sort | uniq
 ----
 +
-Entries from `system:kube-controller-manager` are normal and will disappear after the upgrade.
-+
-Entries from `system:serviceaccount:syn:argocd-application-controller` are from the compiled Commodore manifest.
-Versions can be verified by searching the cluster repository for the offending resource.
+[NOTE]
+Some services autodiscover supported APIs, notably https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/[kube-controller-manager] (`system:kube-controller-manager`) and ArgoCD (`system:serviceaccount:syn:argocd-application-controller`).
+These services will show up as using deprecated APIs.
 
 . Provide the Acknowledgment
 +

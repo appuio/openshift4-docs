@@ -75,11 +75,9 @@ include::partial$setup_terraform.adoc[]
 +
 [source,shell]
 ----
-export VAULT_ADDR=https://vault-prod.syn.vshn.net
-vault login -method=ldap username=<your.name>
 declare -a LB_FQDNS
-for id in 0 1; do
-  LB_FQDNS[$id]=$(terraform state show module.cluster.exoscale_domain_record.lb[$id] | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
+for id in 1 2; do
+  LB_FQDNS[$id]=$(terraform state show module.cluster.exoscale_domain_record.lb[$(expr $id - 1)] | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
 done
 for lb in ${LB_FQDNS[*]}; do
   ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf"

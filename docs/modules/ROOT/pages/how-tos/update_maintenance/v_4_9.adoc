@@ -41,6 +41,36 @@ kubectl get apirequestcounts customresourcedefinitions.v1beta1.apiextensions.k8s
 Some services autodiscover supported APIs, notably https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/[kube-controller-manager] (`system:kube-controller-manager`) and ArgoCD (`system:serviceaccount:syn:argocd-application-controller`).
 These services will show up as using deprecated APIs.
 ====
++
+More advanced query: Show only resources with create and update requests.
++
+[source,bash]
+----
+kubectl --as=cluster-admin get apirequestcount -ojson | jq '
+    .items[] |
+        select(
+            .status.removedInRelease == "1.22" and .status.requestCount > 0
+        ) |
+        {
+            resource: .metadata.name,
+            requests: (
+                reduce .status.last24h[] as $hour ({"requests": 0}; .requests += (
+                    reduce $hour.byNode[]? as $node ({"requests": 0}; .requests += (
+                        reduce $node.byUser[]? as $user ({"requests": 0}; .requests += (
+                            reduce $user.byVerb[]? as $verb (0; . + (
+                                if $verb.verb == "watch" or $verb.verb == "list" or $verb.verb == "get" then
+                                    0
+                                else
+                                    $verb.requestCount
+                                end
+                            ))
+                        ))
+                    ).requests)
+                ).requests)
+            ).requests
+        }
+'
+----
 
 . Provide the Acknowledgment
 +

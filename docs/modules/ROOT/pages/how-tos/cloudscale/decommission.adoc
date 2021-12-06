@@ -127,7 +127,9 @@ Go to https://control.vshn.net/syn/lieutenantclusters
 +
 - Delete cluster entry using the delete button
 
-. Delete all volumes in cloudscale.ch project
+. Delete all remaining volumes which were associated with the cluster in the cloudscale.ch project.
++
+TIP: This step is required because the csi-cloudscale driver doesn't have time to properly cleanup PVs when the cluster is decommissioned with `terraform destroy`.
 
 . Delete the cluster-backup bucket in the cloudscale.ch project
 +

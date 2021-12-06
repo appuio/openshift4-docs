@@ -131,7 +131,7 @@ Go to https://control.vshn.net/syn/lieutenantclusters
 
 . Delete backup bucket in cloudscale.ch project
 
-. Delete all other vault entries
+. Delete all other Vault entries
 
 . Delete LDAP service (via portal)
 +

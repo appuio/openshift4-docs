@@ -129,7 +129,15 @@ Go to https://control.vshn.net/syn/lieutenantclusters
 
 . Delete all volumes in cloudscale.ch project
 
-. Delete backup bucket in cloudscale.ch project
+. Delete the cluster-backup bucket in the cloudscale.ch project
++
+[NOTE]
+====
+Verify that the cluster backups aren't needed anymore before cleaning up the backup bucket.
+Consider extracting the most recent cluster objects and etcd backups before deleting the bucket.
+See the xref:how-tos/recover-from-backup.adoc[Recover objects from backup] how-to for instructions.
+At this point in the decommissioning process, you'll have to extract the Restic configuration from Vault instead of the cluster itself.
+====
 
 . Delete all other Vault entries
 

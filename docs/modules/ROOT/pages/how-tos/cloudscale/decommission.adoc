@@ -25,7 +25,7 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch]
 +
 [source,bash]
 ----
-export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
+export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/service/PROJECT_ID/api-token
 export CLUSTER_ID=<lieutenant-cluster-id>
 export TENANT_ID=<lieutenant-tenant-id>
 export REGION=<region> # rma or lpg (without the zone number)
@@ -40,7 +40,7 @@ include::partial$setup_terraform.adoc[]
 [source,shell]
 ----
 declare -a LB_FQDNS
-for id in 0 1; do
+for id in 1 2; do
   LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | sed -e 's/"//g')
 done
 for lb in ${LB_FQDNS[*]}; do
@@ -126,6 +126,22 @@ Go to https://control.vshn.net/syn/lieutenantclusters
 - Search cluster name
 +
 - Delete cluster entry using the delete button
+
+. Delete all remaining volumes which were associated with the cluster in the cloudscale.ch project.
++
+TIP: This step is required because the csi-cloudscale driver doesn't have time to properly cleanup PVs when the cluster is decommissioned with `terraform destroy`.
+
+. Delete the cluster-backup bucket in the cloudscale.ch project
++
+[NOTE]
+====
+Verify that the cluster backups aren't needed anymore before cleaning up the backup bucket.
+Consider extracting the most recent cluster objects and etcd backups before deleting the bucket.
+See the xref:how-tos/recover-from-backup.adoc[Recover objects from backup] how-to for instructions.
+At this point in the decommissioning process, you'll have to extract the Restic configuration from Vault instead of the cluster itself.
+====
+
+. Delete all other Vault entries
 
 . Delete LDAP service (via portal)
 +

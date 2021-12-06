@@ -25,7 +25,7 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch]
 +
 [source,bash]
 ----
-export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/user/api-tokens
+export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/service/PROJECT_ID/api-token
 export CLUSTER_ID=<lieutenant-cluster-id>
 export TENANT_ID=<lieutenant-tenant-id>
 export REGION=<region> # rma or lpg (without the zone number)
@@ -40,7 +40,7 @@ include::partial$setup_terraform.adoc[]
 [source,shell]
 ----
 declare -a LB_FQDNS
-for id in 0 1; do
+for id in 1 2; do
   LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | sed -e 's/"//g')
 done
 for lb in ${LB_FQDNS[*]}; do
@@ -126,6 +126,12 @@ Go to https://control.vshn.net/syn/lieutenantclusters
 - Search cluster name
 +
 - Delete cluster entry using the delete button
+
+. Delete all volumes in cloudscale.ch project
+
+. Delete backup bucket in cloudscale.ch project
+
+. Delete all other vault entries
 
 . Delete LDAP service (via portal)
 +

@@ -140,8 +140,8 @@ If a URL is printed to the output, you can skip the next steps and directly jump
 +
 [source,bash,subs="attributes+"]
 ----
-curl -L https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/{ocp-patch-version}/rhcos-{ocp-patch-version}-x86_64-openstack.x86_64.qcow2.gz | gzip -d > rhcos-{ocp-minor-version}.gcow
-qemu-img convert rhcos-{ocp-minor-version}.gcow rhcos-{ocp-minor-version}.raw
+curl -L https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/{ocp-patch-version}/rhcos-{ocp-patch-version}-x86_64-openstack.x86_64.qcow2.gz | gzip -d > rhcos-{ocp-minor-version}.qcow
+qemu-img convert rhcos-{ocp-minor-version}.qcow rhcos-{ocp-minor-version}.raw
 ----
 
 . Upload the image to S3 and make it public
@@ -152,16 +152,21 @@ mc cp rhcos-{ocp-minor-version}.raw "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-i
 mc policy set download "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw"
 ----
 +
-[NOTE]
+[TIP]
 ====
-The output of the above looks like an error.
-But when checking with the following, the result is as expected.
+You can check that the download policy is applied successfully with
+
 [source,bash,subs="attributes+"]
 ----
 mc policy get "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw"
 ----
-The output should be `Access permission for `[…]-bootstrap-ignition/rhcos-{ocp-minor-version}.raw` is `download``
 
+The output should be
+
+[source,subs="attributes+"]
+----
+`Access permission for `[…]-bootstrap-ignition/rhcos-{ocp-minor-version}.raw` is `download``
+----
 ====
 
 . Import the image to Cloudscale

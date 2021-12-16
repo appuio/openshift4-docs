@@ -1,6 +1,7 @@
 * xref:oc4:ROOT:how-tos/generic-pre-install-checklist.adoc[Generic Pre-Install Checklist]
 * xref:oc4:ROOT:how-tos/recover-from-backup.adoc[Recover objects from backup]
 * xref:oc4:ROOT:how-tos/update_maintenance.adoc[Update/Maintenance]
+* xref:oc4:ROOT:how-tos/debug-nodes.adoc[Access nodes for debugging]
 
 * Authentication
 ** xref:oc4:ROOT:how-tos/authentication/sudo.adoc[Sudo]

@@ -1,0 +1,283 @@
+= Increase Storage Size of an OCP Logging Elasticsearch instance
+
+[abstract]
+This page describes how to increase the underlying storage size of the OpenShift Cluster Logging Elasticsearch instance.
+
+== Starting situation
+
+* You already have an OpenShift 4 with Cluster Logging enabled.
+* The Cluster Logging instance is managed and is of type `elasticsearch`.
+* You have admin-level access to the cluster.
+* You want to increase the storage size of the Elasticsearch cluster.
+
+== Prerequisites
+
+* `kubectl`
+* `curl`
+* `jq`
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+
+== Prepare local environment
+
+. Configure API access
++
+[source,bash]
+----
+export COMMODORE_API_URL=https://api.syn.vshn.net <1>
+export COMMODORE_API_TOKEN=<your lieutenant token>
+
+# Set Project Syn cluster and tenant ID
+export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-cluster-id-1234
+export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+----
+<1> Replace with the API URL of the desired Lieutenant instance.
+
+. Create a local directory to work in and compile the cluster catalog
++
+[source,bash]
+----
+export WORK_DIR=/path/to/work/dir
+mkdir -p "${WORK_DIR}"
+pushd "${WORK_DIR}"
+
+commodore catalog compile "${CLUSTER_ID}"
+----
++
+[TIP]
+====
+We strongly recommend creating an empty directory, unless you already have a work directory for the cluster you're about to work on.
+This guide will run Commodore in the directory created in this step.
+====
+
+== Increase PVC sizes
+
+=== Update Catalog
+
+. Set desired size
++
+[source,bash]
+----
+STORAGE_SIZE=250Gi <1>
+----
+<1> Replace with the desired PVC size.
+
+. Update Commodore catalog
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i "parameters.openshift4_logging.clusterLogging.logStore.elasticsearch.storage.size += \"${STORAGE_SIZE}\"" \
+  ${CLUSTER_ID}.yml
+
+git commit -a -m "Set Elasticsearch backing storage to \"${STORAGE_SIZE}\" on ${CLUSTER_ID}"
+git push
+popd
+----
++
+. Compile catalog
++
+[source,bash]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i
+----
+
+=== Increase PVC sizes
+
+[INFO]
+The elasticsearch operator can't modify PVC storage sizing at the moment.
+We'll do the steps manually.
+
+. Patch PVCs
++
+[source,bash]
+----
+pvcs=$(kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  get pvc \
+  -l logging-cluster=elasticsearch \
+  -o=name)
+
+while IFS= read -r pvc;
+do
+  kubectl \
+    --as=cluster-admin \
+    -n openshift-logging \
+    patch $pvc \
+    --patch "$(yq eval -n ".spec.resources.requests.storage = \"${STORAGE_SIZE}\"")"
+done <<< "$pvcs"
+----
+
+==== Restart Elasticsearch Deployments
+
+. Stop operator from managing the cluster
++
+[source,bash]
+----
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  patch clusterloggings/instance \
+  --type=merge \
+  -p '{"spec":{"managementState":"Unmanaged"}}'
+----
++
+. Scale down Fluentd pods to stop sending logs to Elasticsearch
++
+[source,bash]
+----
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  patch daemonset fluentd \
+  -p '{"spec":{"template":{"spec":{"nodeSelector":{"logging-infra-fluentd": "false"}}}}}'
+----
++
+. Perform a shard synced flush using the `es_util` tool to ensure there are no pending operations waiting to be written to disk prior to shutting down.
++
+[source,bash]
+----
+es_pod=$(kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  get pods \
+  -l component=elasticsearch \
+  -o name | head -n1)
+
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  exec "${es_pod}" \
+  -c elasticsearch \
+  -- es_util --query="_flush/synced" -XPOST
+----
++
+Example output:
++
+[source,json]
+----
+{"_shards":{"total":4,"successful":4,"failed":0},".security":{"total":2,"successful":2,"failed":0},".kibana_1":{"total":2,"successful":2,"failed":0}}
+----
++
+. Prevent shard balancing when purposely bringing down nodes.
++
+[source,bash]
+----
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  exec "${es_pods[1]}" \
+  -c elasticsearch \
+  -- es_util --query="_cluster/settings" -XPUT -d '{ "persistent": { "cluster.routing.allocation.enable" : "primaries" } }'
+----
++
+Example output:
++
+[source,json]
+----
+{"acknowledged":true,"persistent":{"cluster":{"routing":{"allocation":{"enable":"primaries"}}}},"transient":{}}
+----
++
+. Find Elasticsearch deployments
++
+[source,bash]
+----
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  get deploy \
+  -l component=elasticsearch
+----
++
+Sample output:
++
+[source]
+----
+NAME                           READY   UP-TO-DATE   AVAILABLE   AGE
+elasticsearch-cdm-7ya69va8-1   1/1     1            1           68d
+elasticsearch-cdm-7ya69va8-2   1/1     1            1           68d
+elasticsearch-cdm-7ya69va8-3   1/1     1            1           68d
+----
++
+. For each deployment do
+.. Restart Elasticsearch
++
+[source,bash]
+----
+ES_DEPLOYMENT=elasticsearch-cdm-7ya69va8-1 <1>
+
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  scale deploy/${ES_DEPLOYMENT} \
+  --replicas=0
+
+# Verify pod is removed
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  get pods \
+  | grep "${ES_DEPLOYMENT}-"
+
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  scale deploy/${ES_DEPLOYMENT} \
+  --replicas=1
+
+# Wait for pod to become ready
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  get pods \
+  --watch
+----
+<1> Replace with deployment name found in previous step.
++
+.. Wait until cluster becomes healthy again.
++
+[WARNING]
+Make sure the status is `green` or `yellow` before proceeding.
++
+[source,bash]
+----
+es_pod=$(kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  get pods \
+  -l component=elasticsearch \
+  -o name | head -n1)
+
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  exec "${es_pod}" \
+  -c elasticsearch \
+  -- es_util '--query=_cluster/health?pretty=true' | jq '.status'
+----
++
+. Re-enable shard balancing
++
+[source,bash]
+----
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  exec "${es_pod}" \
+  -c elasticsearch \
+  -- es_util --query="_cluster/settings" -XPUT -d '{ "persistent": { "cluster.routing.allocation.enable" : "all" } }'
+----
++
+. Re-enable operator
++
+[source,bash]
+----
+kubectl \
+  --as=cluster-admin \
+  -n openshift-logging \
+  patch clusterloggings/instance \
+  --type=merge \
+  -p '{"spec":{"managementState":"Managed"}}'
+----

@@ -38,6 +38,9 @@
 ** xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[Remove alert rules]
 ** xref:oc4:ROOT:how-tos/monitoring/handle_alerts.adoc[Investigate and handle alerts]
 
+* Logging
+** xref:oc4:ROOT:how-tos/logging/increase-elasticsearch-storage-size.adoc[Increase Elasticsearch Storage Size]
+
 * VMware vSphere
 ** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
 ** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-creds.adoc[Change vSphere Credentials]

@@ -24,35 +24,7 @@ During the resize, the Elasticsearch cluster will experience reduced performance
 
 == Prepare local environment
 
-. Configure API access
-+
-[source,bash]
-----
-export COMMODORE_API_URL=https://api.syn.vshn.net <1>
-export COMMODORE_API_TOKEN=<your lieutenant token>
-
-# Set Project Syn cluster and tenant ID
-export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-cluster-id-1234
-export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
-----
-<1> Replace with the API URL of the desired Lieutenant instance.
-
-. Create a local directory to work in and compile the cluster catalog
-+
-[source,bash]
-----
-export WORK_DIR=/path/to/work/dir
-mkdir -p "${WORK_DIR}"
-pushd "${WORK_DIR}"
-
-commodore catalog compile "${CLUSTER_ID}"
-----
-+
-[TIP]
-====
-We strongly recommend creating an empty directory, unless you already have a work directory for the cluster you're about to work on.
-This guide will run Commodore in the directory created in this step.
-====
+include::partial$commodore-init.adoc[]
 
 == Increase PVC sizes
 

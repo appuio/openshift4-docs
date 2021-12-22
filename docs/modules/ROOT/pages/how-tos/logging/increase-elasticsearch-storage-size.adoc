@@ -3,6 +3,10 @@
 [abstract]
 This page describes how to increase the underlying storage size of the OpenShift Cluster Logging Elasticsearch instance.
 
+[IMPORTANT]
+This is a disruptive operation!
+During the resize, the Elasticsearch cluster will experience reduced performance and new logs will be delayed.
+
 == Starting situation
 
 * You already have an OpenShift 4 with Cluster Logging enabled.

@@ -85,8 +85,8 @@ commodore catalog compile ${CLUSTER_ID} --push -i
 
 === Increase PVC sizes
 
-[INFO]
-The elasticsearch operator can't modify PVC storage sizing at the moment.
+[TIP]
+The Elasticsearch operator can't modify PVC storage sizes.
 We'll do the steps manually.
 
 . Patch PVCs
@@ -135,7 +135,7 @@ kubectl \
   -p '{"spec":{"template":{"spec":{"nodeSelector":{"logging-infra-fluentd": "false"}}}}}'
 ----
 +
-. Perform a shard synced flush using the `es_util` tool to ensure there are no pending operations waiting to be written to disk prior to shutting down.
+. Perform a flush on all shards to ensure there are no pending operations waiting to be written to disk prior to shutting down.
 +
 [source,bash]
 ----

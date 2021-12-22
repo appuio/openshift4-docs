@@ -154,8 +154,7 @@ kubectl \
   -- es_util --query="_flush/synced" -XPOST
 ----
 +
-Example output:
-+
+.Example output
 [source,json]
 ----
 {"_shards":{"total":4,"successful":4,"failed":0},".security":{"total":2,"successful":2,"failed":0},".kibana_1":{"total":2,"successful":2,"failed":0}}
@@ -173,8 +172,7 @@ kubectl \
   -- es_util --query="_cluster/settings" -XPUT -d '{ "persistent": { "cluster.routing.allocation.enable" : "primaries" } }'
 ----
 +
-Example output:
-+
+.Example output
 [source,json]
 ----
 {"acknowledged":true,"persistent":{"cluster":{"routing":{"allocation":{"enable":"primaries"}}}},"transient":{}}

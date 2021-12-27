@@ -1,0 +1,28 @@
+= Resize Master/Control Plane systems
+
+[abstract]
+This page describes how to rescale the Master/Control Plane systems of an existing OCP4 IPI on vSphere cluster.
+
+== Requirements
+
+[options="interactive"]
+* [ ] Access to vCenter
+* [ ] Access to the cluster
+
+== Procedure
+
+This procedure must be repeated for each master system.
+
+. Drain the node.
+. Update the corresponding `Machine` object to reflect the desired state. This WON'T actually change the VM, so it can be done while the node is draining.
+** The relevant parameters are found under `spec.providerSpec.value`.
+** For Memory, update `memoryMiB`.
+** For CPU, update `numCPUs`.
+. Once the node is drained, shut down the machine.
+** Either via `oc debug node/...`, then `chroot /host` and `poweroff`...
+** .. or via vCenter, select `Power`, `Shut down Guest OS`.
+. In vCenter, change the VM parameters for number of CPUs and RAM to match what was configured in the `Machine` object.
+. Boot the machine.
+. Uncordon the node.
+
+Once the node is up and `Ready`, proceed with the next VM.

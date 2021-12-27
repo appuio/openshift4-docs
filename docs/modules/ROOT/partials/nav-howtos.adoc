@@ -45,6 +45,7 @@
 ** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
 ** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-creds.adoc[Change vSphere Credentials]
 ** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-params.adoc[Change vSphere Parameters]
+** xref:oc4:ROOT:how-tos/vsphere/resize-masters.adoc[Resize Master/Control Plane systems]
 
 * Storage
 ** xref:oc4:ROOT:how-tos/storage/change-luks-key.adoc[Change LUKS Key]

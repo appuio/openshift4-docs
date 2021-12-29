@@ -86,6 +86,15 @@ oc --as=cluster-admin get mcp -w
 ----
 ====
 
+. The maintenance of the cluster is only finished once all nodes, including all worker nodes have been upgraded and all `MachineConfigPools` show `Updated=True`.
++
+[IMPORTANT]
+====
+Never leave the cluster in a state with pending node upgrades.
+If the Machine Config operator can't drain a node (for example because doing so would violate a `PodDisruptionBudget`) you may have to manually force-drain a node or even manually delete pods that block the node drain.
+Always open a follow-up ticket to investigate the underlying issues if manual intervention is required.
+====
+
 So far, the upgrade process mostly just worked.
 Nevertheless, we've started documenting how to observe the upgrade process in the following section.
 More troubleshooting instructions will be added there as we gain experience.
@@ -191,6 +200,17 @@ POD=$(kubectl --as=cluster-admin -o jsonpath='{.items[0].metadata.name}' \
 kubectl --as=cluster-admin -n openshift-machine-config-operator \
   logs -c machine-config-daemon -f "${POD}"
 ----
+
+* If the Machine Config operator fails to drain a node, you may have to force-drain the node:
++
+[source,console]
+----
+oc --as=cluster-admin adm drain <node-name> --delete-emptydir-data --ignore-daemonsets --force --grace-period=0
+----
++
+If manually force-draining the node isn't successful, check which pods are still running on the node with `oc describe node <node-name>` or `oc get pods --all-namespaces --field-selector spec.nodeName=<node-name>` and force delete any non-daemonset pods shown in the output.
+The Machine Config operator should then be able to continue with the node upgrades.
+Depending on what's blocking the drain, these steps may have to be repeated for several nodes.
 
 * If nodes get stuck in `NotReady` during the upgrade process, check whether the VM got stuck trying to reboot itself into the new image:
 . Login to the cloud provider's web console

@@ -91,7 +91,7 @@ oc --as=cluster-admin get mcp -w
 [IMPORTANT]
 ====
 Never leave the cluster in a state with pending node upgrades.
-If the Machine Config operator can't drain a node (eg. because of violating PodDisruptionBudgets) you may have to manually force-drain a node or even manually delete pods that block the node drain.
+If the Machine Config operator can't drain a node (for example because doing so would violate a `PodDisruptionBudget`) you may have to manually force-drain a node or even manually delete pods that block the node drain.
 Always open a follow-up ticket to investigate the underlying issues if manual intervention is required.
 ====
 

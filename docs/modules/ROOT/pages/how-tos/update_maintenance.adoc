@@ -86,6 +86,8 @@ oc --as=cluster-admin get mcp -w
 ----
 ====
 
+. The maintenance of the cluster is only finished once all worker nodes have been upgraded and the worker `MachineConfigPool` shows `Updated=True`. Never leave the cluster in a state with pending node upgrades. If the Machine Config operator can't drain a node (eg. because of violating PodDisruptionBudgets) you may have to manually force-drain a node or even manually delete pods that block the node drain.
+
 So far, the upgrade process mostly just worked.
 Nevertheless, we've started documenting how to observe the upgrade process in the following section.
 More troubleshooting instructions will be added there as we gain experience.

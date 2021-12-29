@@ -208,7 +208,9 @@ kubectl --as=cluster-admin -n openshift-machine-config-operator \
 oc --as=cluster-admin adm drain <node-name> --delete-emptydir-data --ignore-daemonsets --force --grace-period=0
 ----
 +
-If manually force-draining the node isn't successfull, check which pods are still running on the node with `oc describe node <node-name>` and force delete the pods. The Machine Config operator should then be able to continue with the node upgrades. Depending on what's blocking the drain, these steps may have to be repeated for several nodes.
+If manually force-draining the node isn't successfull, check which pods are still running on the node with `oc describe node <node-name>` and force delete the pods.
+The Machine Config operator should then be able to continue with the node upgrades.
+Depending on what's blocking the drain, these steps may have to be repeated for several nodes.
 
 * If nodes get stuck in `NotReady` during the upgrade process, check whether the VM got stuck trying to reboot itself into the new image:
 . Login to the cloud provider's web console

@@ -276,7 +276,7 @@ module "cluster" {
   additional_worker_groups = {}
 }
 EOF
-terraform apply -target "module.cluster.local_file.lb_hieradata"
+terraform apply -target "module.cluster.module.lb.module.hiera"
 ----
 
 . Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
@@ -297,7 +297,7 @@ terraform apply
 ----
 declare -a LB_FQDNS
 for id in 1 2; do
-  LB_FQDNS[$id]=$(terraform state show "module.cluster.exoscale_domain_record.lb[$(expr $id - 1)]" | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
+  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.exoscale_domain_record.lb[$(expr $id - 1)]" | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
 done
 ----
 +

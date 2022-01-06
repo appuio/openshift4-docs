@@ -1,0 +1,58 @@
+= Operator Deletion
+
+This page describes how to delete an operator and troubleshoot certain failure scenarios.
+
+== General
+
+If the operator is managed by a Syn component, remove the component (instance) from your cluster.
+
+Follow the [Deleting Operators from a cluster using the CLI](https://docs.openshift.com/container-platform/4.9/operators/admin/olm-deleting-operators-from-cluster.html#olm-deleting-operator-from-a-cluster-using-cli_olm-deleting-operators-from-a-cluster) guide from Red Hat.
+
+== Troubleshooting
+
+If for some reason the deletion fails and you still have an `operators.operators.coreos.com` object which get's recreated after deletion you can try the following (`elasticsearch-operator.openshift-logging` used as an example):
+
+For all resources from https://github.com/operator-framework/operator-lifecycle-manager/blob/608d6bf1991cdc671a94848e884290a4bc4d9804/pkg/controller/operators/components.go get all objects with the label `operators.coreos.com/<operator-object-name>=''`:
+
+[source,bash]
+----
+kubectl --as=cluster-admin get \
+deployment, \
+service, \
+namespace, \
+apiservicelist, \
+apiservice, \
+subscription, \
+csv, \
+installplan, \
+operatorcondition, \
+sa, \
+role, \
+rolebinding, \
+clusterrole, \
+clusterrolebinding \
+-Al operators.coreos.com/elasticsearch-operator.openshift-logging=''
+----
+
+For each object, check if it's still required (the case if another `operators.coreos.com/...` label exists):
+
+[source,bash]
+----
+kubectl --as=cluster-admin -n openshift-logging get sa --show-labels
+----
+
+If an object is still required, unlabel it. Otherwise delete it:
+
+[source,bash]
+----
+kubectl --as=cluster-admin -n openshift-logging delete sa elasticsearch-operator
+----
+
+Finally, delete the operator object:
+
+[source,bash]
+----
+kubectl --as=cluster-admin scale deployment -n openshift-operator-lifecycle-manager olm-operator --replicas=0
+kubectl --as=cluster-admin delete operators.operators.coreos.com elasticsearch-operator.openshift-logging
+kubectl --as=cluster-admin scale deployment -n openshift-operator-lifecycle-manager olm-operator --replicas=1
+----

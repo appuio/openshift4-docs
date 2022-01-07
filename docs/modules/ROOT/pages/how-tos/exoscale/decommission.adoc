@@ -90,7 +90,7 @@ done
 +
 [source,console]
 ----
-terraform state rm module.cluster.gitfile_checkout.appuio_hieradata
+terraform state rm 'module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata'
 ----
 +
 NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.

@@ -3,7 +3,9 @@
 
 * Google Cloud Platform
 ** xref:oc4:ROOT:explanations/gcp/name_lengths.adoc[Name Lengths]
+
 * xref:oc4:ROOT:explanations/cluster_monitoring.adoc[Cluster Monitoring]
 * xref:oc4:ROOT:explanations/dns_scheme.adoc[DNS Scheme]
 * xref:oc4:ROOT:explanations/node_groups.adoc[Node Groups]
 * xref:oc4:ROOT:explanations/sudo.adoc[Sudo]
+* xref:oc4:ROOT:explanations/etcd_encryption.adoc[etcd Encryption]

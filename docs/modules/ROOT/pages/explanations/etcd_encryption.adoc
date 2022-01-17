@@ -1,6 +1,6 @@
 = etcd Encryption
 
-The only supported method for encrypting some data footnote:[Secrets, Config maps, Routes, OAuth access tokens, OAuth authorize tokens. ref: https://docs.openshift.com/container-platform/4.9/security/encrypting-etcd.html] in etcd on OpenShift 4 is `aescbc` footnote:[Kubernetes upstream documentation says that this is not recommended. ref: https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/].
+The only supported method for encrypting some data footnote:[Secrets, Config maps, Routes, OAuth access tokens, OAuth authorize tokens. ref: https://docs.openshift.com/container-platform/4.9/security/encrypting-etcd.html] in etcd on OpenShift 4 is `aescbc` footnote:[Kubernetes upstream documentation says that this isn't recommended. ref: https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/].
 This method requires that the encryption keys are stored in plain text on the nodes hosting the Kubernetes API server.
 For OpenShift 4 the Kubernetes API server and etcd are hosted on the same nodes.
 
@@ -10,7 +10,7 @@ A few scenarios to consider:
 
 * An attacker with `cluster-admin` rights in Kubernetes doesn't even notice whether etcd is encrypted or not, since the contents which are encrypted at rest in etcd are still returned in "plain text" by the Kubernetes API.
 * An attacker with node access to a node hosting an etcd replica has access to the encryption keys in plain text on the node, and so encrypting etcd doesn't prevent data exfiltration in that case.
-* Since OCP4 backs up the encrypted etcd together with the encryption keys in plaintext to simplify disaster recovery footnote:[ref: https://docs.openshift.com/container-platform/4.9/backup_and_restore/control_plane_backup_and_restore/backing-up-etcd.html], an attacker who manages to get unauthorized access to an etcd dump (e.g. by accessing the backup S3 bucket), automatically also gets access to the encryption keys.
+* Since OCP4 backs up the encrypted etcd together with the encryption keys in plaintext to simplify disaster recovery footnote:[ref: https://docs.openshift.com/container-platform/4.9/backup_and_restore/control_plane_backup_and_restore/backing-up-etcd.html], an attacker who manages to get unauthorized access to an etcd dump (For example by accessing the backup S3 bucket), automatically also gets access to the encryption keys.
 * Note that our (VSHN) cluster backups are encrypted by the backup solution we're using (K8up / restic) and the encryption key for the backups is stored in a Hashicorp Vault instance.
 
 VSHN-internal reference: https://wiki.vshn.net/display/VTAT/OpenShift+4+Encrypted+etcd[OpenShift 4 Encrypted etcd].

@@ -15,7 +15,6 @@ mkdir -p inventory/classes/
 git clone $(curl -sH"Authorization: Bearer ${COMMODORE_API_TOKEN}" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
 ----
 
-ifeval::["{provider}" == "cloudscale"]
 ==== Cilium Optional: Prepare Cilium Configuration
 [%collapsible]
 ====

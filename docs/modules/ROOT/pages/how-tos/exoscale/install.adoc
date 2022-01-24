@@ -2,6 +2,7 @@
 :ocp-minor-version: 4.9
 :ocp-patch-version: {ocp-minor-version}.0
 :provider: exoscale
+:kubectl_extra_args:
 
 [abstract]
 --

@@ -1,14 +1,14 @@
 [source,bash,subs="attributes"]
 ----
-kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
+kubectl {kubectl_extra_args} label --overwrite node -lnode-role.kubernetes.io/worker \
   node-role.kubernetes.io/storage=""
-kubectl label node -lnode-role.kubernetes.io/infra \
+kubectl {kubectl_extra_args} label node -lnode-role.kubernetes.io/infra \
   node-role.kubernetes.io/storage-
 ifdef::delabel_app_nodes[]
-kubectl label node -lnode-role.kubernetes.io/app \
+kubectl {kubectl_extra_args} label node -lnode-role.kubernetes.io/app \
   node-role.kubernetes.io/storage-
 endif::delabel_app_nodes[]
 
-kubectl taint node -lnode-role.kubernetes.io/storage \
+kubectl {kubectl_extra_args} taint node -lnode-role.kubernetes.io/storage \
   storagenode=True:NoSchedule
 ----

@@ -1,4 +1,4 @@
-. Save the admin credentials in the https://password.vshn.net[password manager].
+. Save the admin credentials in the https://cloud.passbolt.com/vshn[password manager].
 You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
 +
 [source,bash]

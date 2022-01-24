@@ -63,7 +63,7 @@ terraform apply
 [source,bash]
 ----
 openshift-install --dir "${INSTALLER_DIR}" \
-  wait-for bootstrap-complete
+  wait-for bootstrap-complete --log-level debug
 ----
 
 . Remove bootstrap node and provision infra nodes
@@ -114,7 +114,7 @@ done
 [source,bash]
 ----
 openshift-install --dir ${INSTALLER_DIR} \
-  wait-for install-complete
+  wait-for install-complete --log-level debug
 ----
 
 ifeval::["{provider}" == "exoscale"]

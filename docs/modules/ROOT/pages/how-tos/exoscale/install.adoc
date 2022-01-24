@@ -2,6 +2,7 @@
 :ocp-minor-version: 4.9
 :ocp-patch-version: {ocp-minor-version}.0
 :provider: exoscale
+:kubectl_extra_args:
 
 [abstract]
 --
@@ -173,10 +174,10 @@ include::partial$get-hieradata-token-from-vault.adoc[]
 
 include::partial$install/prepare-commodore.adoc[]
 
-[#_prepare_installer_config]
-=== Prepare OpenShift Installer Config
+[#_configure_installer]
+=== Configure the OpenShift Installer
 
-include::partial$install/prepare-installer.adoc[]
+include::partial$install/configure-installer.adoc[]
 
 [#_run_installer]
 === Run OpenShift Installer

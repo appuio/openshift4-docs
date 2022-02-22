@@ -53,8 +53,6 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.team = \"${TEAM}\"" \
   ${CLUSTER_ID}.yml
 
-
-ifeval::["{provider}" == "cloudscale"]
 # Enable proxy protocol on the load-balancer and ingress controller to forward the
 # source IP to workloads running on the cluster
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.lb_enable_proxy_protocol = true" \
@@ -63,7 +61,6 @@ yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.endpointPu
   ${CLUSTER_ID}.yml
 yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.endpointPublishingStrategy.hostNetwork.protocol = \"PROXY\"" \
   ${CLUSTER_ID}.yml
-endif::[]
 
 # Configure the OpenShift update channel
 yq eval -i ".parameters.openshift4_version.spec.channel = \"stable-{ocp-minor-version}\"" \

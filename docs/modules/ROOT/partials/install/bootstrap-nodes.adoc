@@ -100,6 +100,21 @@ kubectl label node -lnode-role.kubernetes.io/worker \
   node-role.kubernetes.io/infra=""
 ----
 
+. Enable proxy protocol on ingress controller
++
+[source,bash]
+----
+kubectl -n openshift-ingress-operator patch ingresscontroller default --type=json \
+  -p '[{
+    "op":"replace",
+    "path":"/spec/endpointPublishingStrategy",
+    "value": {"type": "HostNetwork", "hostNetwork": {"protocol": "PROXY"}}
+  }]'
+----
++
+[NOTE]
+This step is only necessary if you enabled the proxy protocol on the load-balancers.
+
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +
 [source,bash]

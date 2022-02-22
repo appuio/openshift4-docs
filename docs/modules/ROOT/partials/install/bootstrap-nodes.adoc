@@ -109,6 +109,15 @@ for fqdn in "${LB_FQDNS[@]}"; do
 done
 ----
 
+. Enable the PROXY protocol on the ingresscontroller
++
+[source,bash]
+----
+kubectl -n openshift-ingress-operator patch \
+ingresscontrollers/default --type merge -p \
+'{"spec":{"endpointPublishingStrategy":{"type":"HostNetwork","hostNetwork":{"protocol":"PROXY"}}}}'
+----
+
 . Wait for installation to complete
 +
 [source,bash]

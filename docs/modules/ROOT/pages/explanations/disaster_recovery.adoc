@@ -34,7 +34,8 @@ Downgrading a cluster after a faulty upgrade isn't supported footnote:[https://a
 It's also not possible to restore a cluster to a previous cluster state with a different OpenShift version footnote:[https://docs.openshift.com/container-platform/4.9/backup_and_restore/control_plane_backup_and_restore/disaster_recovery/scenario-2-restoring-cluster-state.html#dr-scenario-2-restoring-cluster-state_dr-restoring-cluster-state].
 This means there is no official way to rollback a faulty OpenShift upgrade.
 
-Similarly to a complete loss of all control plane hosts, in case of an unrecoverable cluster upgrade failure, we recommend creating a new cluster and re-deploying the workloads of the lost cluster by xref:how-tos/recover-from-backup.adoc[restoring objects from backup].
+An unrecoverable cluster upgrade failure is effectively a complete loss of the old cluster.
+We recommend creating a new cluster and re-deploying the workloads of the lost cluster by xref:how-tos/recover-from-backup.adoc[restoring objects from backup].
 
 [WARNING]
 ====

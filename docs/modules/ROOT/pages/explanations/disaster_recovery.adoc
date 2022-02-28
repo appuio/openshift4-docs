@@ -3,9 +3,6 @@
 The OpenShift Container Platform provides the option to recover from several disaster situations by restoring your cluster to a previous state.
 This can be a recovery option if an administrator deletes something critical or if you have lost the majority of your control plane hosts, leading to etcd quorum loss and the cluster going offline.
 
-We provide how-tos on how to preform such a cluster state restore from automated etcd backup for each of supported cloud provider.
-All of them generally follow the official https://docs.openshift.com/container-platform/4.9/backup_and_restore/control_plane_backup_and_restore/disaster_recovery/scenario-2-restoring-cluster-state.html[OpenShift restore guide].
-
 This document focuses on the limitations of restoring a previous cluster state and when it's not the solution.
 
 == Limitations
@@ -24,7 +21,7 @@ Trying to restore a previous cluster state to a newly created cluster will lead 
 In case of a complete loss of all control plane hosts, we recommend creating a new cluster and re-deploying the workloads of the lost cluster.
 This can be done by xref:how-tos/recover-from-backup.adoc[restoring objects from backup].
 
-[NOTE]
+[WARNING]
 ====
 You might be able to restore a previous cluster state to a newly created cluster by manually updating certificates and fixing inconsitent state.
 This is however not supported and can lead to unforeseen issues.

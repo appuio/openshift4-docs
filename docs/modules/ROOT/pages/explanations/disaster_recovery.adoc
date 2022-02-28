@@ -1,0 +1,47 @@
+= OpenShift Disaster Recovery Limitations
+
+The OpenShift Container Platform provides the option to recover from several disaster situations by restoring your cluster to a previous state.
+This can be a recovery option if an administrator deletes something critical or if you have lost the majority of your control plane hosts, leading to etcd quorum loss and the cluster going offline.
+
+This document focuses on the limitations of restoring a previous cluster state and when it's not the solution.
+
+== Limitations
+
+Restoring to a previous cluster state allows you to recover from a lost control plane. 
+However there are some important limitations that can prevent us from restoring a cluster.
+
+* Disaster recovery requires you to have at least one healthy control plane host that's reachable by SSH
+* When you restore your cluster, you must use an etcd backup that was taken from the same z-stream release
+
+=== Restoring Cluster after complete Control Plane loss
+
+Restoring cluster state without at least one healthy control plane host isn't supported.
+Trying to restore a previous cluster state to a newly created cluster will lead to a mix of certificates and IDs and the cluster won't be able to start.
+
+In case of a complete loss of all control plane hosts, we recommend creating a new cluster and re-deploying the workloads of the lost cluster.
+This can be done by xref:how-tos/recover-from-backup.adoc[restoring objects from backup].
+
+[WARNING]
+====
+You might be able to restore a previous cluster state to a newly created cluster by manually updating certificates and fixing inconsitent state.
+This is however not supported and can lead to unforeseen issues.
+*We don't recommend doing this.*
+====
+
+=== Rollback after cluster upgrade
+
+Downgrading a cluster after a faulty upgrade isn't supported footnote:[https://access.redhat.com/solutions/4777861].
+It's also not possible to restore a cluster to a previous cluster state with a different OpenShift version footnote:[https://docs.openshift.com/container-platform/4.9/backup_and_restore/control_plane_backup_and_restore/disaster_recovery/scenario-2-restoring-cluster-state.html#dr-scenario-2-restoring-cluster-state_dr-restoring-cluster-state].
+This means there is no official way to rollback a faulty OpenShift upgrade.
+
+An unrecoverable cluster upgrade failure is effectively a complete loss of the old cluster.
+We recommend creating a new cluster and re-deploying the workloads of the lost cluster by xref:how-tos/recover-from-backup.adoc[restoring objects from backup].
+
+[WARNING]
+====
+This limitation not only applies to major or minor version upgrades but also to patch upgrades.
+This means when you restore your cluster, you must use an etcd backup that was taken from the same z-stream release.
+For example, an OpenShift Container Platform 4.7.2 cluster must use an etcd backup that was taken from 4.7.2
+====
+
+

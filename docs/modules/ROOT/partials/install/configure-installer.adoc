@@ -58,9 +58,7 @@ sshKey: "$(cat $SSH_PUBLIC_KEY)"
 EOF
 ----
 
-ifeval::["{provider}" == "cloudscale"]
-+
-. Cilium Optional: Add cilium
+. Cilium Optional: Add Cilium
 +
 [%collapsible]
 ====
@@ -74,4 +72,3 @@ If setting custom CIDR for the OpenShift networking, the corresponding values sh
 See https://github.com/projectsyn/component-cilium/blob/master/class/defaults.yml[Cilium Component Defaults] and https://hub.syn.tools/cilium/references/parameters.html[Parameter Reference].
 Verify with `less catalog/manifests/cilium/olm/*ciliumconfig.yaml`.
 ====
-endif::[]

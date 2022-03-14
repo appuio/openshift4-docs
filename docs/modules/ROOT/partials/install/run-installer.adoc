@@ -18,7 +18,6 @@ yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
   spec.domain apps.example.com
 ----
 
-ifeval::["{provider}" == "cloudscale"]
 . Cilium Optional: Copy pre-rendered Cilium manifests
 +
 [%collapsible]
@@ -28,7 +27,6 @@ ifeval::["{provider}" == "cloudscale"]
 cp catalog/manifests/cilium/olm/* target/manifests/
 ----
 ====
-endif::[]
 
 . Extract the cluster domain from the generated manifests
 +

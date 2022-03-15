@@ -1,11 +1,4 @@
-. Save the admin credentials in the https://cloud.passbolt.com/vshn[password manager].
-You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
-+
-[source,bash]
-----
-popd
-ls -l ${INSTALLER_DIR}/auth/
-----
+:dummy:
 
 === Enable Project Syn
 
@@ -62,3 +55,29 @@ for cname in "api" "apps"; do
 done
 ----
 endif::[]
+
+=== Store the cluster's admin credentials in the password manager
+
+. Once the cluster's production API certificate has been deployed, edit the cluster's admin kubeconfig file to remove the initial API certificate CA.
++
+[TIP]
+====
+You may see the error `Unable to connect to the server: x509: certificate signed by unknown authority` when executing `kubectl` or `oc` commands after the cluster's production API certificate has been deployed by Project Syn.
+
+This error can be addressed by removing the initial CA certificate data from the admin kubeconfig as shown in this step.
+====
++
+[source,bash]
+----
+yq e -i 'del(.clusters[0].cluster.certificate-authority-data)' \
+  "${INSTALLER_DIR}/auth/kubeconfig"
+----
+
+. Save the admin credentials in the https://cloud.passbolt.com/vshn[password manager].
+You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
++
+[source,bash]
+----
+popd
+ls -l ${INSTALLER_DIR}/auth/
+----

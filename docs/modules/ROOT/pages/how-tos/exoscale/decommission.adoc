@@ -77,7 +77,7 @@ include::partial$setup_terraform.adoc[]
 ----
 declare -a LB_FQDNS
 for id in 1 2; do
-  LB_FQDNS[$id]=$(terraform state show module.cluster.exoscale_domain_record.lb[$(expr $id - 1)] | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
+  LB_FQDNS[$id]=$(terraform state show module.cluster.module.lb.exoscale_domain_record.lb[$(expr $id - 1)] | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
 done
 for lb in ${LB_FQDNS[*]}; do
   ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf"

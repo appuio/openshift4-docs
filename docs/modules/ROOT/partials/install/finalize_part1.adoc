@@ -13,6 +13,8 @@ ls -l ${INSTALLER_DIR}/auth/
 
 === Setup acme-dns CNAME records for the cluster
 
+NOTE: You can skip this section if you're not using Let's Encrypt for the cluster's API and default wildcard certificates.
+
 . Extract the acme-dns subdomain for the cluster after `cert-manager` has been deployed via Project Syn.
 +
 [source,bash]
@@ -28,15 +30,30 @@ echo "$fulldomain"
 ifeval::["{provider}" == "cloudscale"]
 . Add the following CNAME records to the cluster's DNS zone
 +
+[IMPORTANT]
+====
+The `_acme-challenge` records must be created in the same zone as the cluster's `api` and `apps` records respectively.
+====
++
 [source,dns]
 ----
+$ORIGIN <cluster-zone> <2>
 _acme-challenge.api  IN CNAME <fulldomain>. <1>
+$ORIGIN <apps-base-domain> <3>
 _acme-challenge.apps IN CNAME <fulldomain>. <1>
 ----
 <1> Replace `<fulldomain>` with the output of the previous step.
+<2> The `_acme-challenge.api` record must be created in the same origin as the `api` record.
+<3> The `_acme-challenge.apps` record must be created in the same origin as the `apps` record.
 endif::[]
 ifeval::["{provider}" == "exoscale"]
 . Setup the `_acme-challenge` CNAME records in the cluster's DNS zone
++
+[IMPORTANT]
+====
+The `_acme-challenge` records must be created in the same zone as the cluster's `api` and `apps` records respectively.
+The snippet below assumes that the cluster is configured to use the default "apps" domain in the cluster's zone.
+====
 +
 [source,bash]
 ----

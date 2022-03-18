@@ -2,6 +2,53 @@
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 
+== OpenShift 4.10
+
+The generally available version 4.10.3 got released on 2022-03-10.
+The release notes are available in the upstream documentation under https://docs.openshift.com/container-platform/4.10/release_notes/ocp-4-10-release-notes.html[OpenShift Container Platform 4.10 release notes].
+
+CSI on vShpere::
++
+CSI on vShpere is now generally available but requires some https://docs.openshift.com/container-platform/4.10/release_notes/ocp-4-10-release-notes.html#ocp-4-10-installation-vsphere-csi[minimal versions of vSphere software].
+
+Change cluster network MTU after cluster installation::
++
+https://docs.openshift.com/container-platform/4.10/networking/changing-cluster-network-mtu.html[Changing the MTU for the cluster network]
+
+Ingress Controller router compression::
++
+https://docs.openshift.com/container-platform/4.10/networking/ingress-operator.html#nw-configuring-router-compression_configuring-ingress[Using router compression]
+
+Using fsGroup to reduce pod timeouts::
++
+[quote, Upstream OpenShift 4.10 Release Notes]
+____
+If a storage volume contains many files (~1,000,000 or greater), you may experience pod timeouts.
+
+OpenShift Container Platform 4.10 introduces the ability to use fsGroup and fsGroupChangePolicy to skip recursive permission change for the storage volume, therefore helping to avoid pod timeout problems.
+____
++
+See https://docs.openshift.com/container-platform/4.10/release_notes/ocp-4-10-release-notes.html#ocp-4-10-storage-fsGroup-pod-timeouts[Using fsGroup to reduce pod timeouts].
+
+Changed alert rule names::
++
+https://docs.openshift.com/container-platform/4.10/release_notes/ocp-4-10-release-notes.html#ocp-4-10-monitoring-changes-to-alerting-rules[Some alert rules got renamed].
+Check if your cluster configuration alters any of those alerts and update it accordingly.
+
+TLS X.509 certificates must have a Subject Alternative Name::
++
+[quote, Upstream OpenShift 4.10 Release Notes]
+____
+X.509 certificates must have a properly set the Subject Alternative Name field. If you update your cluster without this, you risk breaking your cluster or rendering it inaccessible.
+____
+See https://docs.openshift.com/container-platform/4.10/release_notes/ocp-4-10-release-notes.html#ocp-4-10-TLS-subject-alternative-names-required[TLS X.509 certificates must have a Subject Alternative Name].
+
+Upgraded clusters might have insecure RBAC rules::
++
+Clusters upgraded from version before 4.8 might allow unauthenticated API requests to certain resources.
+Check the https://docs.openshift.com/container-platform/4.10/release_notes/ocp-4-10-release-notes.html#ocp-4-10-known-issues[OpenShift 4.10 release notes] for details on which clusters are affected.
+There you will also find a snippet on how to resolve this.
+
 == OpenShift 4.9
 
 OpenShift 4.9 was released on 2021-10-18.

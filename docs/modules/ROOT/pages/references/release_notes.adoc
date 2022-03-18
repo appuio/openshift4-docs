@@ -4,7 +4,6 @@ TIP: This page lists notable changes in OpenShift releases which we find importa
 
 == OpenShift 4.10
 
-OpenShift 4.10 is here.
 The generally available version 4.10.3 got released on 2022-03-10.
 The release notes are available in the upstream documentation under https://docs.openshift.com/container-platform/4.10/release_notes/ocp-4-10-release-notes.html[OpenShift Container Platform 4.10 release notes].
 

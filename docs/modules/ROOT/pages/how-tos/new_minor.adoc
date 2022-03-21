@@ -18,4 +18,16 @@ Instead of using an existing cluster, you can also set up one with version `4.<n
 ====
 
 . Check compatibility of components
++
+Check if all core Commodore components are compatible with the new version.
+Address all findings as deemed nessesary.
+Do this by checking an upgraded and or newly installed cluster.
+Things to lookout for:
++
+* API versions of resource types used
+* Alert rules
++
+Main suspect here is `openshift4-monitoring`.
+But also lookout for components that define alert rules but are no longer picked up by cluster monitoring.
+
 . Conduct install on all supported cloud providers

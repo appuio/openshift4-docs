@@ -1,13 +1,13 @@
 = Checklist to prepare for new minor version OpenShift 4
 
-. Read and summarise release notes
+. Read and summarize release notes
 +
 Read through the release notes.
 Lookout for things that affect how we use OpenShift.
 Ensure each finding gets addressed appropriately.
 +
 Write a summary and add it to xref:oc4:ROOT:references/release_notes.adoc[our release notes summary].
-Add things that affect how the solution teams operate a cluster or how our users use their cluster.
+Add things that influence how the solution teams operate a cluster or how our users use their cluster.
 
 . Conduct upgrade
 +
@@ -15,9 +15,9 @@ Use an existing test cluster and upgrade it to the new version.
 +
 [NOTE]
 ====
-The new minor might not show up in the list of available updates even when setting the channel accordingly.
-If this is the case, set the clusters update channel to `fast-<n-1>` and update to the latest patch first.
-This is, amongst others, nessesary, when there is no GA release for the new minor available yet.
+The new minor might not show up in the list of available updates, even when setting the channel accordingly.
+If this is the case, set the cluster's update channel to `fast-<n-1>` and update to the latest patch first.
+This is, amongst others, necessary, when there is no GA release for the new minor available yet.
 The first GA version of a new minor usually is `4.<n>.3`.
 ====
 +
@@ -29,14 +29,14 @@ Instead of using an existing cluster, you can also set up one with version `4.<n
 . Check compatibility of components
 +
 Check if all core Commodore components are compatible with the new version.
-Address all findings as deemed nessesary.
+Address all findings as deemed necessary.
 Do this by checking an upgraded and or newly installed cluster.
 Things to lookout for:
 +
 * API versions of resource types used
 * Alert rules
 +
-Main suspect here is `openshift4-monitoring`.
+The main suspect is `openshift4-monitoring`.
 But also lookout for components that define alert rules but are no longer picked up by cluster monitoring.
 
 . Conduct install on all supported cloud providers

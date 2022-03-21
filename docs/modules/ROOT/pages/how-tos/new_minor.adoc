@@ -1,5 +1,21 @@
 = Checklist to prepare for new minor version OpenShift 4
 
 . Conduct upgrade
++
+Use an existing test cluster and upgrade it to the new version.
++
+[NOTE]
+====
+The new minor might not show up in the list of available updates even when setting the channel accordingly.
+If this is the case, set the clusters update channel to `fast-<n-1>` and update to the latest patch first.
+This is, amongst others, nessesary, when there is no GA release for the new minor available yet.
+The first GA version of a new minor usually is `4.<n>.3`.
+====
++
+[TIP]
+====
+Instead of using an existing cluster, you can also set up one with version `4.<n-1>` and then upgrade this one.
+====
+
 . Check compatibility of components
 . Conduct install on all supported cloud providers

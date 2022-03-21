@@ -40,3 +40,7 @@ Main suspect here is `openshift4-monitoring`.
 But also lookout for components that define alert rules but are no longer picked up by cluster monitoring.
 
 . Conduct install on all supported cloud providers
++
+Use the installation documentation to install a new cluster.
+Do so for each supported hosting provider.
+Ensure the documentation and or the used tools get updated where needed.

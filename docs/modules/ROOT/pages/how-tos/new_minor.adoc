@@ -1,13 +1,13 @@
-= Checklist to prepare for new minor version OpenShift 4
+= Checklist to prepare for a new minor version of OpenShift 4
 
 . Read and summarize release notes
 +
-Read through the release notes.
-Lookout for things that affect how we use OpenShift.
-Ensure each finding gets addressed appropriately.
+Read the release notes.
+Look for things that affect how we use OpenShift.
+Ensure each change which impacts us gets addressed.
 +
 Write a summary and add it to xref:oc4:ROOT:references/release_notes.adoc[our release notes summary].
-Add things that influence how the solution teams operate a cluster or how our users use their cluster.
+Make note of changes that influence how the solution teams operate a cluster or how our users use their cluster.
 
 . Conduct upgrade
 +
@@ -29,18 +29,22 @@ Instead of using an existing cluster, you can also set up one with version `4.<n
 . Check compatibility of components
 +
 Check if all core Commodore components are compatible with the new version.
-Address all findings as deemed necessary.
-Do this by checking an upgraded and or newly installed cluster.
-Things to lookout for:
+Address all issues as necessary.
+If it's straight-forward, directly create a fix.
+Otherwise, create a follow-up story to address the issue.
++
+The best way to find an address issues is to inspect an upgraded and or newly installed cluster using the new minor version.
+Things to look for:
 +
 * API versions of resource types used
 * Alert rules
+* Logic which generates configuration based on the cluster's OpenShift version.
 +
-The main suspect is `openshift4-monitoring`.
-But also lookout for components that define alert rules but are no longer picked up by cluster monitoring.
+One component which definitely needs to be updated for a new minor version is `openshift4-monitoring`.
+Additionally, verify that alert rules defined by other components are still picked up by cluster monitoring.
 
 . Conduct install on all supported cloud providers
 +
 Use the installation documentation to install a new cluster.
 Do so for each supported hosting provider.
-Ensure the documentation and or the used tools get updated where needed.
+Update the documentation, Terraform modules, and used tools as necessary.

@@ -1,0 +1,5 @@
+= Checklist to prepare for new minor version OpenShift 4
+
+. Conduct upgrade
+. Check compatibility of components
+. Conduct install on all supported cloud providers

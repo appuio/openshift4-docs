@@ -1,4 +1,5 @@
 = Checklist to prepare for a new minor version of OpenShift 4
+:fn-core-components: pass:c,q[footnote:[Core Commodore components are those included by the distribution `openshift4` and its parent hierarchy levels.]]
 
 . Read and summarize release notes
 +
@@ -29,7 +30,7 @@ Instead of using an existing cluster, you can also set up one with version `4.<n
 
 . Check compatibility of components
 +
-Check if all core Commodore components are compatible with the new version.
+Check if all core Commodore components{fn-core-components} are compatible with the new version.
 Address all issues as necessary.
 If it's straight-forward, directly create a fix.
 Otherwise, create a follow-up story to address the issue.

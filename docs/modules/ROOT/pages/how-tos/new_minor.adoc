@@ -47,5 +47,5 @@ Additionally, verify that alert rules defined by other components are still pick
 . Conduct install on all supported cloud providers
 +
 Use the installation documentation to install a new cluster.
-Do so for each supported hosting provider.
+Do so for each https://products.docs.vshn.ch/products/appuio/managed/ocp4.html[supported hosting provider].
 Update the documentation, Terraform modules, and used tools as necessary.

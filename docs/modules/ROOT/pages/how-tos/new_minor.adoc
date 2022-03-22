@@ -8,6 +8,7 @@ Ensure each change which impacts us gets addressed.
 +
 Write a summary and add it to xref:oc4:ROOT:references/release_notes.adoc[our release notes summary].
 Make note of changes that influence how the solution teams operate a cluster or how our users use their cluster.
+Keep only the three most recent versions and delete the older ones.
 
 . Conduct upgrade
 +

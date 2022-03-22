@@ -1,0 +1,52 @@
+= Checklist to prepare for a new minor version of OpenShift 4
+:fn-core-components: pass:c,q[footnote:[Core Commodore components are those included by the distribution `openshift4` and its parent hierarchy levels.]]
+
+. Read and summarize release notes
++
+Read the release notes.
+Look for things that affect how we use OpenShift.
+Ensure each change which impacts us gets addressed.
++
+Write a summary and add it to xref:oc4:ROOT:references/release_notes.adoc[our release notes summary].
+Make note of changes that influence how the solution teams operate a cluster or how our users use their cluster.
+Keep only the three most recent versions and delete the older ones.
+
+. Conduct upgrade
++
+Use an existing test cluster and upgrade it to the new version.
++
+[NOTE]
+====
+The new minor might not show up in the list of available updates, even when setting the channel accordingly.
+If this is the case, set the cluster's update channel to `fast-<n-1>` and update to the latest patch first.
+This is, amongst others, necessary, when there is no GA release for the new minor available yet.
+The first GA version of a new minor usually is `4.<n>.3`.
+====
++
+[TIP]
+====
+Instead of using an existing cluster, you can also set up one with version `4.<n-1>` and then upgrade this one.
+====
+
+. Check compatibility of components
++
+Check if all core Commodore componentsfootnote:[Core Commodore components are those included by the distribution `openshift4` and its parent hierarchy levels.] are compatible with the new version.
+Address all issues as necessary.
+If it's straight-forward, directly create a fix.
+Otherwise, create a follow-up story to address the issue.
++
+The best way to find and address issues is to inspect an upgraded and or newly installed cluster using the new minor version.
+Things to look for:
++
+* API versions of resource types used
+* Alert rules
+* Logic which generates configuration based on the cluster's OpenShift version.
++
+One component which definitely needs to be updated for a new minor version is https://github.com/appuio/component-openshift4-monitoring[`openshift4-monitoring`].
+Additionally, verify that alert rules defined by other components are still picked up by cluster monitoring.
+
+. Conduct install on all supported cloud providers
++
+Use the installation documentation to install a new cluster.
+Do so for each https://products.docs.vshn.ch/products/appuio/managed/ocp4.html[supported hosting provider].
+Update the documentation, Terraform modules, and used tools as necessary.

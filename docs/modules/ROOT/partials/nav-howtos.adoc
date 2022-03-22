@@ -49,5 +49,6 @@
 * Storage
 ** xref:oc4:ROOT:how-tos/storage/change-luks-key.adoc[Change LUKS Key]
 
-* Special Upgrade Instructions
+* Upgrades
+** xref:oc4:ROOT:how-tos/new_minor.adoc[Get ready for new minor]
 ** xref:oc4:ROOT:how-tos/update_maintenance/v_4_9.adoc[Upgrade to OCP4.9]

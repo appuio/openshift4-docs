@@ -18,6 +18,18 @@ DNS names are very important, changing them later is usually not possible or a h
 
 Also have a look at xref:explanations/dns_scheme.adoc[DNS Scheme] to get an idea how DNS records are handled.
 
+[TIP]
+====
+Consider to use DNS delegation, if the domain is owned and managed by the customer.
+Once setup, this allows us to progress with the cluster setup and management without having to go back and forth with the customer.
+
+For clusters on Exoscale the Exoscale DNS service is used.
+Ask the customer to set the corresponding NS record when reaching that step within the setup.
+
+Cloudscale doesn't have a DNS service.
+Use the VSHN DNS server instead.
+====
+
 == Resource requirements
 
 The main purpose of the cluster will be to run the users applications and these applications have specific resource requirements.

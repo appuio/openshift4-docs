@@ -1,6 +1,6 @@
 = Installation on cloudscale.ch
 :ocp-minor-version: 4.10
-:ocp-patch-version: {ocp-minor-version}.6
+:ocp-patch-version: {ocp-minor-version}.3
 :provider: cloudscale
 
 [abstract]

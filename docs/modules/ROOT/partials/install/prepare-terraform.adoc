@@ -7,6 +7,27 @@
 TEAM=<team-name>
 ----
 
+. Bootstrap dynamic facts
++
+[source,bash,subs="attributes+"]
+----
+yq eval -i ".parameters.dynamic_facts.kubernetesVersion.major = \"$(echo "{k8s-minor-version}" | awk -F. '{print $1}')\"" \
+  ${CLUSTER_ID}.yml
+yq eval -i ".parameters.dynamic_facts.kubernetesVersion.minor = \"$(echo "{k8s-minor-version}" | awk -F. '{print $2}')\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.dynamic_facts.openshiftVersion.Major = \"$(echo "{ocp-minor-version}" | awk -F. '{print $1}')\"" \
+  ${CLUSTER_ID}.yml
+yq eval -i ".parameters.dynamic_facts.openshiftVersion.Minor = \"$(echo "{ocp-minor-version}" | awk -F. '{print $2}')\"" \
+  ${CLUSTER_ID}.yml
+----
++
+[NOTE]
+--
+Some components rely on dynamic facts fetched from the cluster at runtime.
+Those facts aren't available before steward is installed on the cluster.
+--
+
 . Prepare Terraform cluster config
 +
 [source,bash,subs="attributes+"]

@@ -44,7 +44,6 @@ export GITLAB_USER=<gitlab-user-name>
 # For example: https://api.syn.vshn.net
 # IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
 export COMMODORE_API_URL=<lieutenant-api-endpoint>
-export COMMODORE_API_TOKEN=<lieutenant-api-token>
 
 export TF_VAR_lb_exoscale_api_key=irrelevant
 export TF_VAR_lb_exoscale_api_secret=irrelevant

@@ -34,7 +34,7 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 * An unrestricted Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
 * `docker`
-* `exo` >= v1.28.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `exo` >= v1.37.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * `md5sum`
@@ -118,14 +118,14 @@ virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
 
 exo storage upload rhcos-${RHCOS_VERSION}.qcow2 "sos://${CLUSTER_ID}-bootstrap" --acl public-read
 
-exo vm template register "rhcos-${RHCOS_VERSION}" \
+exo compute instance-template register "rhcos-${RHCOS_VERSION}" \
+  "https://${EXOSCALE_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2" \
+  "$(md5sum rhcos-${RHCOS_VERSION}.qcow2 | awk '{ print $1 }')" \
   --zone "${EXOSCALE_ZONE}" \
-  --checksum $(md5sum rhcos-${RHCOS_VERSION}.qcow2 | awk '{ print $1 }') \
   --boot-mode uefi \
   --disable-password \
   --username core \
-  --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}" \
-  --url "https://${EXOSCALE_S3_ENDPOINT}/${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
+  --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}"
 
 exo storage delete "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
 

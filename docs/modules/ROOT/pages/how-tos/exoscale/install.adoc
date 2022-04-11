@@ -1,7 +1,7 @@
 = Installation on Exoscale
-:ocp-minor-version: 4.9
-:k8s-minor-version: 1.22
-:ocp-patch-version: {ocp-minor-version}.0
+:ocp-minor-version: 4.10
+:k8s-minor-version: 1.23
+:ocp-patch-version: {ocp-minor-version}.3
 :provider: exoscale
 :kubectl_extra_args:
 

@@ -91,6 +91,5 @@ You can find the password in the file `target/auth/kubeadmin-password` and the k
 +
 [source,bash]
 ----
-popd
 ls -l ${INSTALLER_DIR}/auth/
 ----

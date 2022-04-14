@@ -43,6 +43,7 @@ Things to look for:
 * Logic which generates configuration based on the cluster's OpenShift version.
 +
 One component which definitely needs to be updated for a new minor version is https://github.com/appuio/component-openshift4-monitoring[`openshift4-monitoring`].
+Make sure https://hub.syn.tools/openshift4-monitoring/references/parameters.html#_patchrules[`alert patchRules`] get applied to the new minor version.
 Additionally, verify that alert rules defined by other components are still picked up by cluster monitoring.
 
 . Conduct install on all supported cloud providers

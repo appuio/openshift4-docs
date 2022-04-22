@@ -3,11 +3,10 @@
 [source,bash]
 ----
 export COMMODORE_API_URL=https://api.syn.vshn.net <1>
-export COMMODORE_API_TOKEN=<your lieutenant token>
 
 # Set Project Syn cluster and tenant ID
 export CLUSTER_ID=<lieutenant-cluster-id> # Looks like: c-cluster-id-1234
-export TENANT_ID=$(curl -sH "Authorization: Bearer ${COMMODORE_API_TOKEN}" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+export TENANT_ID=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
 ----
 <1> Replace with the API URL of the desired Lieutenant instance.
 

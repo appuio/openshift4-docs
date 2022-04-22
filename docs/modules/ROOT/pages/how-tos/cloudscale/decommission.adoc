@@ -101,7 +101,7 @@ curl -i -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" -X DELETE $(echo $respons
 ----
 # Vault login
 export VAULT_ADDR=https://vault-prod.syn.vshn.net
-vault login -method=ldap username=<your.name>
+vault login -method=oidc
 
 # delete token secret
 vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale

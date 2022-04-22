@@ -63,7 +63,7 @@ git archive --remote ${REPO_URL} master | tar -xC catalog
 +
 [source,console]
 ----
-vault login -method=ldap username=<your username>
+vault login -method=oidc
 ----
 
 4. Export restic configuration

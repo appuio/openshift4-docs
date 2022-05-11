@@ -13,6 +13,7 @@
 ** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Cluster Setup]
 ** xref:oc4:ROOT:how-tos/cloudscale/setup-storage-cluster.adoc[Setup a storage cluster]
 ** xref:oc4:ROOT:how-tos/cloudscale/replace-storage-node.adoc[Replace a storage node]
+** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[Remove a worker node]
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
 ** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd from Backup]
 ** xref:oc4:ROOT:how-tos/cloudscale/enable-loadbalancer-service.adoc[Enable LoadBalancer Services]
@@ -24,6 +25,7 @@
 ** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[Remove a storage node]
 ** xref:oc4:ROOT:how-tos/exoscale/change_storage_node_size.adoc[Change Storage Node Size]
 ** xref:oc4:ROOT:how-tos/exoscale/reinitialize_storage_disk.adoc[Reinitialize a storage disk]
+** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[Remove a worker node]
 ** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Cluster Decommission]
 ** xref:oc4:ROOT:how-tos/exoscale/recover-etcd.adoc[Restore etcd from Backup]
 

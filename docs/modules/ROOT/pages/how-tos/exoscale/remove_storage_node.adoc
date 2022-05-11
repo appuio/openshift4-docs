@@ -13,6 +13,7 @@
 :node-delete-list: ${NODE_TO_REMOVE}
 :delete-nodes-manually: no
 :delete-pvs: old_pv_names
+:delete-node-type: storage
 
 [abstract]
 --
@@ -150,7 +151,7 @@ include::partial$storage-ceph-remove-mon.adoc[]
 
 === Remove VM
 
-include::partial$delete-storage-node.adoc[]
+include::partial$delete-node.adoc[]
 
 == Finish up
 

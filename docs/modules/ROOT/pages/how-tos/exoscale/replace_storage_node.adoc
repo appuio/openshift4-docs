@@ -14,6 +14,7 @@
 :node-delete-list: ${NODE_TO_REPLACE}
 :delete-nodes-manually: yes
 :delete-pvs: old_pv_names
+:delete-node-type: storage
 
 [abstract]
 --
@@ -96,7 +97,7 @@ include::partial$storage-ceph-remove-mon.adoc[]
 
 === Clean up the old node
 
-include::partial$delete-storage-node.adoc[]
+include::partial$delete-node.adoc[]
 
 == Finish up
 

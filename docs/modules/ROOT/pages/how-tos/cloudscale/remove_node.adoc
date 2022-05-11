@@ -3,7 +3,6 @@
 :cloud_provider: cloudscale
 :kubectl_extra_args: --as=cluster-admin
 :delabel_app_nodes: yes
-:argo_app: rook-ceph
 
 :node-delete-list: ${NODE_TO_REPLACE}
 :delete-nodes-manually: no
@@ -94,4 +93,4 @@ echo $NODE_TO_REMOVE
 
 === Remove VM
 
-include::partial$delete-storage-node.adoc[]
+include::partial$delete-node.adoc[]

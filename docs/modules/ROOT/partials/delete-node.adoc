@@ -1,4 +1,4 @@
-. Drain the node(s) to replace
+. Drain the node(s)
 +
 [source,bash,subs="attributes+"]
 ----
@@ -9,17 +9,19 @@ done
 ----
 +
 ifeval::["{cloud_provider}" == "cloudscale"]
+ifeval::["{delete-node-type}" == "storage"]
 [TIP]
 ====
 On cloudscale.ch, we configure Rook Ceph to setup the OSDs in "portable" mode.
 This configuration enables OSDs to be scheduled on any storage node.
 
-With this configuration, we don't have to migrate OSDs hosted on the old node(s) manually. 
+With this configuration, we don't have to migrate OSDs hosted on the old node(s) manually.
 Instead, draining a node will cause any OSDs hosted on that node to be rescheduled on other storage nodes.
 ====
 endif::[]
+endif::[]
 
-. Delete the node(s) to replace from the cluster
+. Delete the node(s) from the cluster
 +
 [source,bash,subs="attributes+"]
 ----
@@ -28,6 +30,7 @@ for node in $(echo -n {node-delete-list}); do
 done
 ----
 
+ifeval::["{delete-node-type}" == "storage"]
 ifeval::["{delete-nodes-manually}" == "yes"]
 ifeval::["{cloud_provider}" == "exoscale"]
 . Remove the Exoscale VM(s)
@@ -66,6 +69,7 @@ for node in $(echo -n {node-delete-list}); do
     "https://api.cloudscale.ch/v1/servers/${node_id}"
 done
 ----
+endif::[]
 endif::[]
 endif::[]
 

@@ -1,0 +1,97 @@
+= Remove a worker node
+
+:cloud_provider: exoscale
+:kubectl_extra_args: --as=cluster-admin
+:delabel_app_nodes: yes
+
+:node-delete-list: ${NODE_TO_REMOVE}
+:delete-nodes-manually: no
+:delete-pvs: old_pv_names
+
+[abstract]
+--
+Steps to remove a worker node of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
+--
+
+== Starting situation
+
+* You already have a OpenShift 4 cluster on Exoscale
+* You have admin-level access to the cluster
+* You want to remove an existing worker node in the cluster
+
+== Prerequisites
+
+include::partial$exoscale/prerequisites.adoc[]
+
+== Prepare local environment
+
+include::partial$exoscale/setup-local-env.adoc[]
+
+== Update Cluster Config
+
+. Update cluster config.
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.worker_count -= 1" \
+  ${CLUSTER_ID}.yml
+----
+
+. Review and commit
++
+[source,bash]
+----
+
+# Have a look at the file ${CLUSTER_ID}.yml.
+
+git commit -a -m "Remove worker node from cluster ${CLUSTER_ID}"
+git push
+
+popd
+----
+
+. Compile and push cluster catalog
++
+[source,bash]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i
+----
+
+== Prepare Terraform environment
+
+include::partial$exoscale/configure-terraform-secrets.adoc[]
+
+include::partial$setup_terraform.adoc[]
+
+== Remove Node
+
+* Find the node you want to remove.
+It has to be the one with the highest terraform index.
++
+[source,bash]
+----
+# Grab JSON copy of current Terraform state
+terraform state pull > .tfstate.json
+
+node_count=$(jq  -r \
+  '.resources[] |
+   select(.module=="module.cluster.module.worker" and .type=="exoscale_compute") |
+   .instances | length' \
+   .tfstate.json)
+# Verify that the number of nodes is one more than we configured earlier.
+echo $node_count
+
+export NODE_TO_REMOVE=$(jq --arg index "$node_count" -r \
+  '.resources[] |
+   select(.module=="module.cluster.module.worker" and .type=="exoscale_compute") |
+   .instances[$index|tonumber-1] |
+   .attributes.hostname' \
+   .tfstate.json)
+echo $NODE_TO_REMOVE
+----
+
+=== Remove VM
+
+include::partial$delete-node.adoc[]

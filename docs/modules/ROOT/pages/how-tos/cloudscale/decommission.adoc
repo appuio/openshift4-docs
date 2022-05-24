@@ -25,7 +25,7 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch]
 +
 [source,bash]
 ----
-export CLOUDSCALE_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/service/PROJECT_ID/api-token
+export CLOUDSCALE_API_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/service/PROJECT_ID/api-token
 export CLUSTER_ID=<lieutenant-cluster-id>
 export TENANT_ID=<lieutenant-tenant-id>
 export REGION=<region> # rma or lpg (without the zone number)
@@ -75,7 +75,7 @@ terraform destroy
 [source,bash]
 ----
 # Use already exiting bucket user
-response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
   https://api.cloudscale.ch/v1/objects-users | \
   jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
 
@@ -92,7 +92,7 @@ mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition" --force
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry" --force
 
 # delete cloudscale.ch user object
-curl -i -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" -X DELETE $(echo $response | jq -r '.href')
+curl -i -H "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" -X DELETE $(echo $response | jq -r '.href')
 ----
 
 . Delete vault entries:

@@ -2,5 +2,5 @@
 [source,bash]
 ----
 # From https://control.cloudscale.ch/service/<your-project>/api-token
-export CLOUDSCALE_TOKEN=<cloudscale-api-token>
+export CLOUDSCALE_API_TOKEN=<cloudscale-api-token>
 ----

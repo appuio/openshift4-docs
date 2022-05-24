@@ -13,6 +13,7 @@
 ** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Cluster Setup]
 ** xref:oc4:ROOT:how-tos/cloudscale/setup-storage-cluster.adoc[Setup a storage cluster]
 ** xref:oc4:ROOT:how-tos/cloudscale/replace-storage-node.adoc[Replace a storage node]
+** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[Add a worker node]
 ** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[Remove a worker node]
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
 ** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd from Backup]

@@ -1,0 +1,90 @@
+= Add a worker node
+
+[abstract]
+--
+Steps to add a worker node to an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
+--
+
+== Starting situation
+
+* You already have an OpenShift 4 cluster on cloudscale.ch
+* You have admin-level access to the cluster
+* You want to add a worker node to the cluster
+
+== Prerequisites
+
+The following CLI utilities need to be available locally:
+
+* `kubectl`
+* `yq`
+
+== Update Cluster Config
+
+. Update cluster config in syn-tenant-repo on a new branch.
++
+[source,bash]
+----
+CLUSTER_ID=
+
+git checkout -b add-worker-node
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.worker_count += 1" \
+  ${CLUSTER_ID}.yml
+----
+
+. Commit and create MR to review
++
+[source,bash]
+----
+git commit -a -m "Add worker node to cluster ${CLUSTER_ID}"
+git push -u origin add-worker-node
+----
+
+. Compile and push cluster catalog using the GitLab CI/CD pipeline in the syn-tenant-repo.
+
+== Create Node
+
+. Verify plan output of GitLab CI/CD pipeline in cluster catalog
+
+. Run apply pipeline pipeline in cluster catalog
+
+== Approve CertificateSigningRequests
+
+. Wait for `kubernetes.io/kube-apiserver-client-kubelet` CertificateSigningRequest from `system:serviceaccount:openshift-machine-config-operator:node-bootstrapper`
++
+[source,bash]
+----
+kubectl get certificatesigningrequests.certificates.k8s.io -w
+----
+
+. Approve `kubernetes.io/kube-apiserver-client-kubelet` CertificateSigningRequest from `system:serviceaccount:openshift-machine-config-operator:node-bootstrapper`
++
+[source,bash]
+----
+kubectl certificate approve --as=cluster-admin
+----
+
+. Wait for `kubernetes.io/kubelet-serving` CertificateSigningRequest from `system:node:...`
++
+[source,bash]
+----
+kubectl get certificatesigningrequests.certificates.k8s.io -w
+----
+
+. Approve `kubernetes.io/kubelet-serving` CertificateSigningRequest from `system:node:...`
++
+[source,bash]
+----
+kubectl certificate approve --as=cluster-admin
+----
+
+== Label Node
+
+. Label new node to become a worker (app) node
++
+[source,bash]
+----
+NODE=
+
+kubectl label node $NODE node-role.kubernetes.io/app=''--as=cluster-admin
+----

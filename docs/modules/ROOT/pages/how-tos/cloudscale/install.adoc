@@ -64,7 +64,7 @@ include::partial$install/register.adoc[]
 [source,bash]
 ----
 # https://control.cloudscale.ch/service/<your-project>/api-token
-export CLOUDSCALE_TOKEN=<cloudscale-api-token>
+export CLOUDSCALE_API_TOKEN=<cloudscale-api-token>
 export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 ----
 
@@ -80,7 +80,7 @@ include::partial$install/vshn-input.adoc[]
 [source,bash]
 ----
 # Use already existing bucket user
-response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
   https://api.cloudscale.ch/v1/objects-users | \
   jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
 ----
@@ -90,7 +90,7 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
 [source,bash]
 ----
 # Create a new user
-response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
   -F display_name=${CLUSTER_ID} \
   https://api.cloudscale.ch/v1/objects-users)
 ----
@@ -116,12 +116,12 @@ mc mb --ignore-existing \
 +
 [source,bash]
 ----
-export AUTH_HEADER="Authorization: Bearer ${CLOUDSCALE_TOKEN}"
+export AUTH_HEADER="Authorization: Bearer ${CLOUDSCALE_API_TOKEN}"
 ----
 +
 [NOTE]
 ====
-The variable `CLOUDSCALE_TOKEN` could be used directly.
+The variable `CLOUDSCALE_API_TOKEN` could be used directly.
 Exporting the variable `AUTH_HEADER` is done to be compatible with the https://www.cloudscale.ch/en/api/[Cloudscale API documentation].
 ====
 
@@ -194,7 +194,7 @@ include::partial$connect-to-vault.adoc[]
 ----
 # Set the cloudscale.ch access secrets
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
-  token=${CLOUDSCALE_TOKEN} \
+  token=${CLOUDSCALE_API_TOKEN} \
   s3_access_key=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
   s3_secret_key=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
 

@@ -55,17 +55,17 @@ ifeval::["{cloud_provider}" == "cloudscale"]
 [source,bash,subs="attributes+"]
 ----
 for node in $(echo -n {node-delete-list}); do
-  node_id=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+  node_id=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
     https://api.cloudscale.ch/v1/servers | \
     jq --arg storage_node "$node" -r \
     '.[] | select(.name|startswith($storage_node)) | .uuid')
 
   echo "Removing node:"
-  curl -sH "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+  curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
     "https://api.cloudscale.ch/v1/servers/${node_id}" |\
     jq -r '.name'
 
-  curl -XDELETE -H "Authorization: Bearer ${CLOUDSCALE_TOKEN}" \
+  curl -XDELETE -H "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
     "https://api.cloudscale.ch/v1/servers/${node_id}"
 done
 ----

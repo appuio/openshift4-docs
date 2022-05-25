@@ -9,6 +9,7 @@ Example scenario: The Datacenter was renamed in vSphere.
 
 [options="interactive"]
 * [ ] Update the `vsphere-config-secret` in the `kube-system` namespace.
+* [ ] Update the `cloud-provider-config` ConfigMap in the `openshift-config` namespace.
 * [ ] Update existing `MachineSet` objects. Note that when renaming the Datacenter, the `folder` and `resourcePool` parameters usually must be changed as well.
 * [ ] Update existing `Machine` objects. Otherwise the Machine API operator won't be able to find the VMs again.
 * [ ] Update existing `Machine` objects not belonging to a `MachineSet`, for example master systems.

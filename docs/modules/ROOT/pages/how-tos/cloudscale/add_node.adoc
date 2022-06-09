@@ -1,0 +1,53 @@
+= Add a worker node
+
+[abstract]
+--
+Steps to add a worker node to an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
+--
+
+== Starting situation
+
+* You already have an OpenShift 4 cluster on cloudscale.ch
+* You have admin-level access to the cluster
+* You want to add a worker node to the cluster
+
+== Prerequisites
+
+The following CLI utilities need to be available locally:
+
+* `kubectl`
+* `yq`
+
+== Update Cluster Config
+
+. Update cluster config in syn-tenant-repo on a new branch.
++
+[source,bash]
+----
+CLUSTER_ID=
+
+git checkout -b add-worker-node
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.worker_count += 1" \
+  ${CLUSTER_ID}.yml
+----
+
+. Commit and create MR to review
++
+[source,bash]
+----
+git commit -a -m "Add worker node to cluster ${CLUSTER_ID}"
+git push -u origin add-worker-node
+----
+
+. Compile and push the cluster catalog.
+
+== Create Node
+
+. Verify output of the Terraform plan step (for example, check the output of the Terraform CI/CD pipeline in cluster catalog)
+
+. If everything looks good, run `terraform apply` (for example, by triggering the apply step in the CI/CD pipeline).
+
+== Approve CertificateSigningRequests
+
+include::partial$install/approve-node-csrs.adoc[]

@@ -40,13 +40,13 @@ git commit -a -m "Add worker node to cluster ${CLUSTER_ID}"
 git push -u origin add-worker-node
 ----
 
-. Compile and push cluster catalog using the GitLab CI/CD pipeline in the syn-tenant-repo.
+. Compile and push the cluster catalog.
 
 == Create Node
 
-. Verify plan output of GitLab CI/CD pipeline in cluster catalog
+. Verify output of the Terraform plan step (for example, check the output of the Terraform CI/CD pipeline in cluster catalog)
 
-. Run apply pipeline pipeline in cluster catalog
+. If everything looks good, run `terraform apply` (for example, by triggering the apply step in the CI/CD pipeline).
 
 == Approve CertificateSigningRequests
 

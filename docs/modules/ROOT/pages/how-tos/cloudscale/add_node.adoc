@@ -50,41 +50,4 @@ git push -u origin add-worker-node
 
 == Approve CertificateSigningRequests
 
-. Wait for `kubernetes.io/kube-apiserver-client-kubelet` CertificateSigningRequest from `system:serviceaccount:openshift-machine-config-operator:node-bootstrapper`
-+
-[source,bash]
-----
-kubectl get certificatesigningrequests.certificates.k8s.io -w
-----
-
-. Approve `kubernetes.io/kube-apiserver-client-kubelet` CertificateSigningRequest from `system:serviceaccount:openshift-machine-config-operator:node-bootstrapper`
-+
-[source,bash]
-----
-kubectl certificate approve --as=cluster-admin
-----
-
-. Wait for `kubernetes.io/kubelet-serving` CertificateSigningRequest from `system:node:...`
-+
-[source,bash]
-----
-kubectl get certificatesigningrequests.certificates.k8s.io -w
-----
-
-. Approve `kubernetes.io/kubelet-serving` CertificateSigningRequest from `system:node:...`
-+
-[source,bash]
-----
-kubectl certificate approve --as=cluster-admin
-----
-
-== Label Node
-
-. Label new node to become a worker (app) node
-+
-[source,bash]
-----
-NODE=
-
-kubectl label node $NODE node-role.kubernetes.io/app=''--as=cluster-admin
-----
+include::partial$install/approve-node-csrs.adoc[]

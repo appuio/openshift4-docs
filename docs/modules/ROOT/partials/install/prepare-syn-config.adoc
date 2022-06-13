@@ -30,7 +30,7 @@ yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID "${INSTALLER_
 yq eval -i ".parameters.openshift.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
   ${CLUSTER_ID}.yml
 
-yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
+yq eval -i ".parameters.vshnKeycloak.clientId = \"${KEYCLOAK_CLIENT_ID}\"" \
   ${CLUSTER_ID}.yml
 ----
 +

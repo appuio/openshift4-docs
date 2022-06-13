@@ -1,0 +1,26 @@
+. Create a new Keycloak client in the `VSHN` realm with the following settings:
++
+[source]
+----
+Client ID = ocp_<customer>_<c-cluster-id> <1>
+Access Type = confidential
+Valid Redirect URIs = https://oauth-openshift.apps.cluster-id.tld/oauth2callback/VSHN <2>
+Base URL = https://console-openshift-console.apps.cluster-id.tld/ <3>
+----
+<1> Create a separate client for each cluster.
+The client ID shall use the format `ocp_<customer-name>_<cluster-id>`.
+<2> The Redirect URI assumes that the authentication method in the OpenShift cluster is named `VSHN`.
+<3> Adjust the Base URL to match the desired web console URL of your cluster.
++
+Use https://TBD to create a client.
+The name must contain the customer and the cluster name.
++
+TODO: Add required config for authentication flow & mappers
+
+. Save the Keycloak client details (client ID and secret) in the following variables for subsequent steps.
++
+[source,bash]
+----
+export KEYCLOAK_CLIENT_ID="Your_client_ID_here"
+export KEYCLOAK_CLIENT_SECRET="Your_client_secret"
+----

@@ -195,9 +195,9 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty \
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
   httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
 
-# Set the LDAP password
-vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
-  bindPassword=${LDAP_PASSWORD}
+# Set the Keycloak client secret
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/oidc/vshn-keycloak \
+  clientSecret=${KEYCLOAK_CLIENT_SECRET}
 
 # Generate a master password for K8up backups
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \

@@ -107,6 +107,7 @@
 ** xref:oc4:ROOT:how-tos/authentication/disable-access.adoc[Disable per cluster access]
 ** xref:oc4:ROOT:how-tos/authentication/disable-self-provisioning.adoc[Disable project self-provisioning]
 ** xref:oc4:ROOT:explanations/sudo.adoc[]
+** xref:oc4:ROOT:how-tos/authentication/migrate-ldap-keycloak.adoc[Migrate cluster from LDAP to Keycloak authentication]
 
 * Networking
 ** xref:oc4:ROOT:how-tos/network/migrate-to-cilium.adoc[]

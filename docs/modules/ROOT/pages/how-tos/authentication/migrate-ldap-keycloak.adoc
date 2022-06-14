@@ -1,0 +1,76 @@
+= Migrate cluster from LDAP to Keycloak authentication
+
+[abstract]
+--
+Steps to migrate an existing OpenShift 4 cluster from LDAP to Keycloak authentication.
+--
+
+== Starting situation
+
+* You have an existing OpenShift 4 cluster which is setup with LDAP authentication
+* You have access to create a new Keycloak client on https://id.vshn.net[id.vshn.net]
+
+== Prerequisites
+
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+* `commodore`
+
+== Set up Keycloak client
+
+include::partial$setup-keycloak-client.adoc[]
+
+== Update cluster configuration
+
+. Compile cluster
++
+[source,bash]
+----
+export CLUSTER_ID=c-cluster-id-1234 <1>
+commodore catalog compile "${CLUSTER_ID}"
+----
+<1> Replace with the Lieutenant ID of the cluster you're migrating
+
+. Update cluster to use `keycloak` as the IDP
++
+[source,bash]
+----
+export TENANT_ID=$(yq e '.parameters.cluster.tenant' inventory/classes/params/cluster.yml)
+
+pushd inventory/classes/${TENANT_ID}
+
+yq eval -i ".parameters.openshift.idp = \"keycloak\"" \
+  ${CLUSTER_ID}.yml
+yq eval -i ".parameters.vshnKeycloak.clientId = \"${KEYCLOAK_CLIENT_ID}\"" \
+  ${CLUSTER_ID}.yml
+
+git commit -am"Configure Keycloak authentication for ${CLUSTER_ID}"
+git push origin master
+
+popd
+----
++
+TIP: You can also completely remove `.parameters.openshift.idp`, as the Commodore global defaults set the parameter to `keycloak`.
+
+. Set the Keycloak client secret in Vault
++
+include::partial$connect-to-vault.adoc[]
++
+[source,bash]
+----
+# Set the Keycloak client secret
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/oidc/vshn-keycloak \
+  clientSecret=${KEYCLOAK_CLIENT_SECRET}
+----
+
+. Compile and push cluster catalog
++
+[source,bash]
+----
+commodore catalog compile --push -i
+----
+
+== Verify migration
+
+. Check rollout of the changes in ArgoCD on the cluster
+
+. Once rollout is complete, verify that you get redirected to id.vshn.net when logging in to the cluster.

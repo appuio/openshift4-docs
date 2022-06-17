@@ -51,3 +51,19 @@ git push -u origin add-worker-node
 == Approve CertificateSigningRequests
 
 include::partial$install/approve-node-csrs.adoc[]
+
+== Label Node 
+
+. Check for the node name
++
+[source,bash]
+----
+kubectl get node
+----
+
+. Add `app` role label to the node
++
+[source,bash]
+----
+kubectl label node worker-XXXX node-role.kubernetes.io/app=""
+----

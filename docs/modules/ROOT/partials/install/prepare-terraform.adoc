@@ -18,8 +18,6 @@ CA_CERT=$(jq -r '.ignition.security.tls.certificateAuthorities[0].source' \
 
 pushd "inventory/classes/${TENANT_ID}/"
 
-yq eval -i '.applications += ["openshift4-terraform"]' ${CLUSTER_ID}.yml
-
 yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")\"" \
   ${CLUSTER_ID}.yml
 
@@ -27,9 +25,6 @@ yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID "${INSTALLER_
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.openshift.baseDomain = \"${CLUSTER_DOMAIN}\"" \
-  ${CLUSTER_ID}.yml
-
-yq eval -i '.parameters.openshift.appsDomain = "apps.${openshift:baseDomain}"' \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \"${BASE_DOMAIN}\"" \
@@ -53,32 +48,13 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.hieradata_repo_
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.team = \"${TEAM}\"" \
   ${CLUSTER_ID}.yml
 
-# Enable proxy protocol on the load-balancer and ingress controller to forward the
-# source IP to workloads running on the cluster
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.lb_enable_proxy_protocol = true" \
-  ${CLUSTER_ID}.yml
-yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.endpointPublishingStrategy.type = \"HostNetwork\"" \
-  ${CLUSTER_ID}.yml
-yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.endpointPublishingStrategy.hostNetwork.protocol = \"PROXY\"" \
-  ${CLUSTER_ID}.yml
-
 # Configure the OpenShift update channel
 yq eval -i ".parameters.openshift4_version.spec.channel = \"stable-{ocp-minor-version}\"" \
-  ${CLUSTER_ID}.yml
-
-# Configure default ingress controller with 3 replicas, so that the
-# VSHN-managed LB HAproxy health check isn't complaining about a missing backend
-yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.replicas = 3" \
   ${CLUSTER_ID}.yml
 
 yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
   ${CLUSTER_ID}.yml
 
-# Configure Git author information for the CI pipeline
-yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.username = \"GitLab CI\"" \
-  ${CLUSTER_ID}.yml
-yq eval -i ".parameters.openshift4_terraform.gitlab_ci.git.email = \"tech+${CLUSTER_ID}@vshn.ch\"" \
-  ${CLUSTER_ID}.yml
 ----
 
 . Bootstrap dynamic facts

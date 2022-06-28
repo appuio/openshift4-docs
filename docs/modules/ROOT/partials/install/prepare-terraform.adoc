@@ -56,6 +56,18 @@ yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
   ${CLUSTER_ID}.yml
 
 ----
++
+[NOTE]
+====
+If you use a custom "apps" domain, make sure to set `parameters.openshift.appsDomain` accordingly.
+
+[source,bash]
+----
+APPS_DOMAIN=your.custom.apps.domain
+yq eval -i ".parameters.openshift.appsDomain = \"${APPS_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+----
+====
 
 . Bootstrap dynamic facts
 +
@@ -77,3 +89,22 @@ yq eval -i ".parameters.dynamic_facts.openshiftVersion.Major = \"$(echo "{ocp-mi
 yq eval -i ".parameters.dynamic_facts.openshiftVersion.Minor = \"$(echo "{ocp-minor-version}" | awk -F. '{print $2}')\"" \
   ${CLUSTER_ID}.yml
 ----
+
+ifeval::["{provider}" == "exoscale"]
+. Configure Exoscale-specific Terraform variables
++
+[source,bash,subs="attributes+"]
+----
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${RHCOS_TEMPLATE}\"" \
+  ${CLUSTER_ID}.yml
+----
+
+endif::[]
+
+[TIP]
+====
+You now have the option to further customize the cluster by editing `terraform_variables`.
+Most importantly you have the option to change node sizes or add additional specialized worker nodes.
+
+Please look at the xref:oc4:ROOT:references/{provider}/config.adoc[configuration reference] for the available options.
+====

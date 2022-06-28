@@ -200,25 +200,6 @@ exo storage upload "${INSTALLER_DIR}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstr
 === Terraform Cluster Config
 
 include::partial$install/prepare-terraform.adoc[]
-+
-[NOTE]
-====
-You now have the option to further customize the cluster by editing `terraform_variables`.
-Most importantly you have the option to change node sizes or add additional specialized worker nodes.
-
-Please look at the xref:oc4:ROOT:references/exoscale/config.adoc[configuration reference] for the available options.
-====
-
-. Configure Exoscale-specific Terraform variables
-+
-[source,bash,subs="attributes+"]
-----
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template = \"${RHCOS_TEMPLATE}\"" \
-  ${CLUSTER_ID}.yml
-yq eval -i ".parameters.openshift4_local_storage.local_storage_operator.channel = \"{ocp-minor-version}\"" \
-  ${CLUSTER_ID}.yml <1>
-----
-<1> Can be removed as soon as Project Syn is Kubernetes version aware and we can set this automatically.
 
 [#_compile_catalog]
 === Commit changes and compile cluster catalog

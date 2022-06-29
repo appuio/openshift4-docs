@@ -255,19 +255,6 @@ export TF_VAR_ignition_bootstrap=$(mc share download \
 === Terraform Cluster Config
 
 include::partial$install/prepare-terraform.adoc[]
-+
-[NOTE]
-====
-You now have the option to further customize the cluster by editing `terraform_variables`.
-Most importantly you have the option to change node sizes or add additional specialized worker nodes.
-
-Please look at the xref:oc4:ROOT:references/cloudscale/config.adoc[configuration reference] for the available options.
-====
-+
-[NOTE]
-====
-If you use a custom "apps" domain, make sure to also change it in `parameters.openshift.appsDomain`.
-====
 
 [#_compile_catalog]
 === Commit changes and compile cluster catalog

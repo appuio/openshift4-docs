@@ -112,8 +112,12 @@ kubectl -n openshift-ingress-operator patch ingresscontroller default --type=jso
   }]'
 ----
 +
-[NOTE]
-This step is only necessary if you enabled the proxy protocol on the load-balancers.
+[TIP]
+====
+This step isn't necessary if you've disabled the proxy protocol on the load-balancers manually during setup.
+
+By default, PROXY protocol is enabled through the VSHN Commodore global defaults.
+====
 
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +

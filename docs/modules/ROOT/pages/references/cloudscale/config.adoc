@@ -40,7 +40,7 @@ WARNING: We don't provide support for configurations with `master_count != 3`.
 
 
 | `infra_flavor`
-| `plus-16`
+| `plus-32-4`
 | Type of the infrastructure node VMs
 
 |===
@@ -50,7 +50,7 @@ WARNING: We don't provide support for configurations with `master_count != 3`.
 We currently don't provide support for any of the following configurations:
 
 * `infra_flavor = flex-*`
-* `infra_flavor` smaller than `plus-16`.
+* `infra_flavor` smaller than `plus-32-4`.
 * `infra_count < 3`.
 ====
 
@@ -65,7 +65,7 @@ We currently don't provide support for any of the following configurations:
 | The number of worker nodes running the customers workload
 
 | `worker_flavor`
-| `plus-16`
+| `plus-16-4`
 | Type of the worker node VMs
 
 | `worker_volume_size_gb`
@@ -79,33 +79,33 @@ We currently don't provide support for any of the following configurations:
 We currently don't provide support for any of the following configurations:
 
 * `worker_flavor = flex-*`
-* `worker_flavor` smaller than `plus-16`.
+* `worker_flavor` smaller than `plus-16-4`.
 * `worker_count < 3`.
 ====
 
 === Additional Worker Groups
 
-You have the option to add additional worker node groups. 
+You have the option to add additional worker node groups.
 Each worker group is a collection of VMs with the same flavor and volume size.
 
-Worker groups can be configured through the `additional_worker_groups` variable. 
+Worker groups can be configured through the `additional_worker_groups` variable.
 This variable is a map from worker group names (used as node prefixes) to objects providing node instance size, node count, node data disk size, and node state.
 
-The following example will add a worker group called `cpu1` with 3 instances of flavor `plus-24` with a volume size of `248GB`.
+The following example will add a worker group called `cpu1` with 3 instances of flavor `plus-24-12` with a volume size of `248GB`.
 
 [source,yaml]
 ----
 terraform_variables:
   additional_worker_groups:
     "cpu1":
-      flavor: "plus-24"
+      flavor: "plus-24-12"
       count: 3
       volume_size_gb: 248
 ----
 
 [NOTE]
 ====
-Please note that you can't use names `master`, `infra`, or `worker` for additional worker groups. 
+Please note that you can't use names `master`, `infra`, or `worker` for additional worker groups.
 We prohibit these names to ensure there are no collisions between the generated nodes names for different worker groups.
 ====
 
@@ -125,7 +125,7 @@ We prohibit these names to ensure there are no collisions between the generated 
 
 | `volume_size_gb`
 | `worker_volume_size_gb`
-| Worker boot volume size in GBs. 
+| Worker boot volume size in GBs.
   Defaults to `worker_volume_size_gb`.
 
 |===
@@ -135,7 +135,7 @@ We prohibit these names to ensure there are no collisions between the generated 
 We currently don't provide support for any of the following configurations:
 
 * `flavor = flex-*`
-* `flavor` smaller than `plus-16`.
+* `flavor` smaller than `plus-16-4`.
 ====
 
 
@@ -148,11 +148,11 @@ parameters:
     terraform_variables:
       root_disk_size: 128
       worker_count: 4
-      worker_flavor: "plus-4"
+      worker_flavor: "plus-16-4"
       worker_volume_size_gb: 512
       additional_worker_groups:
         "cpu1":
-          flavor: "plus-24"
+          flavor: "plus-24-12"
           count: 3
 ----
 

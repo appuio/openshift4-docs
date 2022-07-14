@@ -32,7 +32,7 @@ yq -i e '.parameters.openshift4_terraform.terraform_variables.additional_worker_
   {
     "storage": {
       "count": 3,
-      "flavor": "plus-32"
+      "flavor": "plus-24-12"
     }
   }' "${CLUSTER_ID}.yml"
 
@@ -65,7 +65,7 @@ A typical plan output should look something like
 Terraform will perform the following actions:
   # module.cluster.module.additional_worker["storage"].cloudscale_server.node[0] will be created
   + resource "cloudscale_server" "node" {
-      + flavor_slug                    = "plus-32"
+      + flavor_slug                    = "plus-24-12"
       + href                           = (known after apply)
       + id                             = (known after apply)
       + image_slug                     = "custom:rhcos-4.8"
@@ -102,7 +102,7 @@ Terraform will perform the following actions:
     }
   # module.cluster.module.additional_worker["storage"].cloudscale_server.node[1] will be created
   + resource "cloudscale_server" "node" {
-      + flavor_slug                    = "plus-32"
+      + flavor_slug                    = "plus-24-12"
       + href                           = (known after apply)
       + id                             = (known after apply)
       + image_slug                     = "custom:rhcos-4.8"
@@ -139,7 +139,7 @@ Terraform will perform the following actions:
     }
   # module.cluster.module.additional_worker["storage"].cloudscale_server.node[2] will be created
   + resource "cloudscale_server" "node" {
-      + flavor_slug                    = "plus-32"
+      + flavor_slug                    = "plus-24-12"
       + href                           = (known after apply)
       + id                             = (known after apply)
       + image_slug                     = "custom:rhcos-4.8"

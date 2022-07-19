@@ -50,6 +50,7 @@ git push -u origin add-worker-node
 
 == Approve CertificateSigningRequests
 
+:kubectl_extra_args: --as=cluster-admin
 include::partial$install/approve-node-csrs.adoc[]
 
 == Label Node 
@@ -65,5 +66,5 @@ kubectl get node
 +
 [source,bash]
 ----
-kubectl label node worker-XXXX node-role.kubernetes.io/app=""
+kubectl --as=cluster-admin label node worker-XXXX node-role.kubernetes.io/app=""
 ----

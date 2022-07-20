@@ -1,6 +1,6 @@
 = APPUiO Managed OpenShift 4
 
-image::appuio_logo.png[APPUiO,256,link=https://www.appuio.ch]
+image::appuio-managed.svg[alt="APPUiO Managed",width=400,link=https://www.appuio.ch/offering/managed/]
 
 Welcome to the https://www.appuio.ch[APPUiO] Managed OpenShift 4 (operated by https://www.vshn.ch[VSHN]) technical documentation site.
 
@@ -15,5 +15,5 @@ TIP: Contributions to the documentation are welcome. Just click on btn:[Edit thi
 
 This documentation is a joint effort of the APPUiO team at https://www.vshn.ch[VSHN] and https://www.puzzle.ch[Puzzle].
 
-image::vshn_logo.png[VSHN,link=https://www.vshn.ch]
-image::puzzle_logo.png[VSHN,link=https://www.puzzle.ch]
+image::vshn.svg[alt="VSHN AG",width=400,link=https://www.vshn.ch]
+image::puzzle.svg[alt="Puzzle ITC GmbH",width=400,link=https://www.puzzle.ch]

@@ -275,10 +275,7 @@ popd
 
 . Compile and push cluster catalog
 +
-[source,bash]
-----
-commodore catalog compile ${CLUSTER_ID} --push -i
-----
+include::partial$install/commodore-dynfacts.adoc[]
 
 === Provision Infrastructure
 

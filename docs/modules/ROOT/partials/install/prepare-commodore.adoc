@@ -39,9 +39,6 @@ popd
 +
 . Compile catalog
 +
-[source,bash]
-----
-commodore catalog compile ${CLUSTER_ID} --push -i
-----
+include::partial$install/commodore-dynfacts.adoc[]
 ====
 endif::[]

@@ -1,0 +1,185 @@
+= Update compute flavors
+
+[abstract]
+--
+Steps to change compute flavors for one or more node groups on https://cloudscale.ch[cloudscale.ch].
+--
+
+== Starting situation
+
+* You already have an OpenShift 4 cluster on cloudscale.ch
+* You have admin-level access to the cluster
+* You want to change compute flavors of one or more node groups
+
+== Prerequisites
+
+The following CLI utilities need to be available locally:
+
+* `oc`
+* `jq`
+* `yq`
+* `terraform`
+* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+
+== Update Cluster Config
+
+. Update cluster config in syn-tenant-repo on a new branch.
++
+[source,bash]
+----
+export CLUSTER_ID=
+export INFRA_FLAVOR=plus-X-Y
+export WORKER_FLAVOR=plus-X-Y
+export STORAGE_FLAVOR=plus-X-Y
+
+git checkout -b update-compute-flavors
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.infra_flavor = \"${INFRA_FLAVOR}\"" \
+  ${CLUSTER_ID}.yml
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.worker_flavor = \"${WORKER_FLAVOR}\"" \
+  ${CLUSTER_ID}.yml
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.additional_worker_groups.storage.flavor = \"${STORAGE_FLAVOR}\"" \
+  ${CLUSTER_ID}.yml
+----
+
+Ensure at least version `3.12` of https://github.com/appuio/terraform-openshift4-cloudscale[terraform-openshift4-cloudscale] is used to make sure the flavors for master and loadbalancer nodes get updated as well.
+
+. Commit and create MR to review
++
+[source,bash]
+----
+git commit -a -m "Update compute flavors on cluster ${CLUSTER_ID}"
+git push -u origin update-compute-flavors
+----
+
+. Compile and push the cluster catalog.
+
+== Prepare Terraform environment
+
+include::partial$commodore-init.adoc[]
+
+. Configure Terraform environment
++
+[source,bash]
+----
+export CLOUDSCALE_API_TOKEN=
+export GITLAB_USER=
+export GITLAB_TOKEN=
+----
+
+include::partial$cloudscale/configure-terraform-secrets.adoc[]
+
+. Setup Terraform
++
+.Prepare Terraform execution environment
+[source,bash]
+----
+# Set terraform image and tag to be used
+tf_image=$(\
+  yq eval ".parameters.openshift4_terraform.images.terraform.image" \
+  dependencies/openshift4-terraform/class/defaults.yml)
+tf_tag=$(\
+  yq eval ".parameters.openshift4_terraform.images.terraform.tag" \
+  dependencies/openshift4-terraform/class/defaults.yml)
+
+# Generate the terraform alias
+base_dir=$(pwd)
+alias terraform='docker run --rm \
+  -e REAL_UID=$(id -u) \
+  --env-file ${base_dir}/terraform.env \
+  -w /tf \
+  -v $(pwd):/tf \
+  --ulimit memlock=-1 \
+  "${tf_image}:${tf_tag}" /tf/terraform.sh'
+
+export GITLAB_REPOSITORY_URL=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
+export GITLAB_REPOSITORY_NAME=${GITLAB_REPOSITORY_URL##*/}
+export GITLAB_CATALOG_PROJECT_ID=$(curl -sH "Authorization: Bearer ${GITLAB_TOKEN}" "https://git.vshn.net/api/v4/projects?simple=true&search=${GITLAB_REPOSITORY_NAME/.git}" | jq -r ".[] | select(.ssh_url_to_repo == \"${GITLAB_REPOSITORY_URL}\") | .id")
+export GITLAB_STATE_URL="https://git.vshn.net/api/v4/projects/${GITLAB_CATALOG_PROJECT_ID}/terraform/state/cluster"
+
+pushd catalog/manifests/openshift4-terraform/
+----
++
+.Initialize Terraform
+[source,bash]
+----
+terraform init \
+  "-backend-config=address=${GITLAB_STATE_URL}" \
+  "-backend-config=lock_address=${GITLAB_STATE_URL}/lock" \
+  "-backend-config=unlock_address=${GITLAB_STATE_URL}/lock" \
+  "-backend-config=username=${GITLAB_USER}" \
+  "-backend-config=password=${GITLAB_TOKEN}" \
+  "-backend-config=lock_method=POST" \
+  "-backend-config=unlock_method=DELETE" \
+  "-backend-config=retry_wait_min=5"
+----
+
+== Update compute flavors
+
+. Verify output of the Terraform plan step (for example, check the output of the Terraform CI/CD pipeline in cluster catalog)
+
+. Make sure you are logged in to the correct cluster
++
+[source,bash]
+----
+oc cluster-info
+----
+
+. Allow terraform to stop nodes
++
+[source,bash]
+----
+sed -i '/^resource "cloudscale_server" "node"/a   allow_stopping_for_update = true' .terraform/modules/cluster/modules/node-group/main.tf
+sed -i '/^resource "cloudscale_server" "lb"/a   allow_stopping_for_update = true' .terraform/modules/cluster.lb/modules/vshn-lbaas-cloudscale/main.tf
+----
+
+=== Update master nodes
+. Update master node flavors one at a time
++
+[source,bash]
+----
+terraform state list module.cluster.module.master.cloudscale_server.node | while read node; do terraform show -json | jq --raw-output --arg node "$node" '.values.root_module.child_modules[].child_modules[].resources[] | select(.address == $node) | .values.name | split(".")[0] ' | while read name; do oc adm drain $name --delete-emptydir-data --ignore-daemonsets --force; terraform apply -target $node -auto-approve; oc adm uncordon $name; oc wait node --all --for condition=ready; done; done
+----
+
+=== Update infra nodes
+. Update infra node flavors one at a time
++
+[source,bash]
+----
+terraform state list module.cluster.module.infra.cloudscale_server.node | while read node; do terraform show -json | jq --raw-output --arg node "$node" '.values.root_module.child_modules[].child_modules[].resources[] | select(.address == $node) | .values.name | split(".")[0] ' | while read name; do oc adm drain $name --delete-emptydir-data --ignore-daemonsets --force; terraform apply -target $node -auto-approve; oc adm uncordon $name; oc wait node --all --for condition=ready; done; done
+----
+
+=== Update worker nodes
+. Update worker node flavors one at a time
++
+[source,bash]
+----
+terraform state list module.cluster.module.worker.cloudscale_server.node | while read node; do terraform show -json | jq --raw-output --arg node "$node" '.values.root_module.child_modules[].child_modules[].resources[] | select(.address == $node) | .values.name | split(".")[0] ' | while read name; do oc adm drain $name --delete-emptydir-data --ignore-daemonsets --force; terraform apply -target $node -auto-approve; oc adm uncordon $name; oc wait node --all --for condition=ready; done; done
+----
+
+=== Update storage nodes
+. Because the storage cluster needs time to recover between the node restarts, the storage cluster health needs to be checked manually between the flavor updates.
++
+[source,bash]
+----
+terraform state list 'module.cluster.module.additional_worker["storage"].cloudscale_server.node' | while read node; do terraform show -json | jq --raw-output --arg node "$node" '.values.root_module.child_modules[].child_modules[].resources[] | select(.address == $node) | .values.name | split(".")[0]'; echo $node; done
+# For each of the storage nodes do:
+oc adm drain $name --delete-emptydir-data --ignore-daemonsets --force
+terraform apply -target $node -auto-approve
+oc adm uncordon $name
+# Now make sure storage cluster is healthy and proceed with the next node
+----
+
+=== Update loadbalancer nodes
+. Update loadbalancer flavors one node at a time
++
+[source,bash]
+----
+terraform apply -target 'module.cluster.module.lb.cloudscale_server.lb[0]' -auto-approve
+# Wait until lb[0] is up and running
+terraform apply -target 'module.cluster.module.lb.cloudscale_server.lb[1]' -auto-approve
+----
+
+=== Cleanup
+. Run the Terraform CI/CD pipeline in cluster catalog, verify plan output and make sure `allow_stopping_for_update = true` gets removed from the Terraform state. 
+. Apply the Terraform plan if there are no unexpected changes.

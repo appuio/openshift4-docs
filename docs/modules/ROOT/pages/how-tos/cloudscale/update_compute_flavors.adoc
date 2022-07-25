@@ -41,8 +41,8 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.worker_flavor =
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.additional_worker_groups.storage.flavor = \"${STORAGE_FLAVOR}\"" \
   ${CLUSTER_ID}.yml
 ----
-
-Ensure at least version `3.12` of https://github.com/appuio/terraform-openshift4-cloudscale[terraform-openshift4-cloudscale] is used to make sure the flavors for master and loadbalancer nodes get updated as well.
++
+IMPORTANT: Ensure at least version `3.12` of https://github.com/appuio/terraform-openshift4-cloudscale[terraform-openshift4-cloudscale] is used to make sure the flavors for master and loadbalancer nodes get updated as well.
 
 . Commit and create MR to review
 +
@@ -66,7 +66,7 @@ export CLOUDSCALE_API_TOKEN=
 export GITLAB_USER=
 export GITLAB_TOKEN=
 ----
-
++
 include::partial$cloudscale/configure-terraform-secrets.adoc[]
 
 . Setup Terraform

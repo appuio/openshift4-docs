@@ -182,23 +182,6 @@ curl -i -H "$AUTH_HEADER" \
   https://api.cloudscale.ch/v1/custom-images/import
 ----
 
-. Wait for custom image import to complete
-+
-[source,bash,subs="attributes+"]
-----
-while [ "$(curl -s -H $AUTH_HEADER https://api.cloudscale.ch/v1/custom-images/import | jq -r '.[].status')" != "success" ]; do
-    echo -n "."
-    sleep 5
-done && echo -e "\nCustom image import successful"
-----
-
-. Delete the image from S3
-+
-[source,bash,subs="attributes+"]
-----
-mc rm "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2"
-----
-
 [#_set_vault_secrets]
 === Set secrets in Vault
 
@@ -361,3 +344,10 @@ include::partial$install/finalize_part1.adoc[]
 include::partial$install/registry-acl-fix.adoc[]
 
 include::partial$install/finalize_part2.adoc[]
++
+. Remove bootstrap bucket
+[source,bash]
+----
+mc rm -r --force "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+----

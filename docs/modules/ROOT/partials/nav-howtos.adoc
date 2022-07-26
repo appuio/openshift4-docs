@@ -18,6 +18,7 @@
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
 ** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd from Backup]
 ** xref:oc4:ROOT:how-tos/cloudscale/enable-loadbalancer-service.adoc[Enable LoadBalancer Services]
+** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
 
 * Exoscale
 ** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Cluster Setup]

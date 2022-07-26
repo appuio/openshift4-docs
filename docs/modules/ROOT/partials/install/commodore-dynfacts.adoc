@@ -1,0 +1,12 @@
+[source,bash,subs="attributes+"]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i \
+  --dynamic-fact kubernetesVersion.major=$(echo "{k8s-minor-version}" | awk -F. '{print $1}') \
+  --dynamic-fact kubernetesVersion.minor=$(echo "{k8s-minor-version}" | awk -F. '{print $2}') \
+  --dynamic-fact openshiftVersion.Major=$(echo "{ocp-minor-version}" | awk -F. '{print $1}') \
+  --dynamic-fact openshiftVersion.Minor=$(echo "{ocp-minor-version}" | awk -F. '{print $2}')
+----
++
+[NOTE]
+This `commodore` call requires Commodore v1.5.0 or newer.
+Please make sure to update your local installation.

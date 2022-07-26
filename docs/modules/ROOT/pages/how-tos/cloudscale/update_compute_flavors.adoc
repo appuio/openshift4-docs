@@ -18,7 +18,7 @@ The following CLI utilities need to be available locally:
 * `oc`
 * `jq`
 * `yq`
-* `terraform`
+* `docker`
 * `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
 
 == Update Cluster Config

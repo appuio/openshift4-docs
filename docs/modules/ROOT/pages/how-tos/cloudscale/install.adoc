@@ -45,7 +45,6 @@ It's currently very specific to VSHN and needs further changes to be more generi
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * `openshift-install` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-mac.tar.gz[macOS])
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `qemu-img`
 * `curl`
 * `gzip`
 
@@ -137,20 +136,19 @@ curl -sH "$AUTH_HEADER" https://api.cloudscale.ch/v1/custom-images | jq -r '.[] 
 If a URL is printed to the output, you can skip the next steps and directly jump to the next section.
 ====
 
-. Fetch and convert the latest Red Hat CoreOS image
+. Fetch the latest Red Hat CoreOS image
 +
 [source,bash,subs="attributes+"]
 ----
-curl -L https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/{ocp-patch-version}/rhcos-{ocp-patch-version}-x86_64-openstack.x86_64.qcow2.gz | gzip -d > rhcos-{ocp-minor-version}.qcow
-qemu-img convert rhcos-{ocp-minor-version}.qcow rhcos-{ocp-minor-version}.raw
+curl -L https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/{ocp-patch-version}/rhcos-{ocp-patch-version}-x86_64-openstack.x86_64.qcow2.gz | gzip -d > rhcos-{ocp-minor-version}.qcow2
 ----
 
 . Upload the image to S3 and make it public
 +
 [source,bash,subs="attributes+"]
 ----
-mc cp rhcos-{ocp-minor-version}.raw "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/"
-mc policy set download "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw"
+mc cp rhcos-{ocp-minor-version}.qcow2 "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/"
+mc policy set download "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2"
 ----
 +
 [TIP]
@@ -159,14 +157,14 @@ You can check that the download policy is applied successfully with
 
 [source,bash,subs="attributes+"]
 ----
-mc policy get "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw"
+mc policy get "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2"
 ----
 
 The output should be
 
 [source,subs="attributes+"]
 ----
-`Access permission for `[…]-bootstrap-ignition/rhcos-{ocp-minor-version}.raw` is `download``
+`Access permission for `[…]-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2` is `download``
 ----
 ====
 
@@ -175,11 +173,11 @@ The output should be
 [source,bash,subs="attributes+"]
 ----
 curl -i -H "$AUTH_HEADER" \
-  -F url="$(mc share download --json "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.raw" | jq -r .url)" \
+  -F url="$(mc share download --json "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2" | jq -r .url)" \
   -F name='RHCOS {ocp-minor-version}' \
   -F zones="${REGION}1" \
   -F slug=rhcos-{ocp-minor-version} \
-  -F source_format=raw \
+  -F source_format=qcow2 \
   -F user_data_handling=pass-through \
   https://api.cloudscale.ch/v1/custom-images/import
 ----
@@ -346,3 +344,10 @@ include::partial$install/finalize_part1.adoc[]
 include::partial$install/registry-acl-fix.adoc[]
 
 include::partial$install/finalize_part2.adoc[]
++
+. Remove bootstrap bucket
+[source,bash]
+----
+mc rm -r --force "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+----

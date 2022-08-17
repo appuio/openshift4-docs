@@ -1,0 +1,242 @@
+= Custom Machine API Provider
+
+== Problem
+
+There is currently a lot toil scaling clusters up and down. 
+As most of our OpenShift clusters run on cloudscale.ch or Exoscale this needs to be done manually through terrafrom.
+
+We need to be able to scale OpenShift Clusters on cloudscale.ch and Exoscale automatically. 
+This not only reduces toil, but improves customer experience and allows us to redce cost by scaling down unused nodes.
+
+=== Goals
+
+* Allow worker autoscaling for OpenShift on cloudscale.ch and Exoscale
+
+=== Non-Goals
+
+* Deploy master nodes
+* Support other cloud providers
+* Support other distributions
+* Automate cluster setup
+
+
+== Proposals
+
+=== Option 1: Machine API
+
+We leverage existing OpenShift concepts and extend the machine API to support cloudscale.ch and Exoscale.  
+
+For natively supported cloud providers Machines and MachineSets that allows the provisioning and in turn auto scaling of nodes directly form the Kubernetes control plane. 
+The system managing this is called the Machine API and consists of multiple generic controllers and a specific provider for the cloud the cluster is running on.
+We can implement such a Machine API provider for cloudscale.ch and Exoscale and reuse the generic controllers.
+
+This way we effectively turn cloudscale.ch and Exoscale into supported cloud providers.
+
+
+==== Design
+
+===== Machine API Provider
+
+For the Machine API to be able to interact with cloudscale.ch or Exoscale resources we will need to implement a custom Machine API provider. 
+
+At its core a Machine API provider watches `Machine` resources and creates, deletes, or updates virtual machines of the cloud provider.
+To do this we can leverage a framework provided by the https://github.com/openshift/machine-api-operator[Machine API Operator].
+We essentially "only" need to implement the https://github.com/openshift/machine-api-operator/blob/master/pkg/controller/machine/actuator.go#L28-L37[Actuator interface].
+When implementing such a provider we can look at existing provider such as the https://github.com/openshift/machine-api-provider-gcp[machine-api-provider-gcp].
+
+I can see two valid approaches to implement such a provider:
+
+* Use the SDK of the cloudprovider to provision VMs
+* Let crossplane handle the VM creations, either by using terrajet or by extending custom providers
+
+Directly using the SDK would result in fewer moving parts and no direct dependency on crossplane, while using crossplane might reduce the amount of custom code and/or results in a unified way to interact with the underlying cloud provider.
+
+===== Machine API Deployment
+
+For officially supported Machine API providers the Machine API Operator handles the deployment of all controllers.
+This includes the provider-machine-controller, machineset-controller, node-link-controller, machine-healthcheck controller, and multiple rbac proxies.
+
+We can't leverage this operator to deploy our own controllers, as the list of supported providers is https://github.com/openshift/machine-api-operator/blob/master/pkg/operator/config.go#L77-L106[hard coded].
+There is no clear reason why this couldn't be handled in a more generic way, but in the foreseeable future we won't be able to deploy our custom provider through the operator.
+
+We will have to write a component that deploys all the controllers that are usually managed by the operator.
+This currently seems to be a single deployment, but we need to invest some effort to "reverse-engineer" the operator setup.
+
+===== Autoscaler
+
+After deploying the custom Machine API provider, autoscaling workers should be as easy as creating a MachineSet and https://docs.openshift.com/container-platform/4.9/machine_management/applying-autoscaling.html[configuring the cluster autoscaler].
+
+
+==== Future Work / Opportunities
+
+With this baseline we should be able to deploy and scale worker nodes.
+For future work we could extend this to deploy infra/master nodes.
+We can then significantly reduce the number of install steps, by deploying nodes through MachineSets on the bootstrap node.
+It doesn't seem possible to extend the existing OpenShift Installer, but with some custom installer we should be able to get a similar feel and quick setup.
+
+
+=== Option 2: Cluster API
+
+An alternative to extending the Machine API is to use the https://cluster-api.sigs.k8s.io/[Cluster API].
+The Cluster API is related to the Machine API but has multiple differences, so that a solution for one doesn't work for the other.
+The key idea of the Cluster API is to have a single management cluster that deploys and manages other clusters on different cloud providers.
+We could implement a machine infrastructure provider and use it to deploy and autoscale VMs.
+
+This option is less clear and most likely needs significantly more work.
+
+==== Design
+
+===== Machine Infrastructure Provider
+
+A machine infrastructure provider is responsible for managing the lifecycle of provider-specific machine instances.
+
+This is essentially equivalent to the Machine API provider of the first option.
+The Machine Infrastructure Provider watches (different) `Machine` resources and creates, deletes, or updates virtual machines of the cloud provider.
+This could again be implement through crossplane or by directly using the SDK, but in any case we will need a specialized controller as the Cluster API resources are incompatible with crossplane resources.
+
+There is a https://cluster-api.sigs.k8s.io/developer/providers/machine-infrastructure.html[contract for a Machine Infrastructure Provider.]
+
+===== Bootstrap Provider
+
+The Machine API provides the bootstrap configuration for new nodes in a well-known secret.
+For the Cluster API this is handled by the Bootstrap Provider.
+The provider writes the necessary bootstrap information to a secret on the management cluster and provides this secret to the Machine Infrastructure Provider.
+
+As far as I can tell it also needs to handle the initial bootstrapping of the cluster, but for our purposes it will only need to fetch the well-known secret from the target cluster and make it available on the manager cluster.
+
+There is a https://cluster-api.sigs.k8s.io/developer/providers/bootstrap.html[contract for a Bootstrap  Provider], we would probably only need to develop a subset of this to be usable for auto scaling.
+
+===== Cluster API Deployment
+
+To deploy the Cluster API we should define a central management cluster. 
+We will have to write a component to deploy it, together with all implemented providers.
+We then need to give it access to the target cluster, probably through a service account.
+
+Alternatively it should be possible to deploy the cluster API on every cluster, effectively being both management and target cluster.
+
+
+===== Autoscaler
+
+After deploying the Cluster API with custom provider, autoscaling workers should be as easy as installing and configuring the https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling.html[cluster autoscaler]
+
+==== Future Work / Opportunities
+
+The Cluster API is rapidly evolving and is starting to see wide-spread adoption.
+If we implement a complete cluster and infrastructure provider for couldscale.ch and Exoscale and a bootstrap provider for OpenShift we could deploy new clusters directly from a central management cluster by just applying some CRDs.
+Further if we had this, deploying a plain Kubernetes cluster would also automatically be possible.
+
+
+==== Concerns
+
+Going with the Cluster API approach, we would need to do a lot of work which isn't directly related to the current goal of enabling autoscaling.
+Fully switching to Cluster API managed OpenShift would need a lot of extra planing and work and in my opinion shouldn't be started implicitly during a autoscaling epic.
+
+
+=== Option 3: Cluster Autoscaler
+
+We also have the option to extend the upstream cluster-autoscaler to understand cloudscale.ch.
+This can even be done without having to fork it by https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler/cloudprovider/externalgrpc[implementing a gRPC service].
+
+This would be a more generic approach, that we could adapt easily for other distributions and Exoscale is already supported by the https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler/cloudprovider/exoscale[upstream cluster-autoscaler].
+The disadvantage over option one is that we would lose additional features such as creating new node groups from OpenShift and other tighter integration into OpenShift.
+
+
+==== Design
+
+===== Cloudscale.ch Cloud Provider
+
+We need to implement the interface for the upstream autoscaler to interact with cloudscale.ch.
+We should most likely implement this as a https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler/cloudprovider/externalgrpc[gRPC service].
+
+The cluster autoscaler assumes that each nodes is part of an instance pool that can be scaled (we can disable this for some nodes, for example for master nodes).
+This isn't really the case for cloudscale.ch. 
+They have the notion of servers and server groups, however server groups are only really used for anti-affinity and can't be used to deploy and scale servers, so we would need to implement this ourselves.
+
+I can see two possible approaches to solve this:
+
+* Treat the worker deployed through terraform as a template. 
+If the autoscaler sees a need for more nodes it will ask our service to scale the instance pool of one of the worker and we will deploy more servers with the same flavor, image, userdata, etc.
+The advantage here would be that we need to change very little in the cluster setup and for existing clusters.
+Nodes deployed by terraform need to be annotated to not be removed and the rest should just work.
+We need to make sure that the cluster-autoscaler never deletes our templating nodes by setting the annotation `"cluster-autoscaler.kubernetes.io/scale-down-disabled": "true"`.
+* Introduce node pools as a CRD.
+This would allow deploying worker nodes completely from Kubernetes and scale down to 0.
+This would be more work and potentially hard to generalize for other distributions/clouds.
+
+===== CSR approval
+
+On OpenShift automatic CSR approval is handled by the https://github.com/openshift/cluster-machine-approver[cluster-machine-approver].
+This however only supports nodes deployed through the machine API. 
+So if we use this approach we would need to implement a similar controller ourselves.
+The https://github.com/postfinance/kubelet-csr-approver[controller by postfinance] might solve this for us.
+
+===== Deployment
+
+For this option we would need to deploy the upstream autoscaler, our cloudscale.ch gRPC provider, and our custom CSR approver.
+The advantage here would be that we need to change very little in the cluster setup and for existing clusters.
+Nodes deployed by terraform need to be annotated to not be removed and the rest should just work.
+
+==== Future Work / Opportunities
+
+If we implement this option we get autoscaling for all OpenShift clusters on cloud providers supported by the cluster autoscaler and make autoscaling possible for any Kubernetes cluster on cloudscale.ch.
+
+Further, if cloudscale.ch implements some kind of instance pools the implementation could be simplified.
+
+
+=== Option 4: Karpenter
+
+https://karpenter.sh/[Karpenter] is a tool developed by AWS to autoscale nodes, not by increasing node group sized, but by starting different nodes that can fulfil the needs of the unscheduled pods and minimize cost by optimizing resource utilization.
+
+It should generally be possible to extend Karpenter to support cloudscale.ch and Exoscale, however there currently doesn't seem to be any other implementations and writing other cloud providers https://karpenter.sh/v0.7.2/faq/#can-i-write-my-own-cloud-provider-for-karpenter[isn't documented].
+
+
+==== Design
+
+===== Provider
+
+The Karpenter code base is generally designed to be extendable, however as we would be (one of the) first other cloud provider implementation we need to expect unexpected difficulties.
+After a quick assessment of the code base we would:
+
+* Implement the https://github.com/aws/karpenter/blob/main/pkg/cloudprovider/types.go[CloudProvider interface].
+We most likely need to consult the AWS reference implementation to understand the details of this interface
+* Import Karpenter as a library and call `Initialize` like they do in https://github.com/aws/karpenter/blob/main/cmd/controller/main.go[their main.go]
+* Find out what the https://karpenter.sh/v0.7.2/faq/#can-i-write-my-own-cloud-provider-for-karpenter[other sections of the code] are.
+
+With that (and deployment and unexpected issues) we should have a standalone Karpenter instance that can create nodes on cloudscale.ch/Exoscale.
+
+===== CSR approval
+
+We most likely will still need a custom solution for CSR approvals.
+
+
+===== Deployment
+
+All deployment guides are very AWS specific, however the deployment doesn't seem very complicated.
+There is a helm chart that we probably need to adapt and we would need to think about the current terraform provisioning and how it would change.
+
+===== Future Work / Opportunities
+
+Booting different nodes with CPU and Memory resources and ratio could be interesting to optimize utilization and for APPUiO Cloud we could potentially change our current fair use policies.
+
+It's unclear if and how we could use this to deploy all nodes as part of the installation.
+
+===== Concerns
+
+Compared to the cluster-autoscaler this is a very young project.
+There isn't much precedence for other cloud provider implementations so I expect subtle issues, incompatible designs, and upstream breaking our implementation with upgrades.
+Also the advantages over the standard cluster-autoscaler are in my opinion minor for our applications.
+
+
+== Decision
+
+We decided to implement a custom Machine API provider for cloudscale.ch and later for Exoscale.
+
+
+== Rational
+
+The Cluster API approach would be an interesting long term goal but we currently don't have the resources to support a project at that scale.
+Karpenter is an interesting project, but doesn't seem to be mature enough at this time and the benefits for us aren't important enough to warrant investing into this approach.
+Extending the upstream cluster autoscaler would be a viable alternative, but we decided to invest into the OpenShift ecosystem.
+
+By implementing the Machine API for our cloud providers we get a tighter integration with OpenShift, a simplified installation process, and the potential to eventually move our providers upstream and make the OpenShift experience on cloudscale.ch and Exoscale as seamless as possible.
+We think these advantages are significant enough to warrant additional engineering efforts over extending the upstream cluster-autoscaler.

@@ -1,3 +1,6 @@
+* Decisions
+** xref:oc4:ROOT:explanations/decisions/machine-api.adoc[Machine API Provider]
+
 * Exoscale
 ** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
 

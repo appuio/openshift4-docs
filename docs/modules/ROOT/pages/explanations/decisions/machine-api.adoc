@@ -44,7 +44,7 @@ To do this we can leverage a framework provided by the https://github.com/opensh
 We essentially "only" need to implement the https://github.com/openshift/machine-api-operator/blob/master/pkg/controller/machine/actuator.go#L28-L37[Actuator interface].
 When implementing such a provider we can look at existing provider such as the https://github.com/openshift/machine-api-provider-gcp[machine-api-provider-gcp].
 
-I can see two valid approaches to implement such a provider:
+We see two valid approaches to implement such a provider:
 
 * Use the SDK of the cloudprovider to provision VMs
 * Let crossplane handle the VM creations, either by using terrajet or by extending custom providers
@@ -102,7 +102,7 @@ The Machine API provides the bootstrap configuration for new nodes in a well-kno
 For the Cluster API this is handled by the Bootstrap Provider.
 The provider writes the necessary bootstrap information to a secret on the management cluster and provides this secret to the Machine Infrastructure Provider.
 
-As far as I can tell it also needs to handle the initial bootstrapping of the cluster, but for our purposes it will only need to fetch the well-known secret from the target cluster and make it available on the manager cluster.
+It also needs to handle the initial bootstrapping of the cluster, but for our purposes it will only need to fetch the well-known secret from the target cluster and make it available on the manager cluster.
 
 There is a https://cluster-api.sigs.k8s.io/developer/providers/bootstrap.html[contract for a Bootstrap  Provider], we would probably only need to develop a subset of this to be usable for auto scaling.
 
@@ -152,7 +152,7 @@ The cluster autoscaler assumes that each nodes is part of an instance pool that 
 This isn't really the case for cloudscale.ch. 
 They have the notion of servers and server groups, however server groups are only really used for anti-affinity and can't be used to deploy and scale servers, so we would need to implement this ourselves.
 
-I can see two possible approaches to solve this:
+We see two possible approaches to solve this:
 
 * Treat the worker deployed through terraform as a template. 
 If the autoscaler sees a need for more nodes it will ask our service to scale the instance pool of one of the worker and we will deploy more servers with the same flavor, image, userdata, etc.
@@ -223,7 +223,7 @@ It's unclear if and how we could use this to deploy all nodes as part of the ins
 ===== Concerns
 
 Compared to the cluster-autoscaler this is a very young project.
-There isn't much precedence for other cloud provider implementations so I expect subtle issues, incompatible designs, and upstream breaking our implementation with upgrades.
+There isn't much precedence for other cloud provider implementations so we expect subtle issues, incompatible designs, and upstream breaking our implementation with upgrades.
 Also the advantages over the standard cluster-autoscaler are in my opinion minor for our applications.
 
 

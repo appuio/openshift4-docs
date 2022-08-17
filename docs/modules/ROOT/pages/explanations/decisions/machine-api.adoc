@@ -3,10 +3,10 @@
 == Problem
 
 There is currently a lot toil scaling clusters up and down. 
-As most of our OpenShift clusters run on cloudscale.ch or Exoscale this needs to be done manually through terrafrom.
+As most of our OpenShift clusters run on cloudscale.ch or Exoscale this needs to be done manually through Terrafrom.
 
 We need to be able to scale OpenShift Clusters on cloudscale.ch and Exoscale automatically. 
-This not only reduces toil, but improves customer experience and allows us to redce cost by scaling down unused nodes.
+This not only reduces toil, but improves customer experience and allows us to reduce cost by scaling down unused nodes.
 
 === Goals
 
@@ -232,11 +232,11 @@ Also the advantages over the standard cluster-autoscaler are in my opinion minor
 We decided to implement a custom Machine API provider for cloudscale.ch and later for Exoscale.
 
 
-== Rational
+== Rationale
 
 The Cluster API approach would be an interesting long term goal but we currently don't have the resources to support a project at that scale.
 Karpenter is an interesting project, but doesn't seem to be mature enough at this time and the benefits for us aren't important enough to warrant investing into this approach.
-Extending the upstream cluster autoscaler would be a viable alternative, but we decided to invest into the OpenShift ecosystem.
+Extending the upstream cluster-autoscaler would be a viable alternative, but we decided to invest into the OpenShift ecosystem.
 
 By implementing the Machine API for our cloud providers we get a tighter integration with OpenShift, a simplified installation process, and the potential to eventually move our providers upstream and make the OpenShift experience on cloudscale.ch and Exoscale as seamless as possible.
 We think these advantages are significant enough to warrant additional engineering efforts over extending the upstream cluster-autoscaler.

@@ -1,0 +1,40 @@
+= Service Level Objectives
+
+APPUiO Managed OpenShift 4 comes with a collection of https://sre.google/sre-book/service-level-objectives/[service level objectives (SLOs)].
+This document defines and explains these SLOs.
+An APPUiO Managed cluster should meet these objectives to provide the expected service level to our customers.
+
+We use the SLOs and https://sre.google/workbook/alerting-on-slos/#6-multiwindow-multi-burn-rate-alerts[Multiwindow, Mulit-Brun-Rate Alerts] as the basis of our on-call alerting.
+
+IMPORTANT: These are internal sevice level *objectives*, not service level *agreements*.
+We don't guarantee to meet these objectives at all times.
+
+== Storage
+
+Persistent storage is a key component of a feature complete Kubernetes cluster.
+Any storage issues directly impacts the service level for users.
+
+=== CSI Operations
+
+****
+*99.5% of all CSI operations complete successfully*
+****
+
+CSI operations are any interactions of the kubelet or controller-manager with the CSI provider.
+This includes creating, deleting, mounting, unmounting, or resizing a persistent volume.
+
+We measure these interactions using the following metrics, reported by the kubelets and the controller-manager:
+
+[source,promql]
+----
+# The number of failed csi operations
+storage_operation_duration_seconds_count{
+  volume_plugin=~"kubernetes.io/csi.+",status="fail-unknown"
+}
+
+# All csi operations
+storage_operation_duration_seconds_count{volume_plugin=~"kubernetes.io/csi.+"}
+----
+
+This SLI approximates the user experience of interacting with PVs and PVCs.
+It doesn't measure any performance issues with the underlying storage.

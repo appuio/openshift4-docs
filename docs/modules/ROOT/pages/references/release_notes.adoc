@@ -8,7 +8,9 @@ More flexible alert routing for User Workload Monitoring::
 
 You can now https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-monitoring-enable-alert-routing-for-user-workload-momitoring[enable alert routing] as well as spin up a https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-monitoring-enable-dedicated-alertmanager-for-user-defined-alerts[dedicated Alertmanager] for User Workload Monitoring.
 
-Additionally, metrics retention can now be defined based on https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-monitoring-confgure-retention-size-for-metrics-storage[disk usage].
+Disk usage base metrics retention::
+
+Metrics retention can now be defined based on https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-monitoring-confgure-retention-size-for-metrics-storage[disk usage].
 
 New subcommand to work with tokens::
 

@@ -26,6 +26,35 @@ Deprecation of `snapshot.storage.k8s.io/v1beta1`::
 Before update a cluster, check for usage of `snapshot.storage.k8s.io/v1beta1`.
 If used, inform the affected users and ask them to update to `snapshot.storage.k8s.io/v1`.
 
+...
+
+From https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.11[the blog post] we learn:
+footnote:[No direct section links available.]
+
+Automatic fail-forward updates for failed operator installations::
+
+In the context of the Operator Lifecycle Manager (OLM), a failed operator update always required manual clean up.
+With OpenShift 4.11, one can enable an option to automatically recover failed updates.
+If enabled and a newer patch version is available, the update gets started even if a previous update failed.
+
+Partial updates::
+
+OpenShift 4.11 allows updating the control plane and individual node groups individually.
+They, however, must be updated all within a time window of 60 days.
+
+Conditional updates::
+
+OpenShift always only listed newer versions available to the cluster.
+Available means, it is safe to update to that version.
+OpenShift 4.11 on the Web Console no explains the risks of a certain update.
+Cluster administrators can then decide to do the update anyway and accept that risk.
+
+Web Console integrated observability::
+
+Red Hat decided to remove the individual observability UIs.
+In OpenShift 4.11 they have removed the UIs for Prometheus and Grafana.
+The metrics and graphs are still available and can now be found within the OpenShift Web Console.
+
 == OpenShift 4.10
 
 The generally available version 4.10.3 got released on 2022-03-10.

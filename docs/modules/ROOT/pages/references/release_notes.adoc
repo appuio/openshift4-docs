@@ -29,7 +29,6 @@ If used, inform the affected users and ask them to update to `snapshot.storage.k
 ...
 
 From https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.11[the blog post] we learn:
-footnote:[No direct section links available.]
 
 Automatic fail-forward updates for failed operator installations::
 

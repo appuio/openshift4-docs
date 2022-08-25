@@ -6,7 +6,7 @@ TIP: This page lists notable changes in OpenShift releases which we find importa
 
 OpenShift version 4.11 is available.
 Find the release notes at the upstream documentation as https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html[OpenShift Container Platform 4.11 release notes].
-The https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.11[What’s New in Red Hat OpenShift 4.11] blog post can also be a valuable resource.
+The https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.11[What’s New in Red Hat OpenShift 4.11] blog post is also a valuable resource.
 
 More flexible alert routing for User Workload Monitoring::
 

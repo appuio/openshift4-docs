@@ -44,7 +44,7 @@ They, however, must be updated all within a time window of 60 days.
 Conditional updates::
 
 OpenShift always only listed newer versions available to the cluster.
-Available means, it is safe to update to that version.
+Available means, it's safe to update to that version.
 OpenShift 4.11 on the Web Console no explains the risks of a certain update.
 Cluster administrators can then decide to do the update anyway and accept that risk.
 

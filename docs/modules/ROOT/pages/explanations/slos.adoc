@@ -9,6 +9,60 @@ We use the SLOs and https://sre.google/workbook/alerting-on-slos/#6-multiwindow-
 IMPORTANT: These are internal sevice level *objectives*, not service level *agreements*.
 We don't guarantee to meet these objectives at all times.
 
+== Ingress
+
+Working cluster ingress is a core requirement for a Kubernetes cluster.
+If the workloads running on the cluster aren't accessible, it might as well be down from a user perspective.
+
+=== Canary
+
+****
+*99.75% of all HTTP probes to a canary application succeed*
+****
+
+Probes are sent every minute from the ingress operator, inside the cluster, to the external address of the canary target.
+
+This means it will send a request to the public floating IP of the load balancers, which will forward the request to one of the ingress controller running on the infrastructure nodes, which will then forward the request to one of the canary targets, which runs on every worker and infrastructure node.
+
+[ditaa]
+....
+                           +---------------------------------+
+                           | infra 1                         |
+                           |  /-------\         /-------\    |
+                    /-------->|       |         |       |    |
+                  /-|-------->|Ingress|---+---->|Canary |    |
+                  | |      |  |       |   |     |       |    |
+   +---------+    | |      |  \-------/   |     \-------/    |
+   | lb 1    |    | |      |              |                  |
+   |         |    | |      +--------------|------------------+
+   |         |    | |                     |
+/->|         | ---+ |      +--------------|------------------+
+|  |         |    | |      | infra 2      |                  |
+|  |         |    | |      |  /-------\   |     /-------\    |
+|  +---------+    \-|-------->|       |   |     |       |    |
+|                   +-------->|Ingress|---+---->|Canary |    |
+|                   |      |  |       |   |     |       |    |
+|  +---------+      |      |  \-------/   |     \-------/    |
+|  | lb 2    |      |      |              |                  |
+|  |         |      |      +--------------|------------------+
+|  |         |      |                     |
++->|         |------/      +------------+ | +----------------+
+\-------------------\      | master     | | | worker         |
+   |         |      |      | /--------\ | | |   /-------\    |
+   +---------+      |      | |        | | | |   |       |    |
+                    \---=----|Operator| | \---->|Canary |    |
+                           | |        | |   |   |       |    |
+                           | \--------/ |   |   \-------/    |
+                           |            |   |                |
+                           +------------+   +----------------+
+
+....
+
+This setup should approximate the cluster ingress uptime.
+
+NOTE: As a side effect it also measures out-bound connection issues, which shouldn't be a part of an ingress SLO.
+However, the alternative of using an external probe source also measures issues that shouldn't be part of the SLO, so we chose the in-cluster probe source for simplicity.
+
 == Storage
 
 Persistent storage is a key component of a feature complete Kubernetes cluster.

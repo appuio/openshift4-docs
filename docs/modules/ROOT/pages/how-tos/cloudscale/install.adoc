@@ -39,18 +39,12 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 == Prerequisites
 
-* `docker`
+include::partial$install/prerequisites.adoc[]
 * `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
-* `jq`
-* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
-* `openshift-install` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-mac.tar.gz[macOS])
-* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `curl`
-* `gzip`
 
 [WARNING]
 ====
-Make sure the version of openshift-install and the rhcos image is the same, otherwise ignition will fail.
+Make sure the minor version of `openshift-install` and the RHCOS image are the same as ignition will fail otherwise.
 ====
 
 == Cluster Installation

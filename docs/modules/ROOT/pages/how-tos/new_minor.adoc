@@ -44,6 +44,9 @@ Things to look for:
 +
 One component which definitely needs to be updated for a new minor version is https://github.com/appuio/component-openshift4-monitoring[`openshift4-monitoring`].
 Additionally, verify that alert rules defined by other components are still picked up by cluster monitoring.
+* Usage of deprecated or removed Kubernetes features
++
+For example, we needed to update component `resource-locker` to explicitly create ServiceAccount token secrets for OpenShift 4.11 / Kubernetes 1.24.
 
 . Conduct install on all supported cloud providers
 +

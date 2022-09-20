@@ -1,7 +1,7 @@
 = Installation on Exoscale
-:ocp-minor-version: 4.10
-:k8s-minor-version: 1.23
-:ocp-patch-version: {ocp-minor-version}.3
+:ocp-minor-version: 4.11
+:k8s-minor-version: 1.24
+:ocp-patch-version: {ocp-minor-version}.2
 :provider: exoscale
 :kubectl_extra_args:
 
@@ -32,20 +32,14 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 == Prerequisites
 
-* An unrestricted Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
-* `docker`
-* `exo` >= v1.37.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
-* `jq`
-* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
+include::partial$install/prerequisites.adoc[]
 * `md5sum`
 * `virt-edit`
 * `cpio`
-* `openshift-install` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-mac.tar.gz[macOS])
-* Clone of the https://github.com/appuio/terraform-openshift4-exoscale[terraform-openshift4-exoscale] repository
+//* Clone of the https://github.com/appuio/terraform-openshift4-exoscale[terraform-openshift4-exoscale] repository
+* `exo` >= v1.37.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* An unrestricted Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
 * https://community.exoscale.com/documentation/dns/quick-start/#subscribing-to-the-service[DNS subscription] activated in the Exoscale organisation
-* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `curl`
-* `gzip`
 
 [WARNING]
 ====

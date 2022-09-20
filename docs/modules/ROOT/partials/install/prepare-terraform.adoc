@@ -79,6 +79,15 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.rhcos_template 
 ----
 
 endif::[]
+ifeval::["{provider}" == "cloudscale"]
+. Configure cloudscale.ch-specific Terraform variables
++
+[source,bash,subs="attributes+"]
+----
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.image_slug = \"custom:rhcos-{ocp-minor-version}\"" \
+  ${CLUSTER_ID}.yml
+----
+endif::[]
 
 [TIP]
 ====

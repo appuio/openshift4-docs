@@ -5,6 +5,7 @@ TIP: This page lists notable changes in OpenShift releases which we find importa
 == OpenShift 4.11
 
 OpenShift version 4.11 is available since 2022-08-10.
+This version is based on Kubernetes 1.24.
 Find the release notes at the upstream documentation as https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html[OpenShift Container Platform 4.11 release notes].
 The https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.11[What’s New in Red Hat OpenShift 4.11] blog post is also a valuable resource.
 
@@ -20,6 +21,16 @@ New subcommand to work with tokens::
 
 `oc create token` replaces https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-oc-commands-flags-tokens-deprecated[several existing commands].
 Check your aliases, scripts and other convenience tools you use.
++
+[IMPORTANT]
+====
+The `oc create token` command generates a token with a limited lifetime.
+Use command line argument `--duration` to adjust the token lifetime to suit your purposes.
+Please be aware that the API server may return a token with a shorter or longer lifetime than you requested.
+
+If you need a token which doesn't expire, we recommend that you manually create a https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#manually-create-a-service-account-api-token[ServiceAccount API token secret].
+After creating a secret as described, you can extract the token with `oc get secret <my-token-secret> -ogo-template='{{.data.token|base64decode}}'`.
+====
 
 Deprecation of `snapshot.storage.k8s.io/v1beta1`::
 

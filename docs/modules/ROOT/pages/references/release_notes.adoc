@@ -37,6 +37,10 @@ Deprecation of `snapshot.storage.k8s.io/v1beta1`::
 Before update a cluster, check for usage of `snapshot.storage.k8s.io/v1beta1`.
 If used, inform the affected users and ask them to update to `snapshot.storage.k8s.io/v1`.
 
+Support for configuring maximum number of connections for Ingress Controller::
+
+You can now set the maximum number of simultaneous connections that can be established per HAProxy process in the Ingress Controller to any value between 2000 and 2,000,000.
+
 ...
 
 From https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.11[the blog post] we learn:

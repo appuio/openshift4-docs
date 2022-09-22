@@ -37,6 +37,18 @@ Deprecation of `snapshot.storage.k8s.io/v1beta1`::
 Before update a cluster, check for usage of `snapshot.storage.k8s.io/v1beta1`.
 If used, inform the affected users and ask them to update to `snapshot.storage.k8s.io/v1`.
 
+Pod Security Admission is now enabled::
+
+https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] now runs globally with restricted audit logging and API warnings. 
+This means while everything should still run as it did before, if users rely on security contexts being set by OpenShift's SCCs they'll most likely encounter warnings like the following:
++
+[source,console]
+----
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "nginx" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "nginx" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "nginx" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "nginx" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+----
++
+Users will need to explicitly set security contexts in their manifests to avoid these warnings.
+
 Support for configuring maximum number of connections for Ingress Controller::
 
 You can now set the maximum number of simultaneous connections that can be established per HAProxy process in the Ingress Controller to any value between 2000 and 2,000,000.

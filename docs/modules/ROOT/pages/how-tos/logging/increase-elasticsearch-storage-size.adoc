@@ -107,7 +107,7 @@ kubectl \
 kubectl \
   --as=cluster-admin \
   -n openshift-logging \
-  patch daemonset fluentd \
+  patch daemonset collector \
   -p '{"spec":{"template":{"spec":{"nodeSelector":{"logging-infra-fluentd": "false"}}}}}'
 ----
 +
@@ -143,7 +143,7 @@ kubectl \
 kubectl \
   --as=cluster-admin \
   -n openshift-logging \
-  exec "${es_pods[1]}" \
+  exec "${es_pods}" \
   -c elasticsearch \
   -- es_util --query="_cluster/settings" -XPUT -d '{ "persistent": { "cluster.routing.allocation.enable" : "primaries" } }'
 ----

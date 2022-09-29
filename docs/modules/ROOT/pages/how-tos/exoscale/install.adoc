@@ -37,7 +37,7 @@ include::partial$install/prerequisites.adoc[]
 * `virt-edit`
 * `cpio`
 //* Clone of the https://github.com/appuio/terraform-openshift4-exoscale[terraform-openshift4-exoscale] repository
-* `exo` >= v1.37.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `exo` >= v1.48.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * An unrestricted Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
 * https://community.exoscale.com/documentation/dns/quick-start/#subscribing-to-the-service[DNS subscription] activated in the Exoscale organisation
 
@@ -59,30 +59,14 @@ include::partial$install/vshn-input.adoc[]
 [#_create_iam_keys]
 === Create restricted Exoscale IAM keys for the LBs and object storage
 
-. Create restricted API keys
+. Create restricted API key for Exoscale object storage
 +
-.Restricted API key for object storage
 [source,bash]
 ----
-export EXOSCALE_S3_SECRETKEY=$(exo iam apikey create "${CLUSTER_ID}_object_storage" \
-  -o 'sos/*' -O json | jq -r '.secret')
-export EXOSCALE_S3_ACCESSKEY=$(exo iam apikey show "${CLUSTER_ID}_object_storage" \
-  -O json | jq -r '.key')
-----
-+
-.Restricted API key for the LBs
-[source,bash]
-----
-export TF_VAR_lb_exoscale_api_secret=$(exo iam apikey create "${CLUSTER_ID}_floaty" \
-  -o 'compute/addIpToNic' \
-  -o 'compute/listNics' \
-  -o 'compute/listResourceDetails' \
-  -o 'compute/listVirtualMachines' \
-  -o 'compute/queryAsyncJobResult' \
-  -o 'compute/removeIpFromNic' \
-  -O json | jq -r '.secret')
-export TF_VAR_lb_exoscale_api_key=$(exo iam apikey show "${CLUSTER_ID}_floaty" \
-  -O json | jq -r '.key')
+exoscale_s3_credentials=$(exo iam access-key create "${CLUSTER_ID}_object_storage" \
+  --tag sos -O json)
+export EXOSCALE_S3_ACCESSKEY=$(echo "${exoscale_s3_credentials}" | jq -r '.api_key')
+export EXOSCALE_S3_SECRETKEY=$(echo "${exoscale_s3_credentials}" | jq -r '.api_secret')
 ----
 
 [#_bootstrap_bucket]
@@ -139,11 +123,6 @@ include::partial$connect-to-vault.adoc[]
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/storage_iam \
   s3_access_key=${EXOSCALE_S3_ACCESSKEY} \
   s3_secret_key=${EXOSCALE_S3_SECRETKEY}
-
-# Put LB API key in Vault
-vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty \
-  iam_key=${TF_VAR_lb_exoscale_api_key} \
-  iam_secret=${TF_VAR_lb_exoscale_api_secret}
 
 # Generate an HTTP secret for the registry
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \

@@ -56,7 +56,9 @@ EOF
 terraform apply
 ----
 
+ifeval::["{provider}" == "cloudscale"]
 . Add the DNS records for etcd shown in output variable `dns_entries` from the previous step to the cluster's parent zone
+endif::[]
 
 . Wait for bootstrap to complete
 +

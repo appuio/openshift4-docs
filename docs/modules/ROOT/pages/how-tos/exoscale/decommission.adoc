@@ -44,9 +44,6 @@ export GITLAB_USER=<gitlab-user-name>
 # For example: https://api.syn.vshn.net
 # IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
 export COMMODORE_API_URL=<lieutenant-api-endpoint>
-
-export TF_VAR_lb_exoscale_api_key=irrelevant
-export TF_VAR_lb_exoscale_api_secret=irrelevant
 ----
 
 . Compile cluster catalog to get input variables
@@ -63,8 +60,6 @@ commodore catalog compile ${CLUSTER_ID}
 cat <<EOF > catalog/manifests/openshift4-terraform/.env
 EXOSCALE_API_KEY
 EXOSCALE_API_SECRET
-TF_VAR_lb_exoscale_api_key
-TF_VAR_lb_exoscale_api_secret
 EOF
 ----
 

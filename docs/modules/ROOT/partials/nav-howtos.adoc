@@ -39,6 +39,7 @@
 ** xref:oc4:ROOT:how-tos/gcp/hive.adoc[Hive]
 
 * Monitoring
+** xref:oc4:ROOT:how-tos/monitoring/global-monitoring.adoc[Global Monitoring insights.appuio.net]
 ** xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[Remove alert rules]
 ** xref:oc4:ROOT:how-tos/monitoring/handle_alerts.adoc[Investigate and handle alerts]
 

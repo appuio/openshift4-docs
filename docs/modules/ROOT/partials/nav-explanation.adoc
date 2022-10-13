@@ -14,3 +14,4 @@
 * xref:oc4:ROOT:explanations/sudo.adoc[Sudo]
 * xref:oc4:ROOT:explanations/etcd_encryption.adoc[etcd Encryption]
 * xref:oc4:ROOT:explanations/disaster_recovery.adoc[Disaster Recovery Limitations]
+* xref:oc4:ROOT:explanations/pod_security.adoc[Pod Security]

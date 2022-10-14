@@ -8,7 +8,7 @@ This page is VSHN specific.
 VSHN hosts a global monitoring instance for all APPUiO managed OCP4 clusters.
 This instance is available at https://insights.appuio.net/.
 
-The global monitoting is currently exclusively used for SLO monitoring.
+The global monitoring is currently exclusively used for SLO monitoring.
 
 An APPUiO managed OCP4 cluster with VSHN defaults will start sending data to this instance as soon as the `openshift4-slos` component is installed.
 

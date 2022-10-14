@@ -1,0 +1,26 @@
+= Global SLO Monitoring insights.appuio.net
+
+[NOTE]
+This page is VSHN specific.
+
+== Overview
+
+VSHN hosts a global monitoring instance for all APPUiO managed OCP4 clusters.
+This instance is available at https://insights.appuio.net/.
+
+The global monitoring is currently exclusively used for SLO monitoring.
+
+An APPUiO managed OCP4 cluster with VSHN defaults will start sending data to this instance as soon as the `openshift4-slos` component is installed.
+
+== Dashboards
+
+There is an overview dashboard available at https://insights.appuio.net/d/high-level-sloth-slos/high-level-sloth-slos and a detailed, per cluster dashboard available at https://insights.appuio.net/d/slo-detail/detailed-sloth-slos.
+
+=== Changes to the dashboards
+
+Users with the `Openshiftroot` role are able to change the dashboards.
+Please notify [Team Tarazed](https://vshn.chat/channel/tarazed) if you want to make changes to the dashboards in the Tarazed folder.
+
+== Alerts
+
+There is currently no alerting configured.

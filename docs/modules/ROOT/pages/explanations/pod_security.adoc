@@ -1,12 +1,12 @@
 = Pod Security
 
-This page should give an overview over Security Contexts, Security Context Constraints, and Pod Security Admission and how they interact.
+This page gives an overview over Security Contexts, Security Context Constraints, and Pod Security Admission and how they interact.
 
 
 == Security Contexts
 
 https://kubernetes.io/docs/tasks/configure-pod-container/security-context/[A Security Context] is part of a Pod specification and defines privilege and access control settings for the Pod or Container.
-Security context settings include setting the user ID, give it certain Linux capability, configuring SELinux, or much more.
+Security context settings include setting the user ID, give it certain Linux capability, configuring SELinux, and much more.
 
 This is an example of a restictive security context, that would adhere to the _Restricted_ Pod Security Standard (See section on Pod Security Admission).
 
@@ -45,7 +45,8 @@ If a service account or user has access to more than one Security Context Constr
 If priorities are equal, the most restrictive SCC will apply.
 
 SCCs are implemented as both a validating and mutating webhook.
-That means when a Pod is created, it will first check if no configuration violates the relevant SCC and if it doesn't it will default all not provided configuration to the limit of the SCC.
+Therefore, when a Pod is created, the controller will first verify that no configuration violates the selected SCC.
+Then, if the validation succeeds, all omitted configurations will be set to the maximum allowed configuration according to the SCC.
 
 The following example SCC is a subset of the default `non-root` SCC.
 This SCC is fairly restricted, but allows users to run with any non-root UID.
@@ -81,9 +82,9 @@ NOTE: With OpenShift 4.11 we do no longer recommend that you rely on the mutatin
 
 == Pod Security Admission
 
-Kuberenetes 1.24 removed Pod Security Policies, the Kuberenetes native SCC equivalent, and enabled the new https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] by default.
+Kubernetes 1.24 removed Pod Security Policies, the Kubernetes native SCC equivalent, and enabled the new https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] by default.
 https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-auth-pod-security-admission[OpenShift 4.11 also introduces PSA] globally with restricted audit logging and API warnings.
-However, it doesn't replace the existing Security Context Constraints, but runs along side it.
+However, OpenShift doesn't replace the Security Context Constraints with Pod Security Admission, but instead runs both mechanisms in parallel.
 
 Pod Security Admission was designed to meet the most common security needs out of the box, while being simple to understand and adopt.
 
@@ -104,10 +105,11 @@ Allows the default (minimally specified) Pod configuration.
 |Heavily restricted policy, following current Pod hardening best practices.
 |===
 
-Under Pod Security Admission we understand the built-in Pod Security admission controller to enforce the Pod Security Standards.
-Pod security restrictions are applied at the namespace level when pods are created, and will deny the creation of Pods, Deployments, etc if they don't adhere to the configured Pod Security Standard.
+Under Pod Security Admission, the built-in Pod Security admission controller enforces the configured Pod Security Standards.
+Pod security restrictions are managed at the namespace level, and are processed when pods are created.
+The PSA admission controller will deny the creation of workloads (Pods, Deployments, etc.) if they don't adhere to the configured Pod Security Standard of the namespace.
 
-You can configure how PSA will apply for a namespace, by setting specific labels on the namespace.
+You can configure how PSA will apply for a namespace by setting specific labels on the namespace.
 These labels define which of the predefined Pod Security Standard levels are used for a namespace. 
 The selected label defines what action the control plane takes if a potential violation is detected:
 
@@ -132,20 +134,22 @@ Check out https://kubernetes.io/docs/tasks/configure-pod-container/enforce-stand
 .PSA and SCCs
 ****
 
-Pod Security Policy and Security Context Constraints run along side each other and OpenShift makes sure that PSA and SCCs are kept in sync.
+On OpenShift, Pod Security Admission and Security Context Constraints run in parallel and OpenShift makes sure that PSA and SCCs are kept in sync.
 
-It does this by looking at the highest privileged SCC available in a namespace and sets the PSA labels accordingly.
+The configuration for a namespace is kept in sync by setting the PSA labels according to the highest privileged SCC which is can be used in the namespace.
 This is handled by the https://github.com/openshift/cluster-policy-controller/tree/master/pkg/psalabelsyncer[Cluster Policy Controller].
 
-So PSA is never more restrictive than SCCs, if a pod is allowed by an SCC it will also be allowed by PSA.
+Since this results in a PSA configuration which is never more restrictive than SCCs, a pod is allowed by an SCC will also be allowed by PSA.
+`
 However PSA will validate workloads before the SCC mutating webhook is applied.
-This means, if you rely on the defaulting feature of SCCs and leave Security Contexts empty you will see warnings during deployment.
+Therefore, if you leave Security Contexts for your workloads empty and rely on the SCC controller to inject sensible defaults, you will see warnings during deployment.
 
 [source]
 ----
 Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != fa..
 ----
 
-This won't stop the Pod from running, as PSA is only set to warn by default, but it's unclear if this will change in the future.
-The only way to get rid of these warnings is to explicitly set Security Contexts in manifests.
+On OpenShift 4.11, these warnings won't stop the Pod from running, as PSA is set to warn by default.
+However, it's not documented whether this configuration will change in future Openshift 4 releases.
+To silence these warnings it's required to explicitly set appropriate Security Contexts in workload manifests.
 ****

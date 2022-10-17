@@ -143,6 +143,6 @@ parameters:
 You _should_ always explicitly set Security Contexts and request the minimum permission necessary to run the application.
 
 OpenShift Security Context Constraints come with a modifying webhook that will provide defaults for Security Contexts.
-However with OpenShift 4.11 relying on these defaults clashes with the Pod Security Admission and will result in warnings.
-Please consult the explanation on xref:oc4:ROOT:explanations/pod_security.adoc[Pod Security] for more insight how SCCs and PSA interact.
+However, on OpenShift 4.11, relying on these defaults clashes with the Pod Security Admission and will result in warnings.
+Please consult the explanation on xref:oc4:ROOT:explanations/pod_security.adoc[Pod Security] for more details on how SCCs and PSA interact.
 

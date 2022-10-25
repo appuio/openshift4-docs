@@ -67,7 +67,7 @@ However, the alternative of using an external probe source also measures issues 
 == Kubernetes API
 
 The Kubernetes API is the main way users interact with the cluster itself.
-Without it users can't change configuration or run new workloads and existing deployments will quickly degrade.
+If the API isn't available, users can't change configuration or run new workloads and existing deployments will quickly degrade.
 
 A misbehaving Kubernetes API directly impacts the service level.
 
@@ -89,7 +89,7 @@ apiserver_request_total{code=~"(5..|429)"}
 apiserver_request_total
 ----
 
-NOTE: We explicitly only look for 500 errors, which indicate a server side error, or at error 429, which indicate that our API server is overloaded.
+NOTE: We only look for HTTP 5xx errors, which indicate a server side error, and HTTP error 429, which indicates that the API server is overloaded.
 
 
 === Uptime
@@ -100,7 +100,7 @@ NOTE: We explicitly only look for 500 errors, which indicate a server side error
 
 Probes are sent every 10 seconds from a blackbox exporter inside the cluster to the readiness endpoint of the Kubernetes API server.
 
-This SLI approximates a user's ability to reach at least one API server instance and the API servers uptime.
+This SLI approximates a user's ability to reach at least one API server instance and the API server's uptime.
 
 NOTE: Complete outages measured by this SLI can't be measured by the error rate SLI.
 
@@ -154,7 +154,7 @@ It doesn't measure any performance issues with the underlying storage.
 == Cluster Network
 
 Reliable cluster networking is essential for nearly every workload.
-Without it users can't reliably access their workload and even moderate packet loss can negatively impact deployments such as databases.
+Without it, users can't reliably access their workload and even moderate packet loss can negatively impact deployments such as databases.
 
 === Packet Loss
 

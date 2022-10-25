@@ -223,8 +223,12 @@ module "cluster" {
   additional_worker_groups = {}
 }
 EOF
+terraform apply -target module.cluster.exoscale_security_group.all_machines
+terraform apply -target module.cluster.module.lb.exoscale_security_group.load_balancers
 terraform apply
 ----
++
+NOTE: We create the LB and all machines security group with `terraform apply -target` to avoid a bug in the Exoscale Terraform provider when trying to create security group rules which reference security groups which aren't created yet.
 
 . Set Exoscale Elastic IP reverse DNS
 +

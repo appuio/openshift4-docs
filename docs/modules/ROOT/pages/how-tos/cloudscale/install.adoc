@@ -1,4 +1,4 @@
-= Installation on cloudscale.ch
+= Install OpenShift 4 on cloudscale.ch
 :ocp-minor-version: 4.11
 :k8s-minor-version: 1.24
 :ocp-patch-version: {ocp-minor-version}.2

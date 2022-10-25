@@ -6,7 +6,7 @@ An APPUiO Managed cluster should meet these objectives to provide the expected s
 
 We use the SLOs and https://sre.google/workbook/alerting-on-slos/#6-multiwindow-multi-burn-rate-alerts[Multiwindow, Mulit-Brun-Rate Alerts] as the basis of our on-call alerting.
 
-IMPORTANT: These are internal sevice level *objectives*, not service level *agreements*.
+IMPORTANT: These are internal service level *objectives*, not service level *agreements*.
 We don't guarantee to meet these objectives at all times.
 
 == Ingress
@@ -63,6 +63,63 @@ This setup should approximate the cluster ingress uptime.
 NOTE: As a side effect it also measures out-bound connection issues, which shouldn't be a part of an ingress SLO.
 However, the alternative of using an external probe source also measures issues that shouldn't be part of the SLO, so we chose the in-cluster probe source for simplicity.
 
+
+== Kubernetes API
+
+The Kubernetes API is the main way users interact with the cluster itself.
+If the API isn't available, users can't change configuration or run new workloads and existing deployments will quickly degrade.
+
+A misbehaving Kubernetes API directly impacts the service level.
+
+
+=== Request Error Rate
+
+****
+*99.9% of all requests to the Kubernetes API server succeed or are invalid*
+****
+
+This is measured directly at the API server through the following metrics.
+
+[source,promql]
+----
+# The number of failed valid API requests
+apiserver_request_total{code=~"(5..|429)"}
+
+# All API requests
+apiserver_request_total
+----
+
+NOTE: We only look for HTTP 5xx errors, which indicate a server side error, and HTTP error 429, which indicates that the API server is overloaded.
+
+
+=== Uptime
+
+****
+*99.9% of all HTTP probes to the Kubernetes API server succeed*
+****
+
+Probes are sent every 10 seconds from a blackbox exporter inside the cluster to the readiness endpoint of the Kubernetes API server.
+
+This SLI approximates a user's ability to reach at least one API server instance and the API server's uptime.
+
+NOTE: Complete outages measured by this SLI can't be measured by the error rate SLI.
+
+== Workload Schedulability
+
+We define _Workload Schedulability_ as the ability to start and successfully run new workloads on the cluster.
+This ability is essential and directly impacts the service level.
+
+=== Canary
+
+****
+*99.75% of canary pods start successfully*
+****
+
+A controller starts a known good canary pod every minute and checks if it successfully started after 3 minutes.
+
+This SLI acts as a proxy to measure if users are able to start new workloads and should reveal issues with the scheduler, cluster capacity, and more.
+
+
 == Storage
 
 Persistent storage is a key component of a feature complete Kubernetes cluster.
@@ -92,3 +149,21 @@ storage_operation_duration_seconds_count{volume_plugin=~"kubernetes.io/csi.+"}
 
 This SLI approximates the user experience of interacting with PVs and PVCs.
 It doesn't measure any performance issues with the underlying storage.
+
+
+== Cluster Network
+
+Reliable cluster networking is essential for nearly every workload.
+Without it, users can't reliably access their workload and even moderate packet loss can negatively impact deployments such as databases.
+
+=== Packet Loss
+
+****
+*99.5% of all ICMP pings between canary pods succeed*
+****
+
+A network canary daemonset starts a canary pod on every node.
+These canaries continuously ping every other pod in the daemonset and report any packet loss.
+Pings are set every second and the metrics are scraped directly from the canary pods.
+
+This SLI approximates the overall packet loss of the cluster network.

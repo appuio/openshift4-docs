@@ -235,8 +235,8 @@ terraform state pull > state.json
 ingress_id=$(jq -r '.resources[] | select(.type == "exoscale_elastic_ip" and .name == "ingress") | .instances[0].attributes.id' state.json)
 api_id=$(jq -r '.resources[] | select(.type == "exoscale_elastic_ip" and .name == "api") | .instances[0].attributes.id' state.json)
 # Use auto-generated Exoscale API V2 OpenAPI command to set EIP reverse DNS
-echo "{\"domain-name\": \"ingress.${CLUSTER_DOMAIN}.\"}" | exo x update-reverse-dns-elastic-ip "$ingress_id"
-echo "{\"domain-name\": \"api.${CLUSTER_DOMAIN}.\"}" | exo x update-reverse-dns-elastic-ip "$api_id"
+echo "{\"domain-name\": \"ingress.${CLUSTER_DOMAIN}.\"}" | exo x --zone "${EXOSCALE_ZONE}" update-reverse-dns-elastic-ip "$ingress_id"
+echo "{\"domain-name\": \"api.${CLUSTER_DOMAIN}.\"}" | exo x --zone "${EXOSCALE_ZONE}" update-reverse-dns-elastic-ip "$api_id"
 
 rm state.json
 ----

@@ -5,7 +5,7 @@
 * Executables used in this guide:
 ** `kubectl`
 ** `jq`
-** `yq` (version 4 or higher)
+** `yq` https://mikefarah.gitbook.io/yq[yq] (version 4 or higher)
 ** `restic`
 * API access to the target cluster
 
@@ -70,15 +70,15 @@ vault login -method=oidc
 +
 [source,console]
 ----
-export RESTIC_REPOSITORY=s3:$(yq -o=json '.' catalog/manifests/cluster-backup/10_object.yaml | jq -r 'select(.kind == "Schedule")| .spec.backend.s3 | .endpoint + "/" + .bucket')
+export RESTIC_REPOSITORY=s3:$(yq -o=json 'select(.kind == "Schedule")| .spec.backend.s3 | .endpoint + "/" + .bucket' catalog/manifests/cluster-backup/10_object.yaml)
 
-PASSWORD_KEY="$(yq -o=json '.' catalog/manifests/cluster-backup/10_object.yaml | jq 'select(.kind == "Secret" and .metadata.name == "objects-backup-password") | .stringData.password' | cut -d: -f2)"
+PASSWORD_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-password") | .stringData.password' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
 export RESTIC_PASSWORD=$(vault kv get -format json "clusters/kv/${PASSWORD_KEY%/*}" | jq -r ".data.data.${PASSWORD_KEY##*/}")
 
-ID_KEY="$(yq -o=json '.' catalog/manifests/cluster-backup/10_object.yaml | jq 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.username' | cut -d: -f2)"
+ID_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.username' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
 export AWS_ACCESS_KEY_ID=$(vault kv get -format json "clusters/kv/${ID_KEY%/*}" | jq -r ".data.data.${ID_KEY##*/}")
 
-SECRET_KEY="$(yq -o=json '.' catalog/manifests/cluster-backup/10_object.yaml | jq 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.password' | cut -d: -f2)"
+SECRET_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.password' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
 export AWS_SECRET_ACCESS_KEY=$(vault kv get -format json "clusters/kv/${SECRET_KEY%/*}" | jq -r ".data.data.${SECRET_KEY##*/}")
 ----
 

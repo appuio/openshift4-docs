@@ -5,7 +5,7 @@
 * Executables used in this guide:
 ** `kubectl`
 ** `jq`
-** `yq`
+** `yq` (version 4 or higher)
 ** `restic`
 * API access to the target cluster
 

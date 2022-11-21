@@ -48,6 +48,10 @@ Additionally, verify that alert rules defined by other components are still pick
 +
 For example, we needed to update component `resource-locker` to explicitly create ServiceAccount token secrets for OpenShift 4.11 / Kubernetes 1.24.
 
+. Upgrade to a supported OpenShift Cluster Logging version on the upgraded cluster
++
+TIP: Usually you'll want to upgrade to the latest OpenShift Cluster Logging version.
+
 . Conduct install on all supported cloud providers
 +
 Use the installation documentation to install a new cluster.

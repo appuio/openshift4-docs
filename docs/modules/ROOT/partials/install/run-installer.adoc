@@ -20,13 +20,10 @@ yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
 
 . Copy pre-rendered Cilium manifests
 +
-[%collapsible]
-====
 [source,bash]
 ----
 cp catalog/manifests/cilium/olm/* target/manifests/
 ----
-====
 
 . Extract the cluster domain from the generated manifests
 +

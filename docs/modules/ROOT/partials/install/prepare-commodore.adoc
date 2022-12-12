@@ -39,4 +39,3 @@ popd
 . Compile catalog
 +
 include::partial$install/commodore-dynfacts.adoc[]
-endif::[]

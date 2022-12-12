@@ -60,7 +60,7 @@ capabilities:
 EOF
 ----
 
-. Cilium Optional: Add Cilium
+. Add Cilium
 +
 [%collapsible]
 ====

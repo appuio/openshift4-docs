@@ -18,7 +18,7 @@ yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
   spec.domain apps.example.com
 ----
 
-. Cilium Optional: Copy pre-rendered Cilium manifests
+. Copy pre-rendered Cilium manifests
 +
 [%collapsible]
 ====

@@ -15,9 +15,6 @@ mkdir -p inventory/classes/
 git clone $(curl -sH"Authorization: Bearer $(commodore fetch-token)" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
 ----
 
-==== Cilium Optional: Prepare Cilium Configuration
-[%collapsible]
-====
 . Add Cilium to cluster configuration
 +
 [source,bash]
@@ -42,5 +39,3 @@ popd
 . Compile catalog
 +
 include::partial$install/commodore-dynfacts.adoc[]
-====
-endif::[]

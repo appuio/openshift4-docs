@@ -1,0 +1,58 @@
+= Disable access to one or more OpenShift 4 clusters
+
+[abstract]
+This guide describes how to remove a user's access to one or more OpenShift 4 clusters
+
+== Prerequisites
+
+* Access to https://control.vshn.net[control.vshn.net] if the cluster uses LDAP authentication.
+* Admin access to the https://id.vshn.net[VSHN Keycloak] if the cluster uses OIDC authentication.
++
+TIP: You'll need to contact the https://handbook.vshn.ch/role_ciso.html[VSHN CISO] if you need access to Keycloak.
+
+== Remove access in control.vshn.net and id.vshn.net
+
+For each OpenShift 4 cluster where the user's access should be removed:
+
+.For clusters which use LDAP authentication
+[%collapsible]
+====
+. Remove the service corresponding to the cluster from the user in https://control.vshn.net/users[control.vshn.net].
+====
+
+.For clusters which use OIDC authentication
+[%collapsible]
+====
+. Go to menu:Users[\{username} > Groups] in the "VSHN-realm" realm on id.vshn.net, select the group corresponding to the cluster and click "Leave."
+. Go to menu:Users[\{username} > Sessions] in the "VSHN-realm" realm on id.vshn.net and terminate the user's sessions in the client corresponding to the cluster.
+====
+
+== Revoke access on the cluster itself
+
+On the cluster, remove any `oauthaccesstokens` of the user:
+
+[source,bash]
+----
+export username=<username> <1>
+export KUBECONFIG=/path/to/cluster/kubeconfig <2>
+oc --as=cluster-admin get oauthaccesstokens | grep ${username} | cut -d' ' -f1 | \
+  xargs oc --as=cluster-admin delete oauthaccesstokens
+----
+<1> The username of the user to remove
+<2> Point `kubectl` to the cluster on which the user's access should be revoked
+
+Additionally, you can also delete the user's `user` and associated `identity` objects:
+
+[source,bash]
+----
+export KUBECONFIG=/path/to/cluster/kubeconfig <1>
+oc --as=cluster-admin delete identity --field-selector=user.name="<username>"
+oc --as=cluster-admin delete user "<username>"
+----
+<1> Point `kubectl` to the cluster on which the user's access should be revoked
+
+[TIP]
+====
+Deleting the user and identity objects is optional.
+The user won't be allowed to create fresh tokens once their access is revoked in control.vshn.net and id.vshn.net.
+====

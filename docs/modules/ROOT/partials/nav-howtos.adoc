@@ -5,6 +5,7 @@
 
 * Authentication
 ** xref:oc4:ROOT:how-tos/authentication/sudo.adoc[Sudo]
+** xref:oc4:ROOT:how-tos/authentication/disable-access.adoc[]
 
 * Ingress
 ** xref:oc4:ROOT:how-tos/ingress/self-signed-ingress-cert.adoc[Self-signed default ingress certificate]

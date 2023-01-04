@@ -3,7 +3,7 @@
 == Healthy nodes
 
 You can access nodes for debugging with `oc debug node` as long as the Kubernetes API is available and pods can be scheduled on the node.
-If this isn't the case see the next section.
+If this isn't the case see the <<Unhealthy nodes>>.
 
 In order to ensure that the debug pod is scheduled correctly, use the following command:
 

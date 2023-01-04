@@ -1,5 +1,8 @@
 = Maintenance and Update of an OpenShift 4 cluster
 
+In contrast to previous versions of OpenShift, or other Kubernetes distributions, the operating system (https://docs.openshift.com/container-platform/4.11/architecture/architecture-rhcos.html[Red Hat Enterprise Linux CoreOS (RHCOS)]) and OCP4 server components are bundled into a single unit.
+In practice, this means that there is no difference between "updating the operating system" or "installing the latest OCP version," it's all the same.
+
 [IMPORTANT]
 ====
 For an upgrade to `4.9`, see xref:oc4:ROOT:how-tos/update_maintenance/v_4_9.adoc[Upgrade to OpenShift 4.9] first.

@@ -1,6 +1,9 @@
 = Access nodes for debugging
 
-You can access nodes for debugging with `oc debug node` as long as the Kubernetes API is available.
+== Healthy nodes
+
+You can access nodes for debugging with `oc debug node` as long as the Kubernetes API is available and pods can be scheduled on the node.
+If this isn't the case see the <<Unhealthy nodes>>.
 
 In order to ensure that the debug pod is scheduled correctly, use the following command:
 
@@ -13,3 +16,71 @@ oc --as=cluster-admin -n syn-debug-nodes debug "node/${nodename}" <2>
 Use the names shown in `oc get nodes`.
 <2> Impersonating `cluster-admin` with `--as=cluster-admin` ensures that you have sufficient permissions to schedule the debug pod.
 Selecting namespace `syn-debug-nodes` with `-n syn-debug-nodes` ensures that the debug pod can be scheduled on any node in the cluster.
+
+== Unhealthy nodes
+
+To access nodes when the Kubernetes API isn't available, or to investigate a node on which new pods can't be started, you can directly access the node over SSH.
+Follow the steps below to access a node over SSH.
+
+. Extract the node SSH key from https://vault-prod.syn.vshn.net[Vault] and add it to your SSH agent
++
+TIP: Check the cluster's documentation to find the node SSH key for infrastructures other than cloudscale.ch and Exoscale.
++
+[source,bash]
+----
+export CLOUD=<cloud-provider-id> <1>
+export CLUSTER_ID=<cluster-id>
+export TENANT_ID=<tenant-id>
+export VAULT_ADDR=https://vault-prod.syn.vshn.net
+vault login -method=oidc
+vault kv get -format json clusters/kv/${TENANT_ID}/${CLUSTER_ID}/${CLOUD}/ssh | \
+  jq -r '.data.data.private_key' | base64 -d > ${CLUSTER_ID}_ssh
+chmod 600 ${CLUSTER_ID}_ssh
+ssh-add ${CLUSTER_ID}_ssh
+----
+<1> Use `cloudscale` for cloudscale.ch, and `exoscale` for Exoscale.
+
+. Use one of the Puppet-managed LBs as a SSH jumphost.
++
+TIP: Strictly speaking, this isn't necessary for Exoscale, as the nodes are directly reachable.
++
+TIP: For clusters on other infrastructures, check the cluster's network documentation to find a host from which you can access the node network.
++
+[source,bash]
+---
+export JUMPHOST=the-jumphost.cluster.example.com <1>
+---
+<1> Replace with the FQDN of one of the Puppet-managed LBs
+
+. SSH into the node
++
+[source,bash]
+----
+NODE_IP=<node-ip> <1>
+ssh -J ${JUMPHOST} core@${NODE_IP}
+----
+<1> Replace with the node's IP address.
++
+[TIP]
+====
+If the Kubernetes API is reachable, you can extract the node IP with
+[source,bash]
+----
+kubectl get node <NODENAME> -o json | \
+  jq -r '.status.addresses[] | select(.type == "InternalIP") | .address'
+----
+====
++
+[TIP]
+====
+User `core` has full sudo permissions.
+You can become `root` with `sudo -i`.
+====
+
+. After you're done, remove the node SSH key from the SSH agent
++
+[source,bash]
+----
+ssh-add -d ${CLUSTER_ID}_ssh
+rm ${CLUSTER_ID}_ssh
+----

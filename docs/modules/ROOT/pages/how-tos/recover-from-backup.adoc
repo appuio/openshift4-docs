@@ -66,6 +66,7 @@ git archive --remote ${REPO_URL} master | tar -xC catalog
 +
 [source,console]
 ----
+export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=oidc
 ----
 

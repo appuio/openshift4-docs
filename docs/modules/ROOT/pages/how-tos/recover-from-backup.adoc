@@ -38,6 +38,8 @@ export AWS_SECRET_ACCESS_KEY=$(kubectl --as cluster-admin -n syn-cluster-backup 
 1. Obtain the repository URL of the clusters catalog and export it to `REPO_URL`
 +
 Get the URL from https://control.vshn.net/syn/lieutenantclusters.
+Ensure to use the `ssh://` URL not https one.
++
 Alternatively, get it from the Lieutenant API or the Kubernetes API Lieutenant is running on.
 +
 .Use the Lieutenant API

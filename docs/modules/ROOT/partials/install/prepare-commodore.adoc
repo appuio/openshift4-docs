@@ -36,6 +36,13 @@ git push
 popd
 ----
 +
+. Enable billing metrics collection
++
+[source,bash]
+----
+yq eval -i '.classes' += ["global.distribution.openshift4.appuio-managed-billing"] ${CLUSTER_ID}.yml
+----
+
 . Compile catalog
 +
 include::partial$install/commodore-dynfacts.adoc[]

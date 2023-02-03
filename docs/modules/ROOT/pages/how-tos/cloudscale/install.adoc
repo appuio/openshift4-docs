@@ -328,6 +328,9 @@ oc create secret generic image-registry-private-configuration-user \
 --from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
 --from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
 ----
++
+include::partial$install/registry-samples-operator.adoc[]
+
 include::partial$install/finalize_part1.adoc[]
 
 include::partial$install/registry-acl-fix.adoc[]

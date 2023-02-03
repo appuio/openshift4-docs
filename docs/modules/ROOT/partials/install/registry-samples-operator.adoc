@@ -1,0 +1,22 @@
+[NOTE]
+====
+If the registry S3 credentials are created too long after the initial cluster setup, it's possible that the `openshift-samples` operator has disabled itself because it couldn't find a working in-cluster registry.
+
+If the samples operator is disabled, no templates and builder images will be available on the cluster.
+
+You can check the samples-operator's state with the following command:
+
+[source,bash]
+----
+kubectl get config.samples cluster -ojsonpath='{.spec.managementState}'
+----
+
+If the command returns `Removed`, verify that the in-cluster registry pods are now running, and enable the samples operator again:
+
+[source,bash]
+----
+kubectl patch config.samples cluster -p '{"spec":{"managementState":"Managed"}}'
+----
+
+See the https://docs.openshift.com/container-platform/latest/openshift_images/configuring-samples-operator.html[upstream documentation] for more details on the samples operator.
+====

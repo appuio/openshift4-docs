@@ -20,6 +20,6 @@ ifeval::["{needs_hieradata_edit}" == "yes"]
 ----
 export GIT_AUTHOR_NAME=$(git config --global user.name)
 export GIT_AUTHOR_EMAIL=$(git config --global user.email)
-export TF_VAR_control_vshn_net_token=<control-vshn-net-token>
+export TF_VAR_control_vshn_net_token=<control-vshn-net-token> # use your personal SERVERS API token from https://control.vshn.net/tokens
 ----
 endif::[]

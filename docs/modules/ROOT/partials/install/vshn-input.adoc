@@ -5,7 +5,7 @@ include::partial$vshn-input.adoc[]
 .OpenShift configuration
 [source,bash]
 ----
-export BASE_DOMAIN=<your-base-domain>
+export BASE_DOMAIN=<your-base-domain> # customer-provided base domain without cluster name, e.g. "zrh.customer.vshnmanaged.net"
 export PULL_SECRET='<redhat-pull-secret>' # As copied from https://cloud.redhat.com/openshift/install/pull-secret "Copy pull secret". value must be inside quotes.
 ----
 

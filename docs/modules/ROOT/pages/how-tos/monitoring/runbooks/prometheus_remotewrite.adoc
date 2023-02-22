@@ -34,7 +34,6 @@ Errors like the following indicate that nginx's DNS cache contains stale pod IPs
 === icon:wrench[] Resolve
 
 If you've identified that the Mimir nginx is the cause of the issue, restart the nginx pod.
-+
 [source,shell]
 ----
 k -n vshn-appuio-mimir delete po -l app.kubernetes.io/component=nginx

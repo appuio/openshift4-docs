@@ -1,6 +1,7 @@
 * xref:oc4:ROOT:references/release_notes.adoc[Release Notes]
 * xref:oc4:ROOT:references/operators.adoc[Operators]
 * xref:oc4:ROOT:references/labels.adoc[]
+* xref:oc4:ROOT:references/annotations.adoc[]
 
 * Google Cloud Platform
 ** xref:oc4:ROOT:references/resources/gcp.adoc[Cluster Resources]

@@ -34,4 +34,16 @@ They indicate that there's an issue which is blocking the maintenance, or that s
 |This label indicates the Commodore component which manages the alert rule.
 This label is intended to help engineers to find the source code where the alert rule is defined or adjusted.
 
+|`cluster_id`
+|A Project Syn cluster ID
+|This label identifies the cluster from which the alert originates.
+We use the cluster's Project Syn ID as a unique identifier.
+
+|`tenant_id`
+|A Project Syn tenant ID
+|This label identifies the tenant which owns the cluster from which the alert originates.
+We use the tenant's Project Syn ID as a unique identifier.
+
 |===
+
+NOTE: The `cluster_id` and `tenant_id` labels are added to all alerts (and time series) through Prometheus's https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file[external labels] feature.

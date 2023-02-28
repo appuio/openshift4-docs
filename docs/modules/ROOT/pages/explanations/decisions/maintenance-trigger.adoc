@@ -1,0 +1,75 @@
+= Triggering Automated Maintenance
+
+== Problem
+
+We need a way to trigger OpenShift 4 updates automatically to achieve unattended maintenance.
+There's multiple potential approaches to do so, see section <<_proposals,proposals>>
+
+=== Goals
+
+* Automatically start upgrade at a specified time
+** Start time can be specified at the cluster level
+** Maintenance rhythm (weekly, every two weeks, ...) can be specified at the cluster level
+* Scheduled upgrades can be skipped (for example due to known issues on a cluster, or by customer request)
+
+=== Non-goals
+
+* More general centralized management of OpenShift 4 clusters
+
+== Proposals
+
+=== Option 1: Use Renovate
+
+We can extend our https://github.com/projectsyn/commodore-renovate[customized Renovate fork] to support updating the desired OpenShift 4 version in the configuration hierarchy.
+Since we've already written multiple custom Renovate managers, identifying and extracting the current desired OpenShift 4 version from the configuration should be straightforward.
+
+Renovate's https://github.com/renovatebot/renovate/blob/56c161a8d4bc8ebf661a641fdcd12d803492749f/lib/modules/datasource/readme.md[data sources] are used to determine available updates for a dependency identified by a manager.
+In contrast to custom managers, we've not yet implemented a custom data source for Renovate.
+However, looking at the documentation, it should be fairly straightforward to implement a data source which queries api.openshift.com for available OpenShift 4 upgrades.
+There's already code which queries this API in the https://github.com/openshift/managed-upgrade-operator/blob/94799f049d5d460d66fc64db8d3dab0e19980b42/pkg/ocm/client.go[OpenShift managed upgrade operator] and our own custom https://git.vshn.net/vshn/openshift4-maintenance-tool[OpenShift 4 maintenance tool].
+
+To ensure upgrades are started at a specified time we can leverage Renovate's support for https://docs.renovatebot.com/key-concepts/scheduling/[scheduled updates] and https://docs.renovatebot.com/key-concepts/automerge/[automerging].
+
+=== Option 2: Use RedHat Advanced Cluster Management (RHACM)
+
+We can use RHACM to automate cluster upgrades.
+RHACM itself appears to be targeted at manual operations work more than automated GitOps workflows.
+For example, https://access.redhat.com/documentation/en-us/red_hat_advanced_cluster_management_for_kubernetes/2.7/html-single/clusters/index#upgrading-your-cluster[upgrading clusters] is documented as a manual process through clicking in the web interface.
+
+Given this documentation, it looks like we'd need to engineer custom tooling which interacts with RHACM to update managed clusters to the desired version at the right time.
+
+Overall, RHACM does a lot more than just cluster upgrades, and doesn't provide enough upgrade functionality out of the box to fulfil our requirements.
+Given our experience with managing Openshift 4 through GitOps, it's quite likely that trying to interact with RHACM through GitOps would be finicky, if it's even possible at all.
+
+=== Option 3: Use OpenShift managed upgrade operator
+
+The Openshift managed upgrade operator supports scheduled upgrades.
+The operator is installed on each cluster, and watches `UpgradeConfig` resources.
+It sets the cluster's desired version based on the `UpgradeConfig` resources present on the cluster.
+See the https://github.com/openshift/managed-upgrade-operator#workflow---upgradeconfig[README on GitHub] for details on how the upgrade process works in detail.
+
+To be able to fully utilize the managed upgrade operator, we'd have to adjust the implementation, since the operator currently only looks at the `worker` machine config pool to determine whether the node upgrades have completed.
+
+=== Option 4: Use a policy tool
+
+We could use a policy tool, such as Kyverno, to orchestrate OpenShift 4 upgrades.
+
+A possible policy to orchestrate upgrades would check the `ClusterVersion` object for available updates and would update the cluster's desired version to the latest available upgrade.
+However, it's unclear how we could extend such a policy to ensure that upgrades are only applied at a specified time.
+
+Finally, our experience with Kyverno for https://kb.vshn.ch/appuio-cloud/explanation/decisions/kyverno-policy.html#_2022_08_17_2[APPUiO Cloud policies] has shown that any reasonably complex policies are hard to engineer and hard to test.
+
+== Decision
+
+We decided to extend Renovate with support for managing OpenShift 4 upgrades and to trigger scheduled upgrades using Renovate's existing automerge and scheduling capabilities.
+
+== Rationale
+
+Renovate's approach of creating and automerging MRs to update the desired OpenShift 4 version for individual clusters fits well with our current GitOps approach.
+Additionally, managing OpenShift 4 version upgrades through MRs in the Project Syn tenant repos, we can identify when an specific upgrade happened by looking at the relevant commits in the tenant repo and each cluster catalog.
+
+By engineering the upgrade triggering mechanism to interact with the cluster's Project Syn config, we can keep the current machinery based on Project Syn to set the cluster's desired version in the `ClusterVersion` resource unchanged.
+Additionally, we already understand how to engineer extensions for Renovate to create MRs for dependencies which aren't supported out of the box.
+
+Finally, we already have experience with scheduling automerging Renovate MRs for a certain time.
+Since we control Renovate default configuration through self-hosting our custom Renovate, we can set a global default trigger time for upgrades, while still allowing custom start times for tenants or clusters through `renovate.json` in individual tenant repos.

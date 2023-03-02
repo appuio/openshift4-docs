@@ -12,6 +12,7 @@ There's multiple potential approaches to do so, see section <<_proposals,proposa
 ** Maintenance rhythm (weekly, every two weeks, ...) can be specified at the cluster level
 * Scheduled upgrades can be skipped (for example due to known issues on a cluster, or by customer request)
 * Maintenance start trigger is monitored for failures
+* Maintenance is skipped when cluster is unhealthy
 
 === Non-goals
 
@@ -34,6 +35,10 @@ To ensure upgrades are started at a specified time we can leverage Renovate's su
 Monitoring trigger failures for the Renovate approach would require monitoring both Renovate's execution, and the Commodore CI pipelines for all clusters.
 This would require a significant amount of engineering, since we don't have any infrastructure to do so in place yet.
 
+Skipping maintenance when a cluster is unhealthy would require either a feedback loop between Renovate or the Commodore CI pipeline and the cluster, or an additional component on the cluster which can block a desired upgrade pushed into the cluster catalog.
+Having an additional component on the cluster will introduce additional complexity and raise the question of why that component doesn't a larger amount of work to orchestrate the upgrade itself.
+On the other hand, implementing a feedback loop between the cluster and Renovate or the CI pipeline creates additional dependencies which may not be desirable.
+
 === Option 2: Use RedHat Advanced Cluster Management (RHACM)
 
 We can use RHACM to automate cluster upgrades.
@@ -54,6 +59,8 @@ See the https://github.com/openshift/managed-upgrade-operator#workflow---upgrade
 
 To be able to fully utilize the managed upgrade operator, we'd have to adjust the implementation, since the operator currently only looks at the `worker` machine config pool to determine whether the node upgrades have completed.
 
+The managed upgrade operator already performs some simple health checks and won't trigger a requested upgrade if the cluster is unhealthy.
+
 The managed upgrade operator does provide some metrics which can be used to monitor an upgrade.
 There's a metric which indicates whether there was an error while triggering the upgrade, as well as metrics indicating the progress of the upgrade.
 
@@ -68,6 +75,8 @@ Finally, our experience with Kyverno for https://kb.vshn.ch/appuio-cloud/explana
 
 Monitoring the upgrade would be feasible with most policy tools, as they usually provide metrics regarding policy execution errors.
 
+Introducing a pre-upgrade health check should be possible with a policy, since most policy tools have some concept of preconditions which must hold for the policy execution.
+We might have to implement an additional component which checks the cluster health periodically and updates a configmap with the health check results in order to make them available to the policy.
 
 == Decision
 

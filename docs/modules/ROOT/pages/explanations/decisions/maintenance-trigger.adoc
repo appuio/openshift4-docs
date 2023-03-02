@@ -80,15 +80,8 @@ We might have to implement an additional component which checks the cluster heal
 
 == Decision
 
-We decided to extend Renovate with support for managing OpenShift 4 upgrades and to trigger scheduled upgrades using Renovate's existing automerge and scheduling capabilities.
+TBD
 
 == Rationale
 
-Renovate's approach of creating and automerging MRs to update the desired OpenShift 4 version for individual clusters fits well with our current GitOps approach.
-Additionally, managing OpenShift 4 version upgrades through MRs in the Project Syn tenant repos, we can identify when an specific upgrade happened by looking at the relevant commits in the tenant repo and each cluster catalog.
-
-By engineering the upgrade triggering mechanism to interact with the cluster's Project Syn config, we can keep the current machinery based on Project Syn to set the cluster's desired version in the `ClusterVersion` resource unchanged.
-Additionally, we already understand how to engineer extensions for Renovate to create MRs for dependencies which aren't supported out of the box.
-
-Finally, we already have experience with scheduling automerging Renovate MRs for a certain time.
-Since we control Renovate default configuration through self-hosting our custom Renovate, we can set a global default trigger time for upgrades, while still allowing custom start times for tenants or clusters through `renovate.json` in individual tenant repos.
+TBD

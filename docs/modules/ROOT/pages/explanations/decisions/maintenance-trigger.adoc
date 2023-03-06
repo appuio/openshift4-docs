@@ -99,8 +99,19 @@ However, by implementing our own controller, we should be able to add support fo
 
 == Decision
 
-TBD
+We decided to implement our own upgrade controller.
 
 == Rationale
 
-TBD
+By implementing our own upgrade controller we strike a good balance between implementation effort, customizability, complexity of monitoring the upgrade process.
+
+With a controller that runs on the cluster which is being upgraded, we build a triggering mechanism which can easily react to dynamic changes on the cluster, such as skipping a scheduled upgrade if the cluster is unhealthy.
+In comparison, a solution where (parts of) the triggering mechanism run outside the target cluster which is being upgraded, would need a complex feedback loop across multiple systems to be able to react to dynamic changes on the cluster.
+
+Additionally, with a controller that runs in the cluster, we don't need to invest time into engineering new monitoring infrastructure for external systems, such as GitLab CI pipelines which run Renovate or the Commodore catalog compilation CI pipeline, in order to be able to monitor the upgrade triggering mechanism itself.
+
+Further, by writing our own controller, we're able to accommodate specific upgrade requirements such as announcing target versions ahead of time or custom upgrade schedules more easily than by going with any of the other options.
+
+On the implementation side -- since we've got significant experience in writing Kubernetes controllers in Go -- the overhead of bootstrapping and maintaining our own dedicated tool to trigger upgrades is acceptable.
+
+Finally, having the update triggering mechanism running in the cluster matches RedHat's upgrade concept for OpenShift 4 which is inherently cluster-scoped, see the https://docs.openshift.com/container-platform/latest/updating/index.html[upstream documentation].

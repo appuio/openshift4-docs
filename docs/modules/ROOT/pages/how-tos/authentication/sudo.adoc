@@ -1,6 +1,6 @@
-= Sudo
+= Become Cluster Admin
 
-See the xref:explanations/sudo.adoc[sudo explanation] for further details.
+See the xref:explanations/sudo.adoc[] for a background explanation.
 
 
 == CLI Usage
@@ -18,7 +18,7 @@ This will impersonate the stated user for this command.
 == OpenShift Console
 
 To elevate privileges to `cluster-admin` using the OpenShift web console, use the https://www.openshift.com/blog/openshift-4-3-spoofing-a-user[user impersonation] feature:
-
+further details
 . Login to the web console with your regular user
 . Navigate to "User Management" -> "Role Binding" in the sidebar
 . Search for `impersonate-cluster-admin` in the rop right search box

@@ -21,24 +21,31 @@
 ** cloudscale.ch
 *** xref:oc4:ROOT:references/cloudscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Install]
+// Node management
+*** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[]
+*** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
+*** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[]
+// Storage add-on
 *** xref:oc4:ROOT:how-tos/cloudscale/setup-storage-cluster.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/replace-storage-node.adoc[]
-*** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[]
-*** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[]
-*** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Decomisioning]
-*** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd]
+
 *** xref:oc4:ROOT:how-tos/cloudscale/enable-loadbalancer-service.adoc[Enable LoadBalancer Services]
-*** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
+*** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd]
+*** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Decomisioning]
 
 ** Exoscale
 *** xref:oc4:ROOT:references/exoscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Install]
-*** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[]
+// Node management
+*** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
+
+// Storage cluster
 *** xref:oc4:ROOT:how-tos/exoscale/add_storage_node.adoc[]
-*** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/change_storage_node_size.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/reinitialize_storage_disk.adoc[]
-*** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[]
+
 *** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Decomisioning]
 *** xref:oc4:ROOT:how-tos/exoscale/recover-etcd.adoc[Restore etcd]
 *** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
@@ -51,12 +58,12 @@
 ** Google Cloud Platform
 *** xref:oc4:ROOT:how-tos/gcp/project.adoc[Project Setup]
 *** xref:oc4:ROOT:how-tos/gcp/install.adoc[Install]
-*** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Decomisioning]
 *** xref:oc4:ROOT:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
+*** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Decomisioning]
 *** xref:oc4:ROOT:how-tos/gcp/hive.adoc[Hive]
+*** xref:oc4:ROOT:explanations/gcp/name_lengths.adoc[Name Lengths]
 *** xref:oc4:ROOT:references/resources/gcp.adoc[Cluster Resources]
 *** xref:oc4:ROOT:references/storage/gcp.adoc[Storage Options]
-*** xref:oc4:ROOT:explanations/gcp/name_lengths.adoc[Name Lengths]
 
 * Install
 ** xref:oc4:ROOT:how-tos/generic-pre-install-checklist.adoc[Pre-Install Checklist]
@@ -81,9 +88,9 @@
 
 
 * Authentication
-** xref:oc4:ROOT:explanations/sudo.adoc[]
 ** xref:oc4:ROOT:how-tos/authentication/sudo.adoc[]
 ** xref:oc4:ROOT:how-tos/authentication/disable-access.adoc[Disable per cluster access]
+** xref:oc4:ROOT:explanations/sudo.adoc[]
 
 // Networking
 
@@ -99,11 +106,11 @@
 *** xref:oc4:ROOT:how-tos/cloudscale/replace-storage-node.adoc[]
 
 ** Exoscale
-*** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/add_storage_node.adoc[]
-*** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/change_storage_node_size.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/reinitialize_storage_disk.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[]
 
 ** Google Cloud Platform
 *** xref:oc4:ROOT:references/storage/gcp.adoc[Storage Options]
@@ -123,8 +130,8 @@
 
 ** cloudscale.ch
 *** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[]
+*** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
 *** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[]
-*** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[]
 
 ** Exoscale
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
@@ -139,12 +146,11 @@
 ** xref:oc4:ROOT:how-tos/logging/increase-elasticsearch-storage-size.adoc[Increase Elasticsearch Storage Size]
 
 * Monitoring
-** xref:oc4:ROOT:how-tos/monitoring/global-monitoring.adoc[]
-** xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[]
-** xref:oc4:ROOT:how-tos/monitoring/handle_alerts.adoc[]
-** xref:oc4:ROOT:how-tos/monitoring/runbooks/prometheus_remotewrite.adoc[Runbook: PrometheusRemoteWrite]
-** xref:oc4:ROOT:explanations/slos.adoc[]
 ** xref:oc4:ROOT:explanations/cluster_monitoring.adoc[]
+** xref:oc4:ROOT:explanations/slos.adoc[]
+** xref:oc4:ROOT:how-tos/monitoring/global-monitoring.adoc[]
+** xref:oc4:ROOT:how-tos/monitoring/handle_alerts.adoc[]
+** xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[]
 
 // Scalability and performance
 // Specialized hardware and driver enablement
@@ -165,29 +171,39 @@
 ** xref:oc4:ROOT:how-tos/update_maintenance.adoc[Update/Maintenance]
 ** xref:oc4:ROOT:how-tos/debug-nodes.adoc[Debugging Nodes]
 
+** Runbooks
+*** xref:oc4:ROOT:how-tos/monitoring/runbooks/prometheus_remotewrite.adoc[PrometheusRemoteWrite]
+
 ** cloudscale.ch
-*** xref:oc4:ROOT:how-tos/cloudscale/replace-storage-node.adoc[]
+// Node management
 *** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[]
+*** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
 *** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[]
+// Storage add-on
+*** xref:oc4:ROOT:how-tos/cloudscale/setup-storage-cluster.adoc[]
+*** xref:oc4:ROOT:how-tos/cloudscale/replace-storage-node.adoc[]
+
 *** xref:oc4:ROOT:how-tos/cloudscale/enable-loadbalancer-service.adoc[Enable LoadBalancer Services]
-*** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[]
 
 ** Exoscale
-*** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[]
-*** xref:oc4:ROOT:how-tos/exoscale/add_storage_node.adoc[]
-*** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[]
-*** xref:oc4:ROOT:how-tos/exoscale/change_storage_node_size.adoc[]
-*** xref:oc4:ROOT:how-tos/exoscale/reinitialize_storage_disk.adoc[]
+// Node management
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
 
+// Storage cluster
+*** xref:oc4:ROOT:how-tos/exoscale/add_storage_node.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/change_storage_node_size.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/reinitialize_storage_disk.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[]
+
 * Decomisioning
-** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[]
-** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[]
-** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[]
+** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[cloudscale.ch]
+** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Exoscale]
+** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Google Compute Cloud]
 
 * Guidelines
-** xref:oc4:ROOT:references/labels.adoc[]
 ** xref:oc4:ROOT:references/annotations.adoc[]
+** xref:oc4:ROOT:references/labels.adoc[]
 ** xref:oc4:ROOT:references/projectsyn/developer.adoc[]
 
 * Decisions

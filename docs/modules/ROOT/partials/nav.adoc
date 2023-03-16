@@ -1,13 +1,111 @@
 * xref:index.adoc[Home]
 
 .Tutorials
-include::partial$nav-tutorials.adoc[]
 
 .How-to guides
-include::partial$nav-howtos.adoc[]
+
+* xref:oc4:ROOT:how-tos/generic-pre-install-checklist.adoc[Generic Pre-Install Checklist]
+* xref:oc4:ROOT:how-tos/recover-from-backup.adoc[Recover objects from backup]
+* xref:oc4:ROOT:how-tos/update_maintenance.adoc[Update/Maintenance]
+* xref:oc4:ROOT:how-tos/debug-nodes.adoc[Access nodes for debugging]
+
+* Authentication
+** xref:oc4:ROOT:how-tos/authentication/sudo.adoc[Sudo]
+** xref:oc4:ROOT:how-tos/authentication/disable-access.adoc[]
+
+* Ingress
+** xref:oc4:ROOT:how-tos/ingress/self-signed-ingress-cert.adoc[Self-signed default ingress certificate]
+
+* cloudscale.ch
+** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Cluster Setup]
+** xref:oc4:ROOT:how-tos/cloudscale/setup-storage-cluster.adoc[Setup a storage cluster]
+** xref:oc4:ROOT:how-tos/cloudscale/replace-storage-node.adoc[Replace a storage node]
+** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[Add a worker node]
+** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[Remove a worker node]
+** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Cluster Decommission]
+** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd from Backup]
+** xref:oc4:ROOT:how-tos/cloudscale/enable-loadbalancer-service.adoc[Enable LoadBalancer Services]
+** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
+
+* Exoscale
+** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Cluster Setup]
+** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[Replace a storage node]
+** xref:oc4:ROOT:how-tos/exoscale/add_storage_node.adoc[Add a storage node]
+** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[Remove a storage node]
+** xref:oc4:ROOT:how-tos/exoscale/change_storage_node_size.adoc[Change Storage Node Size]
+** xref:oc4:ROOT:how-tos/exoscale/reinitialize_storage_disk.adoc[Reinitialize a storage disk]
+** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[Remove a worker node]
+** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Cluster Decommission]
+** xref:oc4:ROOT:how-tos/exoscale/recover-etcd.adoc[Restore etcd from Backup]
+
+* Google Cloud Platform
+** xref:oc4:ROOT:how-tos/gcp/project.adoc[Project Setup]
+** xref:oc4:ROOT:how-tos/gcp/install.adoc[Cluster Setup]
+** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Cluster Decommissioning]
+** xref:oc4:ROOT:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
+** xref:oc4:ROOT:how-tos/gcp/hive.adoc[Hive]
+
+* Monitoring
+** xref:oc4:ROOT:how-tos/monitoring/global-monitoring.adoc[Global Monitoring insights.appuio.net]
+** xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[Remove alert rules]
+** xref:oc4:ROOT:how-tos/monitoring/handle_alerts.adoc[Investigate and handle alerts]
+** xref:oc4:ROOT:how-tos/monitoring/runbooks/prometheus_remotewrite.adoc[Runbook: PrometheusRemoteWrite]
+
+* Logging
+** xref:oc4:ROOT:how-tos/logging/increase-elasticsearch-storage-size.adoc[Increase Elasticsearch Storage Size]
+
+* VMware vSphere
+** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
+** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-creds.adoc[Change vSphere Credentials]
+** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-params.adoc[Change vSphere Parameters]
+
+* Storage
+** xref:oc4:ROOT:how-tos/storage/change-luks-key.adoc[Change LUKS Key]
+
+* Upgrades
+** xref:oc4:ROOT:how-tos/new_minor.adoc[Get ready for new minor]
+** xref:oc4:ROOT:how-tos/update_maintenance/v_4_9.adoc[Upgrade to OCP4.9]
+
+* Operators
+** xref:oc4:ROOT:how-tos/operators/operator-deletion.adoc[Operator Deletion]
 
 .Technical reference
-include::partial$nav-reference.adoc[]
+
+* xref:oc4:ROOT:references/release_notes.adoc[Release Notes]
+* xref:oc4:ROOT:references/operators.adoc[Operators]
+* xref:oc4:ROOT:references/labels.adoc[]
+* xref:oc4:ROOT:references/annotations.adoc[]
+
+* Google Cloud Platform
+** xref:oc4:ROOT:references/resources/gcp.adoc[Cluster Resources]
+** xref:oc4:ROOT:references/storage/gcp.adoc[Storage Options]
+
+* Project Syn
+** xref:oc4:ROOT:references/projectsyn/developer.adoc[Commodore Component Developer Guidelines]
+
+* cloudscale.ch
+** xref:oc4:ROOT:references/cloudscale/config.adoc[Cluster Configuration]
+
+* Exoscale
+** xref:oc4:ROOT:references/exoscale/config.adoc[Cluster Configuration]
 
 .Explanation
-include::partial$nav-explanation.adoc[]
+
+* Decisions
+** xref:oc4:ROOT:explanations/decisions/machine-api.adoc[Machine API Provider]
+** xref:oc4:ROOT:explanations/decisions/maintenance-trigger.adoc[]
+
+* Exoscale
+** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
+
+* Google Cloud Platform
+** xref:oc4:ROOT:explanations/gcp/name_lengths.adoc[Name Lengths]
+
+* xref:oc4:ROOT:explanations/slos.adoc[Service Level Objectives]
+* xref:oc4:ROOT:explanations/cluster_monitoring.adoc[Cluster Monitoring]
+* xref:oc4:ROOT:explanations/dns_scheme.adoc[DNS Scheme]
+* xref:oc4:ROOT:explanations/node_groups.adoc[Node Groups]
+* xref:oc4:ROOT:explanations/sudo.adoc[Sudo]
+* xref:oc4:ROOT:explanations/etcd_encryption.adoc[etcd Encryption]
+* xref:oc4:ROOT:explanations/disaster_recovery.adoc[Disaster Recovery Limitations]
+* xref:oc4:ROOT:explanations/pod_security.adoc[Pod Security]

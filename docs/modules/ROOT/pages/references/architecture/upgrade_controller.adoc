@@ -29,10 +29,64 @@ The controller is a standard `controller-runtime` controller.
 It is deployed on each OpenShift 4 cluster.
 It is managed through a Custom Resource Definition (CRD) called `UpgradeConfig`.
 
-=== The controller is extendable through webhooks
+=== Basic upgrade flow
+
+image:explanations/upgrade-controller-high-level-flow-chart.svg[]
+
+=== The controller is extendable through webhooks [[upgrade-webhooks]]
 
 The controller should be able to send notifications to a webhook.
 Every step of the upgrade process should be notified.
+
+We might want to reuse the Alertmanager webhook definition, they already thought about TLS and authentication and other necessary features.
+
+[source,yaml]
+----
+url: "https://example.com/webhook"
+http_config: <1>
+  authorization:
+    credentials: "token"
+  proxy_url: "http://proxy.example.com"
+annotations: <2>
+  cluster_id: "bar"
+  tenant_id: "foo"
+----
+<1> https://prometheus.io/docs/alerting/latest/configuration/#http_config[Alertmanager HTTP Config]
+<2> Additional annotations to send with the webhook.
+
+The controller should send a POST request to the webhook with a JSON payload.
+
+[source,json]
+----
+{
+  "version": "1", <1>
+
+  "type": "UpgradeSkipped", <2>
+  "status": "True", <3>
+  "reason": "ClusterUnhealthy", <4>
+  "message": "Critical alerts [MultipleDefaultStorageClasses, NodeFilesystemAlmostOutOfFiles] are firing", <5>
+
+  "desiredVersion": { <6>
+    "version": "4.6.34",
+    "image": "quay.io/openshift-release-dev/ocp-release@sha256:1234567890abcdef"
+  },
+
+  "annotations": { <7>
+    "cluster_id": "bar",
+    "tenant_id": "foo"
+  }
+}
+----
+<1> The version of the webhook payload
+<2> The type of the notification.
+Inspired by https://github.com/kubernetes/apimachinery/blob/8d1258da8f386b809d312cdda316366d5612f54e/pkg/apis/meta/v1/types.go#L1481[`metav1.Condition`].
+<3> The status of the notification.
+`True`, `False`, `Unknown`.
+<4> The programmatic identifier of the notification indicating the reason for the notification.
+<5> The human-readable message indicating the reason for the notification.
+<6> The desired version of the cluster.
+Only present for certain notifications.
+<7> Additional annotations from the webhook configuration.
 
 === The controller manages the content of the `ClusterVersion/version` object
 
@@ -52,7 +106,15 @@ The `UpgradeJob` contains a snapshot of the most recent version in the `.status.
 The `UpgradeJob` rechecks the available updates at the time of the upgrade.
 If the version is no longer available, the upgrade is skipped and a notification is send to the webhook.
 
-=== Interval/ time window definition
+[source,yaml]
+----
+pinVersionWindow: "4h" <1>
+----
+<1> The time window before the maintenance window in which the upgrade version is pinned.
+Upgrade jobs are created just in time if empty.
+Scheduled upgrade jobs are created in this time window.
+
+=== Interval/ time window definition [[upgrade-schedule]]
 
 * The controller must support customizable upgrade start time
 * The controller must be able to support various upgrade rhythms (weekly, every two weeks, whenever there's an update)
@@ -71,13 +133,18 @@ It must be possible to suspend scheduling of upgrades.
 [source,yaml]
 ----
 schedule:
-  cron: "0 22 * * 2" # 22:00 on Tuesdays
-  isoWeek: "@odd" # every odd week of the year
-  location: "Europe/Zurich" # time at this location
-  suspend: false # whether to suspend timing new upgrades
+  cron: "0 22 * * 2" # 22:00 on Tuesdays <1>
+  isoWeek: "@odd" <2>
+  location: "Europe/Zurich" <3>
+  suspend: false <4>
 ----
+<1> https://pkg.go.dev/github.com/robfig/cron/v3#hdr-CRON_Expression_Format[Cron expression]
+<2> Every odd week of the year according to ISO 8601 week number.
+Initially supported values are `@odd` and `@even`.
+<3> https://pkg.go.dev/time#LoadLocation[Time zone]
+<4> Whether to suspend scheduling of upgrades.
 
-=== The controller verifies cluster health before and after the upgrade
+=== The controller verifies cluster health before and after the upgrade [[upgrade-health-checks]]
 
 The controller should not try to upgrade a cluster that is not healthy.
 
@@ -109,16 +176,111 @@ It should be possible to exclude alerts and alerts in namespaces.
 
 ==== Check cluster operator health
 
-KJDHFKJLDSHFLKJSDHFKLSDHFKLJSHDFLKSHDFKLJHSDLKFHSDKHFLSKDFHJSDFHl
+The `ClusterVersion/version` object contains a queryable list of cluster operators health.
+If any of the operators is degraded, the cluster is unhealthy and should not be upgraded.
 
+It should be possible to exclude operators.
 
-** If the cluster is unhealthy before the maintenance, the upgrade should be skipped
-* The controller must expose Prometheus metrics indicating current state of upgrade
-** It must be possible to create alerts for failures in the upgrade process, e.g. upgrade triggering failed, upgrade itself failed, upgrade got stuck, ...
-* The controller should have extension points before/after each upgrade phase
-** This will allow us to easily accommodate customer requests, e.g. POSTing to some HTTP API after the upgrade is done
+=== The controller must expose Prometheus metrics indicating current state of upgrade
+
+The controller should expose Prometheus metrics indicating the current state of the upgrade and the controller itself.
+This allows us to monitor the controller and the upgrade process and create alerts.
+
+=== When is an upgrade job considered successful?
+
+The controller monitors the `ClusterVersion/version` for the `Available` condition.
+The `UpgradeJob` is considered successful if the `Available` condition is `True` and the `Version` matches the desired version.
+
+== Custom resource definition
+
+=== UpgradeConfig
+
+The `UpgradeConfig` CRD defines the upgrade schedule and the upgrade job template.
+The reconciliation loop of the controller creates `UpgradeJob` objects based on the `UpgradeConfig` object.
+
+[source,yaml]
+----
+apiVersion: upgrade.appuio.io/v1beta1
+kind: UpgradeConfig
+metadata:
+  name: cluster-upgrade
+spec:
+  schedule: <1>
+    cron: "0 22 * * 2"
+    isoWeek: "@odd"
+    location: "Europe/Zurich"
+    suspend: false <4>
+  pinVersionWindow: "4h" <2>
+  jobTemplate:
+    upgradeTimeout: "2h" <3>
+    preUpgradeHealthChecks: <4>
+      checkCriticalAlerts: true
+      checkDegradedOperators: true
+      excludeAlerts:
+      - alertname: "KubePodCrashLooping"
+      excludeNamespaces:
+      - openshift-console
+      excludeOperators:
+      - openshift-monitoring
+    postUpgradeHealthChecks: <5>
+      checkCriticalAlerts: true
+      checkDegradedOperators: true
+      excludeAlerts:
+      - alertname: "KubePodCrashLooping"
+      excludeNamespaces:
+      - openshift-console
+      excludeOperators:
+      - openshift-monitoring
+    webhooks: <6>
+      - url: "https://example.com/webhook"
+        annotations:
+          cluster_id: "bar"
+          tenant_id: "foo"
+  webhooks: <6>
+    - url: "https://example.com/webhook"
+      annotations:
+        cluster_id: "bar"
+        tenant_id: "foo"
+----
+<1> The upgrade schedule as defined in <<upgrade-schedule>>.
+<2> The time window before the maintenance window in which the upgrade version is pinned.
+UpgradeJobs are created at `schedule - pinVersionWindow`.
+<3> The timeout for the upgrade.
+The upgrade is marked as failed if it takes longer than this.
+<4> The health checks to perform before the upgrade as defined in <<upgrade-health-checks>>.
+<5> The health checks to perform after the upgrade as defined in <<upgrade-health-checks>>.
+<6> The webhook to send notifications to as defined in <<upgrade-webhook>>.
+Having multiple webhooks allows to send notifications to different systems.
+Both the `UpgradeConfig` and the `UpgradeJob` have a `webhooks` field since both might send notifications.
+
+=== UpgradeJob
+
+An `UpgradeJob` is created for each upgrade.
+It contains a snapshot of the most recent version in the `.status.availableUpdates` field, a snapshot of the config, and a timestamp when the upgrade should start.
+
+[source,yaml]
+----
+apiVersion: upgrade.appuio.io/v1beta1
+kind: UpgradeJob
+metadata:
+  name: cluster-upgrade-2021-01-01T22:00:00+01:00
+spec:
+  upgradeAt: "2021-01-01T22:00:00+01:00" <1>
+  desiredVersion: <2>
+    version: "4.6.1"
+    image: "quay.io/openshift-release-dev/ocp-release@sha256:1234567890abcdef"
+  config: <3>
+    upgradeTimeout: "2h"
+    preUpgradeHealthChecks: {} ...
+    postUpgradeHealthChecks: {} ...
+    webhooks: []
+----
+<1> The timestamp when the upgrade should start.
+<2> The version to upgrade to.
+<3> The config as defined in <<upgrade-config>> and copied from the `UpgradeConfig` object.
 
 == Resources
 
 - https://access.redhat.com/labs/ocpupgradegraph/update_channel[RedHat OCP Upgrade Graph]
 - https://github.com/openshift/managed-upgrade-operator/blob/fc03c10ca7bb95f15a9b7c7d75bd129fb0d4fef4/pkg/upgraders/healthcheckstep.go#L51[RedHat Managed Upgrade Operator Health Check]
+- https://github.com/openshift/managed-upgrade-operator/blob/fc03c10ca7bb95f15a9b7c7d75bd129fb0d4fef4/pkg/clusterversion/cv.go#L124[RedHat Managed Upgrade Degraded Operators Check]

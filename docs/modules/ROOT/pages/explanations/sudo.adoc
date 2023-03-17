@@ -1,4 +1,4 @@
-= Sudo
+= Privilege Escalation
 
 A https://www.sudo.ws[sudo] like process to elevate privileges for cluster admins is implemented using the Kubernetes https://kubernetes.io/docs/reference/access-authn-authz/authentication/#user-impersonation[user impersonation] feature.
 

@@ -154,9 +154,12 @@ if an update is skipped, the controller should send a notification to the webhoo
 The controller should also check the cluster health after the upgrade.
 If the cluster is unhealthy, the controller should send a notification to the webhook.
 
+Having custom queries allows customers or VSHN to extend checks to skip upgrades easily.
+
 [source,yaml]
 ----
 preUpgradeHealthChecks:
+  timeout: "30m" <1>
   checkCriticalAlerts: true
   checkDegradedOperators: true
   excludeAlerts:
@@ -165,7 +168,11 @@ preUpgradeHealthChecks:
   - openshift-console
   excludeOperators:
   - openshift-monitoring
+  customQueries:
+  - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
 ----
+<1> How long to wait for the health checks to be successful.
+
 
 ==== Query alerts
 
@@ -201,7 +208,7 @@ There must be only one `ClusterVersion` object in the cluster.
 
 [source,yaml]
 ----
-apiVersion: upgrade.appuio.io/v1beta1
+apiVersion: managedupgrade.appuio.io/v1beta1
 kind: ClusterVersion
 metadata:
   name: version
@@ -224,7 +231,7 @@ The reconciliation loop of the controller creates `UpgradeJob` objects based on 
 
 [source,yaml]
 ----
-apiVersion: upgrade.appuio.io/v1beta1
+apiVersion: managedupgrade.appuio.io/v1beta1
 kind: UpgradeConfig
 metadata:
   name: cluster-upgrade
@@ -238,6 +245,7 @@ spec:
   jobTemplate:
     upgradeTimeout: "2h" <3>
     preUpgradeHealthChecks: <4>
+      timeout: "30m"
       checkCriticalAlerts: true
       checkDegradedOperators: true
       excludeAlerts:
@@ -246,7 +254,10 @@ spec:
       - openshift-console
       excludeOperators:
       - openshift-monitoring
+      customQueries:
+      - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
     postUpgradeHealthChecks: <5>
+      timeout: "30m"
       checkCriticalAlerts: true
       checkDegradedOperators: true
       excludeAlerts:
@@ -255,6 +266,8 @@ spec:
       - openshift-console
       excludeOperators:
       - openshift-monitoring
+      customQueries:
+      - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
     webhooks: <6>
       - url: "https://example.com/webhook"
         annotations:
@@ -284,7 +297,7 @@ It contains a snapshot of the most recent version in the `.status.availableUpdat
 
 [source,yaml]
 ----
-apiVersion: upgrade.appuio.io/v1beta1
+apiVersion: managedupgrade.appuio.io/v1beta1
 kind: UpgradeJob
 metadata:
   name: cluster-upgrade-2021-01-01T22:00:00+01:00

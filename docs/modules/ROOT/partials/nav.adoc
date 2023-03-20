@@ -4,7 +4,7 @@
 
 // TODO Consider to add a "Getting Started" section
 
-* Architectrue
+* Architecture
 ** xref:oc4:ROOT:explanations/dns_scheme.adoc[]
 ** xref:oc4:ROOT:explanations/node_groups.adoc[]
 ** xref:oc4:ROOT:explanations/etcd_encryption.adoc[]
@@ -31,7 +31,7 @@
 
 *** xref:oc4:ROOT:how-tos/cloudscale/enable-loadbalancer-service.adoc[Enable LoadBalancer Services]
 *** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd]
-*** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Decomisioning]
+*** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Decommissioning]
 
 ** Exoscale
 *** xref:oc4:ROOT:references/exoscale/config.adoc[Configuration]
@@ -45,7 +45,7 @@
 *** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[]
 
-*** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Decomisioning]
+*** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Decommissioning]
 *** xref:oc4:ROOT:how-tos/exoscale/recover-etcd.adoc[Restore etcd]
 *** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
 
@@ -58,7 +58,7 @@
 *** xref:oc4:ROOT:how-tos/gcp/project.adoc[Project Setup]
 *** xref:oc4:ROOT:how-tos/gcp/install.adoc[Install]
 *** xref:oc4:ROOT:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
-*** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Decomisioning]
+*** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Decommissioning]
 *** xref:oc4:ROOT:how-tos/gcp/hive.adoc[Hive]
 *** xref:oc4:ROOT:explanations/gcp/name_lengths.adoc[Name Lengths]
 *** xref:oc4:ROOT:references/resources/gcp.adoc[Cluster Resources]

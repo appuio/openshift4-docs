@@ -88,7 +88,7 @@ Inspired by https://github.com/kubernetes/apimachinery/blob/8d1258da8f386b809d31
 Only present for certain notifications.
 <7> Additional annotations from the webhook configuration.
 
-=== The controller manages the content of the `ClusterVersion/version` object
+=== The controller manages the content of the `ClusterVersion/version` object [[manage-version-object]]
 
 The `ClusterVersion/version` object is the source of truth for the cluster's current version and available updates.
 It is currently managed by ArgoCD which could conflict with the controller.
@@ -114,7 +114,7 @@ pinVersionWindow: "4h" <1>
 Upgrade jobs are created just in time if empty.
 Scheduled upgrade jobs are created in this time window.
 
-=== Interval/ time window definition [[upgrade-schedule]]
+=== Interval / time window definition [[upgrade-schedule]]
 
 * The controller must support customizable upgrade start time
 * The controller must be able to support various upgrade rhythms (weekly, every two weeks, whenever there's an update)
@@ -192,6 +192,30 @@ The controller monitors the `ClusterVersion/version` for the `Available` conditi
 The `UpgradeJob` is considered successful if the `Available` condition is `True` and the `Version` matches the desired version.
 
 == Custom resource definition
+
+=== ClusterVersion
+
+The `ClusterVersion` CRD defines the parameters <<manage-version-object,synced to>> the  `ClusterVersion/version` object.
+
+There must be only one `ClusterVersion` object in the cluster.
+
+[source,yaml]
+----
+apiVersion: upgrade.appuio.io/v1beta1
+kind: ClusterVersion
+metadata:
+  name: version
+spec:
+  template: <1>
+    capabilities:
+      baselineCapabilitySet: v4.11
+    channel: stable-4.11
+    clusterID: bc75be34-e92d-4745-bb9d-8ec39e877854
+    desiredUpdate: {} <2>
+    upstream: https://api.openshift.com/api/upgrades_info/v1/graph
+----
+<1> Template for the `ClusterVersion/version` object.
+<2> The `desiredUpdate` is ignored and set by the `UpgradeJob` controller.
 
 === UpgradeConfig
 

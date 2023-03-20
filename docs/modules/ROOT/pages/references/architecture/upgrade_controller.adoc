@@ -5,8 +5,8 @@
 Maintenance of OpenShift 4 clusters is a manual process.
 We promise maintenance windows outside office hours, and some of them are Switzerland only.
 
-Staying up late to upgrade those clusters is not a sustainable solution.
-It binds team members to the task, and it is not a good use of their time.
+Staying up late to upgrade those clusters isn't a sustainable solution.
+It binds team members to the task, and it isn't a good use of their time.
 
 The need for automation is obvious.
 We decided to write xref:oc4:ROOT:explanations/decisions/maintenance-trigger.adoc[our own upgrade controller].
@@ -26,8 +26,8 @@ We decided to write xref:oc4:ROOT:explanations/decisions/maintenance-trigger.ado
 == Implementation
 
 The controller is a standard `controller-runtime` controller.
-It is deployed on each OpenShift 4 cluster.
-It is managed through a Custom Resource Definition (CRD) called `UpgradeConfig`.
+It's deployed on each OpenShift 4 cluster.
+It's managed through a Custom Resource Definition (CRD) called `UpgradeConfig`.
 
 === Basic upgrade flow
 
@@ -91,7 +91,7 @@ Only present for certain notifications.
 === The controller manages the content of the `ClusterVersion/version` object [[manage-version-object]]
 
 The `ClusterVersion/version` object is the source of truth for the cluster's current version and available updates.
-It is currently managed by ArgoCD which could conflict with the controller.
+It's currently managed by ArgoCD which could conflict with the controller.
 The controller should replace ArgoCD and manage the object from its own CRD.
 
 The https://github.com/openshift/api/blob/1957a8d7445bf2332f027f93a24d7573f77a0dc0/config/v1/types_cluster_version.go#L35[configv1.ClusterVersionSpec] is included in the `UpgradeConfig` CRD and syncs the `ClusterVersion/version` object.
@@ -120,9 +120,9 @@ Scheduled upgrade jobs are created in this time window.
 * The controller must be able to support various upgrade rhythms (weekly, every two weeks, whenever there's an update)
 
 The upgrade start time is defined in the `UpgradeConfig` object.
-It is in the form of a cron expression with an additional field for the https://www.iso.org/obp/ui#iso:std:iso:8601:-1:ed-1:v1:en:term:3.1.1.23[ISO 8601 week number] (https://pkg.go.dev/time#Time.ISOWeek[time#Time.ISOWeek]).
+It's in the form of a cron expression with an additional field for the https://www.iso.org/obp/ui#iso:std:iso:8601:-1:ed-1:v1:en:term:3.1.1.23[ISO 8601 week number] (https://pkg.go.dev/time#Time.ISOWeek[`time#Time.ISOWeek`]).
 The additional field is used to define the weekly upgrade rhythm.
-The syntax is cron-like, e.g. `7` means on the 7th week of the year.
+The syntax is cron-like, for example `7` means on the 7th week of the year.
 The initial implementation will support only `@odd` and `@even` which means every odd/even week of the year.
 
 We sell maintenance windows at the local time of the customer.
@@ -146,7 +146,7 @@ Initially supported values are `@odd` and `@even`.
 
 === The controller verifies cluster health before and after the upgrade [[upgrade-health-checks]]
 
-The controller should not try to upgrade a cluster that is not healthy.
+The controller shouldn't try to upgrade a cluster that isn't healthy.
 
 A `UpgradeJob` checks the cluster health before the upgrade and skips the upgrade if the cluster is unhealthy.
 if an update is skipped, the controller should send a notification to the webhook.
@@ -184,7 +184,7 @@ It should be possible to exclude alerts and alerts in namespaces.
 ==== Check cluster operator health
 
 The `ClusterVersion/version` object contains a queryable list of cluster operators health.
-If any of the operators is degraded, the cluster is unhealthy and should not be upgraded.
+If any of the operators is degraded, the cluster is unhealthy and shouldn't be upgraded.
 
 It should be possible to exclude operators.
 
@@ -193,7 +193,7 @@ It should be possible to exclude operators.
 The controller should expose Prometheus metrics indicating the current state of the upgrade and the controller itself.
 This allows us to monitor the controller and the upgrade process and create alerts.
 
-=== When is an upgrade job considered successful?
+=== When's an upgrade job considered successful?
 
 The controller monitors the `ClusterVersion/version` for the `Available` condition.
 The `UpgradeJob` is considered successful if the `Available` condition is `True` and the `Version` matches the desired version.

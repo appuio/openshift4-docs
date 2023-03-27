@@ -243,9 +243,10 @@ spec:
     location: "Europe/Zurich"
     suspend: false
   pinVersionWindow: "4h" <2>
+  maxUpgradeStartDelay: "1h" <3>
   jobTemplate:
-    upgradeTimeout: "2h" <3>
-    preUpgradeHealthChecks: <4>
+    upgradeTimeout: "2h" <4>
+    preUpgradeHealthChecks: <5>
       timeout: "30m"
       checkCriticalAlerts: true
       checkDegradedOperators: true
@@ -257,7 +258,7 @@ spec:
       - openshift-monitoring
       customQueries:
       - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
-    postUpgradeHealthChecks: <5>
+    postUpgradeHealthChecks: <6>
       timeout: "30m"
       checkCriticalAlerts: true
       checkDegradedOperators: true
@@ -269,12 +270,12 @@ spec:
       - openshift-monitoring
       customQueries:
       - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
-    webhooks: <6>
+    webhooks: <7>
       - url: "https://example.com/webhook"
         annotations:
           cluster_id: "bar"
           tenant_id: "foo"
-  webhooks: <6>
+  webhooks: <7>
     - url: "https://example.com/webhook"
       annotations:
         cluster_id: "bar"
@@ -283,11 +284,13 @@ spec:
 <1> The upgrade schedule as defined in <<upgrade-schedule>>.
 <2> The time window before the maintenance window in which the upgrade version is pinned.
 UpgradeJobs are created at `schedule - pinVersionWindow`.
-<3> The timeout for the upgrade.
+<3> The maximum delay between the scheduled upgrade time and the actual upgrade time.
+Influences the `UpgradeJob`'s `.status.upgradeBefore` field.
+<4> The timeout for the upgrade.
 The upgrade is marked as failed if it takes longer than this.
-<4> The health checks to perform before the upgrade as defined in <<upgrade-health-checks>>.
-<5> The health checks to perform after the upgrade as defined in <<upgrade-health-checks>>.
-<6> The webhook to send notifications to as defined in <<upgrade-webhook>>.
+<5> The health checks to perform before the upgrade as defined in <<upgrade-health-checks>>.
+<6> The health checks to perform after the upgrade as defined in <<upgrade-health-checks>>.
+<7> The webhook to send notifications to as defined in <<upgrade-webhook>>.
 Having multiple webhooks allows to send notifications to different systems.
 Both the `UpgradeConfig` and the `UpgradeJob` have a `webhooks` field since both might send notifications.
 
@@ -301,21 +304,26 @@ It contains a snapshot of the most recent version in the `.status.availableUpdat
 apiVersion: managedupgrade.appuio.io/v1beta1
 kind: UpgradeJob
 metadata:
-  name: cluster-upgrade-2021-01-01T22:00:00+01:00
+  name: cluster-upgrade-1609531200-ef11c47 <1>
 spec:
-  upgradeAt: "2021-01-01T22:00:00+01:00" <1>
-  desiredVersion: <2>
+  startAfter: "2021-01-01T22:00:00+01:00" <2>
+  startBefore: "2021-01-01T23:00:00+01:00" <3>
+  desiredVersion: <4>
     version: "4.6.1"
     image: "quay.io/openshift-release-dev/ocp-release@sha256:1234567890abcdef"
-  config: <3>
+  config: <5>
     upgradeTimeout: "2h"
     preUpgradeHealthChecks: {} ...
     postUpgradeHealthChecks: {} ...
     webhooks: []
 ----
-<1> The timestamp when the upgrade should start.
-<2> The version to upgrade to.
-<3> The config as defined in <<upgrade-config>> and copied from the `UpgradeConfig` object.
+<1> The name of the `UpgradeJob` is the timestamp when the upgrade should start plus a hash of the `UpgradeConfig` object.
+The timestamp is primarily used for sorting the `UpgradeJob` objects should multiple exist.
+<2> The timestamp from when the upgrade should start.
+<3> The timestamp until when the upgrade should start.
+If the upgrade doesn't start within this time window, for example when the controller is unavailable, the upgrade is marked as skipped.
+<4> The version to upgrade to.
+<5> The config as defined in <<upgrade-config>> and copied from the `UpgradeConfig` object.
 
 == Resources
 

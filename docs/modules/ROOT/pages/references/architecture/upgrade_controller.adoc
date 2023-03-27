@@ -37,6 +37,7 @@ image:explanations/upgrade-controller-high-level-flow-chart.svg[]
 
 The controller should be able to send notifications to a webhook.
 Every step of the upgrade process should be notified.
+Failed notification deliveries must not block the upgrade flow.
 
 We might want to reuse the Alertmanager webhook definition, they already thought about TLS and authentication and other necessary features.
 
@@ -125,7 +126,7 @@ The additional field is used to define the weekly upgrade rhythm.
 The syntax is cron-like, for example `7` means on the 7th week of the year.
 The initial implementation will support only `@odd` and `@even` which means every odd/even week of the year.
 
-We sell maintenance windows at the local time of the customer.
+We support maintenance windows adhering to the local time of a cluster.
 The time zone of the schedule should be configurable.
 
 It must be possible to suspend scheduling of upgrades.
@@ -148,8 +149,8 @@ Initially supported values are `@odd` and `@even`.
 
 The controller shouldn't try to upgrade a cluster that isn't healthy.
 
-A `UpgradeJob` checks the cluster health before the upgrade and skips the upgrade if the cluster is unhealthy.
-if an update is skipped, the controller should send a notification to the webhook.
+An `UpgradeJob` checks the cluster health before the upgrade and skips the upgrade if the cluster is unhealthy.
+If an update is skipped, the controller should send a notification to the webhook.
 
 The controller should also check the cluster health after the upgrade.
 If the cluster is unhealthy, the controller should send a notification to the webhook.
@@ -179,12 +180,12 @@ preUpgradeHealthChecks:
 The controller should query the cluster's Prometheus instance for alerts.
 If there are any alerts with `severity=critical`, the cluster is unhealthy.
 
-It should be possible to exclude alerts and alerts in namespaces.
+It should be possible to exclude specific alerts and all alerts for certain namespaces.
 
 ==== Check cluster operator health
 
-The `ClusterVersion/version` object contains a queryable list of cluster operators health.
-If any of the operators is degraded, the cluster is unhealthy and shouldn't be upgraded.
+The `ClusterVersion/version` object contains a queryable list of each cluster operator's health.
+If any of the operators is degraded, the cluster should be considered unhealthy and shouldn't be upgraded.
 
 It should be possible to exclude operators.
 

@@ -241,7 +241,7 @@ spec:
     cron: "0 22 * * 2"
     isoWeek: "@odd"
     location: "Europe/Zurich"
-    suspend: false <4>
+    suspend: false
   pinVersionWindow: "4h" <2>
   jobTemplate:
     upgradeTimeout: "2h" <3>

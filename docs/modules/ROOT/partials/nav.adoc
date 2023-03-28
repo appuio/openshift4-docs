@@ -11,7 +11,7 @@
 ** xref:oc4:ROOT:explanations/pod_security.adoc[]
 ** xref:oc4:ROOT:references/architecture/upgrade_controller.adoc[Upgrade Controller]
 
-** cloudscale.ch
+** Exoscale
 *** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
 
 ** Google Cloud Platform

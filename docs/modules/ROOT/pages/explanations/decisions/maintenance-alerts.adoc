@@ -1,0 +1,51 @@
+= Group Maintenance Alerts
+
+== Problem
+
+Unattended maintenance for OpenShift 4 should just be happening.
+OnCall shouldn't be alerted all the time, instead relevant alerts should be aggregated.
+There's multiple potential approaches to do so, see section <<_proposals,proposals>>
+
+=== Goals
+
+* Alert if automated maintenance of any OpenShift 4 cluster is blocked at any point
+* Respect OnCall engineers sanity and alert only once or as few times as possible
+** Aggregate individual cluster alerts into one single alert
+** Only send out alerts if any alert is firing for a certain period of time
+** Supress cluster alerts during the maintenance window
+* SLA relevant alerts shouldn't be supressed in any form
+
+=== Non-goals
+
+* General centralized alerts of OpenShift 4 clusters
+
+== Proposals
+
+=== Option 1: Use centralized Mimir / Grafana
+
+The upgrade controller is monitoring the clusters health and can emit metrics on the current state of the maintenance process.
+Alternatively record rules could be used to create necessary metric timeseries.
+We can send these few metrics to our centralized Mimir instance and implement alerting there.
+
+Using metrics from the upgrade controller or record rulesd eliminates the need for sending a wast amount of different metrics to our centralized Mimir instance.
+
+=== Option 2: Use centralized Grafana and remote Datasources
+
+Configure our centralized Grafana to access every clusters Prometheus as datasources.
+Alert based on metrics from all datasources by Grafana.
+
+This approach can be used to also monitor clusters that use different upgrade mechanism, not only OpenShift 4 clusters.
+
+Accessing the Prometheus instances from outside the cluster might be difficult for some customers with airgapped setups.
+
+=== Option 3: Use Opsgenie
+
+Opsgenie has some options to filter and group alerts together.
+Special routes can be configured based on alert labels to wait for a specified time before alerting an OnCall engineer.
+
+
+== Decision
+
+
+== Rationale
+

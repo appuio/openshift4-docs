@@ -50,7 +50,7 @@ Special routes can be configured based on alert labels to wait for a specified t
 
 There is a possibility to group alerts together using https://support.atlassian.com/opsgenie/docs/what-is-alert-de-duplication/[Opsgenie aliases].
 
-Alertmanager https://github.com/prometheus/alertmanager/issues/1598[does not allow] control over this field currently.
+Alertmanager https://github.com/prometheus/alertmanager/issues/1598[doesn't allow] control over this field currently.
 We would need a proxy between Alertmanager and Opsgenie to set the alias field.
 The configuration seems to be quite complex and error prone.
 
@@ -59,13 +59,13 @@ The configuration seems to be quite complex and error prone.
 There is a possibility to configure a maintenance window for specific alerts.
 During this time period a notification policy can delay alerting or auto close the alert.
 
-This does not solve the grouping issue.
+This doesn't solve the grouping issue.
 
 ==== Incident Creation
 
 There is a possibility to create incidents automatically based on alert labels.
 This could allow us to create a "cluster maintenance" incident, with low priority, and add all alerts that are firing to it.
-Closing the incident is not possible and would need to be done manually.
+Closing the incident isn't possible and would need to be done manually.
 I couldn't find a way to delay alerts for a certain time period.
 
 The incident creation seems to be quite buggy.

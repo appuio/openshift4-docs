@@ -9,7 +9,7 @@ There's multiple potential approaches to do so, see section <<_proposals,proposa
 === Goals
 
 * Alert if automated maintenance of any OpenShift 4 cluster is blocked at any point
-* Respect OnCall engineers sanity and alert only once or as few times as possible
+* To minimize alert fatigue for OnCall engineers, alert only once or as few times as possible
 ** Aggregate individual cluster alerts into one single alert
 ** Only send out alerts if any alert is firing for a certain period of time
 ** Suppress cluster alerts during the maintenance window
@@ -23,20 +23,20 @@ There's multiple potential approaches to do so, see section <<_proposals,proposa
 
 === Option 1: Use centralized Mimir / Grafana
 
-The upgrade controller is monitoring the clusters health and can emit metrics on the current state of the maintenance process.
+The upgrade controller is monitoring the cluster's health and can emit metrics on the current state of the maintenance process.
 We can send these few metrics to our centralized Mimir instance and implement alerting there.
 
 Alternatively record rules could be used to create necessary metric time series.
 The Prometheus `ALERTS` metric is also a record rule under the hood.
-It should be possible to remote write this metric to our centralized Mimir instance.
+It's possible to remote write this metric to our centralized Mimir instance.
 This would allow us to build alerting dashboards and meta alerts with minimal additional work and transmitted data.
 
 === Option 2: Use centralized Grafana and remote Datasources
 
-Configure our centralized Grafana to access every clusters Prometheus as data source.
+Configure our centralized Grafana to access every cluster's Prometheus as data source.
 Alert based on metrics from all data sources by Grafana.
 
-Accessing the Prometheus instances from outside the cluster might be difficult for some customers with air-gapped setups and we would need a way to expose the Prometheus API to the outside.
+Accessing the Prometheus instances from outside the cluster might be difficult for some customers with restricted networking setups and we would need a way to expose the Prometheus API to the outside.
 
 Using alerts managed by Grafana would be different from the current approach of using Prometheus Alertmanager.
 It would need additional integration work into Opsgenie.
@@ -66,10 +66,10 @@ This doesn't solve the grouping issue.
 There is a possibility to create incidents automatically based on alert labels.
 This could allow us to create a "cluster maintenance" incident, with low priority, and add all alerts that are firing to it.
 Closing the incident isn't possible and would need to be done manually.
-I couldn't find a way to delay alerts for a certain time period.
+There doesn't seem to be a way to delay alerts for a certain time period.
 
 The incident creation seems to be quite buggy.
-I could ACK an incident and it would still be shown as "unacknowledged" in the UI.
+While an incident can be acknowledged, it would still be shown as "unacknowledged" in the UI.
 
 This does solve the grouping issue, but not the maintenance window end issue.
 

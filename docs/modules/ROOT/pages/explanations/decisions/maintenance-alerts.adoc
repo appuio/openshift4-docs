@@ -1,0 +1,84 @@
+= Group Maintenance Alerts
+
+== Problem
+
+Unattended maintenance for OpenShift 4 should just be happening.
+OnCall shouldn't be alerted all the time, instead relevant alerts should be aggregated.
+There's multiple potential approaches to do so, see section <<_proposals,proposals>>
+
+=== Goals
+
+* Alert if automated maintenance of any OpenShift 4 cluster is blocked at any point
+* To minimize alert fatigue for OnCall engineers, alert only once or as few times as possible
+** Aggregate individual cluster alerts into one single alert
+** Only send out alerts if any alert is firing for a certain period of time
+** Suppress cluster alerts during the maintenance window
+* SLA relevant alerts shouldn't be suppressed in any form
+
+=== Non-goals
+
+* General centralized alerts of OpenShift 4 clusters
+
+== Proposals
+
+=== Option 1: Use centralized Mimir / Grafana
+
+The upgrade controller is monitoring the cluster's health and can emit metrics on the current state of the maintenance process.
+We can send these few metrics to our centralized Mimir instance and implement alerting there.
+
+Alternatively record rules could be used to create necessary metric time series.
+The Prometheus `ALERTS` metric is also a record rule under the hood.
+It's possible to remote write this metric to our centralized Mimir instance.
+This would allow us to build alerting dashboards and meta alerts with minimal additional work and transmitted data.
+
+=== Option 2: Use centralized Grafana and remote Datasources
+
+Configure our centralized Grafana to access every cluster's Prometheus as data source.
+Alert based on metrics from all data sources by Grafana.
+
+Accessing the Prometheus instances from outside the cluster might be difficult for some customers with restricted networking setups and we would need a way to expose the Prometheus API to the outside.
+
+Using alerts managed by Grafana would be different from the current approach of using Prometheus Alertmanager.
+It would need additional integration work into Opsgenie.
+
+=== Option 3: Use Opsgenie
+
+Opsgenie has some options to filter and group alerts together.
+Special routes can be configured based on alert labels to wait for a specified time before alerting an OnCall engineer.
+
+==== Grouping Alerts using Opsgenie aliases
+
+There is a possibility to group alerts together using https://support.atlassian.com/opsgenie/docs/what-is-alert-de-duplication/[Opsgenie aliases].
+
+Alertmanager https://github.com/prometheus/alertmanager/issues/1598[doesn't allow] control over this field currently.
+We would need a proxy between Alertmanager and Opsgenie to set the alias field.
+The configuration seems to be quite complex and error prone.
+
+==== Maintenance Window
+
+There is a possibility to configure a maintenance window for specific alerts.
+During this time period a notification policy can delay alerting or auto close the alert.
+
+This doesn't solve the grouping issue.
+
+==== Incident Creation
+
+There is a possibility to create incidents automatically based on alert labels.
+This could allow us to create a "cluster maintenance" incident, with low priority, and add all alerts that are firing to it.
+Closing the incident isn't possible and would need to be done manually.
+There doesn't seem to be a way to delay alerts for a certain time period.
+
+The incident creation seems to be quite buggy.
+While an incident can be acknowledged, it would still be shown as "unacknowledged" in the UI.
+
+This does solve the grouping issue, but not the maintenance window end issue.
+
+== Decision
+
+We decided to go with option 1 and use a centralized Mimir / Grafana.
+
+== Rationale
+
+We already use a centralized Mimir instance for billing and SLOs.
+Forwarding upgrade-controller metrics and alerts to Mimir should be minimal additional work.
+Using Mimir we also can configure meta-alerts using PromQL and Alertmanager, both technologies we already know and use.

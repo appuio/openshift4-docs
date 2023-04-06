@@ -209,3 +209,4 @@
 * Decisions
 ** xref:oc4:ROOT:explanations/decisions/machine-api.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/maintenance-trigger.adoc[]
+** xref:oc4:ROOT:explanations/decisions/maintenance-alerts.adoc[]

@@ -92,7 +92,7 @@ Since we already have sufficient experience in implementing Kubernetes controlle
 
 In order for this approach to actually reduce complexity compared to the Renovate-based approach, we need the controller to autonomously update the desired cluster version.
 Notably, we don't gain anything except for additional moving parts if we make the desired OpenShift patch version an input for the controller.
-Therefore the biggest drawback of this approach is -- as with any option that's based on an active component in the cluster -- that we lose some amount of control over the desired version of a cluster in the GitOps repositories.
+Therefore the biggest drawback of this approach is--as with any option that's based on an active component in the cluster--that we lose some amount of control over the desired version of a cluster in the GitOps repositories.
 Additionally, we don't automatically have a persistent history of version updates for each cluster based on the commits in the cluster's catalog repository.
 
 However, by implementing our own controller, we should be able to add support for a persistent update history outside the cluster with reasonable effort.
@@ -112,6 +112,6 @@ Additionally, with a controller that runs in the cluster, we don't need to inves
 
 Further, by writing our own controller, we're able to accommodate specific upgrade requirements such as announcing target versions ahead of time or custom upgrade schedules more easily than by going with any of the other options.
 
-On the implementation side -- since we've got significant experience in writing Kubernetes controllers in Go -- the overhead of bootstrapping and maintaining our own dedicated tool to trigger upgrades is acceptable.
+On the implementation side--since we've got significant experience in writing Kubernetes controllers in Go--the overhead of bootstrapping and maintaining our own dedicated tool to trigger upgrades is acceptable.
 
 Finally, having the update triggering mechanism running in the cluster matches RedHat's upgrade concept for OpenShift 4 which is inherently cluster-scoped, see the https://docs.openshift.com/container-platform/latest/updating/index.html[upstream documentation].

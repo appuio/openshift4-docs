@@ -14,6 +14,24 @@ oc --as cluster-admin get nodes
 
 This will impersonate the stated user for this command.
 
+=== Usage in tools that use the kubeconfig file
+
+The `kubeconfig` file has a `users` section where impersonation can be https://kubernetes.io/docs/reference/config-api/kubeconfig.v1/#AuthInfo[configured].
+
+The file can be found at `$HOME/.kube/config` or at the location specified by the `KUBECONFIG` environment variable.
+
+[source,bash]
+----
+# Impersonation config for current context
+yq -i '.current-context as $cc | (.contexts[] | select(.name == $cc) | .context.user) as $cu | with(.users[] | select(.name == $cu); .user.as = "cluster-admin")' ${KUBECONFIG:-$HOME/.kube/config}
+oc whoami
+
+# Use your tool of choice ...
+
+# Stop impersonation
+yq -i '.current-context as $cc | (.contexts[] | select(.name == $cc) | .context.user) as $cu | with(.users[] | select(.name == $cu); del(.user.as))' ${KUBECONFIG:-$HOME/.kube/config}
+oc whoami
+----
 
 == OpenShift Console
 

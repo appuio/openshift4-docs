@@ -1,0 +1,63 @@
+= Sharing ArgoCD between teams
+
+== Problem
+
+Currently, there's no easy way to assign operational responsibility for applications managed by the Project Syn ArgoCD instance to different teams.
+Additionally, a team currently can't pause ArgoCD's auto sync for their applications without pausing auto sync for the ArgoCD root application.
+
+=== Goals
+
+* We can assign operational responsibility per Project Syn-managed ArgoCD application (per component instance)
+* Teams can manage their ArgoCD applications on a cluster without interfering with other teams' ArgoCD applications
+
+=== Non-Goals
+
+* Allow deploying arbitrary applications through the Project Syn ArgoCD instance
+* Create a well-defined structure for per-team configurations in the Project Syn tenant repository
+
+== Proposals
+
+=== Add team label to ArgoCD apps
+
+We can keep the current setup (one ArgoCD instance with one https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern[root application ("app of apps")]) and inject additional information in the form of labels on the ArgoCD applications.
+
+This approach can easily be tested by injecting suitable application labels manually in Commodore components.
+Additionally, engineering streamlined support for this approach is straightforward and can be done in the https://github.com/projectsyn/component-argocd/blob/1227b46c2db6e6959ce75aa7ab44db975f33bb3e/lib/argocd.libjsonnet[argocd component library] and the configuration hierarchy.
+A potential implementation would be to provide a mapping of component instance names to team names in the configuration hierarchy.
+This would enable the component library to lookup the value for the team label with minimal requirements.
+
+However, this approach doesn't address the issue that it's currently not possible to pause ArgoCD auto sync without pausing auto sync for the global root app.
+
+=== Create separate ArgoCD project and root application per team
+
+The next option is to adjust the Project Syn-managed ArgoCD to support an ArgoCD Project and root app per team.
+This approach will need more extensive engineering, since a lot of Project Syn tooling (at least https://github.com/projectsyn/steward/blob/c25ea41615340ab8b6a78888d03fe710f77d86de/pkg/argocd/argocd.go#L88-L94[Steward], https://github.com/projectsyn/component-argocd/blob/1227b46c2db6e6959ce75aa7ab44db975f33bb3e/component/app.jsonnet[component argocd] and the https://github.com/projectsyn/commodore-component-template/blob/cfd150bd41deaa0ad10d522ec5fd0abafed65800/%7B%7B%20cookiecutter.slug%20%7D%7D/class/%7B%7B%20cookiecutter.slug%20%7D%7D.yml#L4-L7[component template]) currently assumes that there's exactly one ArgoCD project and root application for all applications managed through Project Syn.
+
+With this approach, the team responsible for the cluster itself would continue using the current ArgoCD project (`syn`) and root application (`root`).
+This team can bootstrap ArgoCD projects and root applications for any other teams who deploy applications to the cluster through Project Syn.
+
+To support this approach, the argocd component library needs to be made "team-aware" (similar to the first alternative).
+Instead of using the component instance to team mapping to add labels to each ArgoCD application, the component library can ensure the correct ArgoCD project is configured for each application.
+
+Additionally, each component's `kapitan.compile` entry for the ArgoCD application needs to be adjusted to write the application manifest into a well-defined path matching the owning team's ArgoCD project.
+Most likely, this can be done as a patch for the component template.
+
+=== Create separate ArgoCD instance per team
+
+The final option would be to bootstrap a separate ArgoCD instance per additional team managing a part of the applications on a cluster.
+The primary Project Syn ArgoCD instance (in namespace `syn`) would be assigned to the primary team which operates the cluster itself. 
+This team would then bootstrap an additional ArgoCD instance for each other team who manages a number of applications on the cluster through Project Syn.
+
+This approach has similar implications to the previous approach in regards of required engineering. 
+However, this approach requires more cluster resources than just adding a separate ArgoCD project and root app to the existing Project Syn ArgoCD instance.
+
+== Decision
+
+We've decided to go with creating a separate ArgoCD project and root application per team.
+
+== Rationale
+
+First off, just adding a team label to each ArgoCD application doesn't fully address the goal of allowing teams to autonomously manage their ArgoCD applications.
+
+Overall, we think that creating a separate ArgoCD project and root application per team strikes a good balance between separation and resource usage.
+There's not much to gain by operating multiple ArgoCD instances with a single project and root application each for configurations which are sourced from the same Git repository.

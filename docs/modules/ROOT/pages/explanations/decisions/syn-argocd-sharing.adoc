@@ -36,11 +36,15 @@ This approach will need more extensive engineering, since a lot of Project Syn t
 With this approach, the team responsible for the cluster itself would continue using the current ArgoCD project (`syn`) and root application (`root`).
 This team can bootstrap ArgoCD projects and root applications for any other teams who deploy applications to the cluster through Project Syn.
 
+Each team's root application will be managed independently from the default root application (`root`).
+The bootstrap process for the additional root applications should be fully automated through some parameter in the configuration hierarchy.
+
 To support this approach, the argocd component library needs to be made "team-aware" (similar to the first alternative).
 Instead of using the component instance to team mapping to add labels to each ArgoCD application, the component library can ensure the correct ArgoCD project is configured for each application.
 
-Additionally, each component's `kapitan.compile` entry for the ArgoCD application needs to be adjusted to write the application manifest into a well-defined path matching the owning team's ArgoCD project.
-Most likely, this can be done as a patch for the component template.
+To ensure each team's applications are independent, support for storing application definitions in multiple paths in the catalog repository will be required.
+To do so, each component's `kapitan.compile` entry for the ArgoCD application needs to be adjusted to write the application manifest into a well-defined path matching the owning team's ArgoCD project.
+Most likely, this change can be implemented globally in the component template.
 
 === Create separate ArgoCD instance per team
 

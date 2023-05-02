@@ -215,12 +215,13 @@ metadata:
   name: version
 spec:
   template: <1>
-    capabilities:
-      baselineCapabilitySet: v4.11
-    channel: stable-4.11
-    clusterID: bc75be34-e92d-4745-bb9d-8ec39e877854
-    desiredUpdate: {} <2>
-    upstream: https://api.openshift.com/api/upgrades_info/v1/graph
+    spec:
+      capabilities:
+        baselineCapabilitySet: v4.11
+      channel: stable-4.11
+      clusterID: bc75be34-e92d-4745-bb9d-8ec39e877854
+      desiredUpdate: {} <2>
+      upstream: https://api.openshift.com/api/upgrades_info/v1/graph
 ----
 <1> Template for the `ClusterVersion/version` object.
 <2> The `desiredUpdate` is ignored and set by the `UpgradeJob` controller.
@@ -245,36 +246,38 @@ spec:
   pinVersionWindow: "4h" <2>
   maxUpgradeStartDelay: "1h" <3>
   jobTemplate:
-    upgradeTimeout: "2h" <4>
-    preUpgradeHealthChecks: <5>
-      timeout: "30m"
-      checkCriticalAlerts: true
-      checkDegradedOperators: true
-      excludeAlerts:
-      - alertname: "KubePodCrashLooping"
-      excludeNamespaces:
-      - openshift-console
-      excludeOperators:
-      - openshift-monitoring
-      customQueries:
-      - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
-    postUpgradeHealthChecks: <6>
-      timeout: "30m"
-      checkCriticalAlerts: true
-      checkDegradedOperators: true
-      excludeAlerts:
-      - alertname: "KubePodCrashLooping"
-      excludeNamespaces:
-      - openshift-console
-      excludeOperators:
-      - openshift-monitoring
-      customQueries:
-      - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
-    webhooks: <7>
-      - url: "https://example.com/webhook"
-        annotations:
-          cluster_id: "bar"
-          tenant_id: "foo"
+    spec:
+      config:
+        upgradeTimeout: "2h" <4>
+        preUpgradeHealthChecks: <5>
+          timeout: "30m"
+          checkCriticalAlerts: true
+          checkDegradedOperators: true
+          excludeAlerts:
+          - alertname: "KubePodCrashLooping"
+          excludeNamespaces:
+          - openshift-console
+          excludeOperators:
+          - openshift-monitoring
+          customQueries:
+          - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
+        postUpgradeHealthChecks: <6>
+          timeout: "30m"
+          checkCriticalAlerts: true
+          checkDegradedOperators: true
+          excludeAlerts:
+          - alertname: "KubePodCrashLooping"
+          excludeNamespaces:
+          - openshift-console
+          excludeOperators:
+          - openshift-monitoring
+          customQueries:
+          - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
+        webhooks: <7>
+          - url: "https://example.com/webhook"
+            annotations:
+              cluster_id: "bar"
+              tenant_id: "foo"
   webhooks: <7>
     - url: "https://example.com/webhook"
       annotations:

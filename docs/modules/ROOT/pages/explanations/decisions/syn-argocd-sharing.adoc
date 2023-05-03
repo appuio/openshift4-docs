@@ -65,3 +65,7 @@ First off, just adding a team label to each ArgoCD application doesn't fully add
 
 Overall, we think that creating a separate ArgoCD project and root application per team strikes a good balance between separation and resource usage.
 There's not much to gain by operating multiple ArgoCD instances with a single project and root application each for configurations which are sourced from the same Git repository.
+
+== References
+
+* https://syn.tools/syn/SDDs/0030-argocd-multitenancy.html[Syn Design Document corresponding to this decision]

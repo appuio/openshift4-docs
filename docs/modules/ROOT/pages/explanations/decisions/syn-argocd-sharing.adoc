@@ -14,6 +14,7 @@ Additionally, a team currently can't pause ArgoCD's auto sync for their applicat
 
 * Allow deploying arbitrary applications through the Project Syn ArgoCD instance
 * Create a well-defined structure for per-team configurations in the Project Syn tenant repository
+* Partial cluster catalog compilation to allow isolated catalog updates for a single team's applications
 
 == Proposals
 
@@ -65,6 +66,10 @@ First off, just adding a team label to each ArgoCD application doesn't fully add
 
 Overall, we think that creating a separate ArgoCD project and root application per team strikes a good balance between separation and resource usage.
 There's not much to gain by operating multiple ArgoCD instances with a single project and root application each for configurations which are sourced from the same Git repository.
+
+The current decision doesn't introduce partial catalog compilations to allow a team to make changes without having to worry about other unrelated changes getting rolled out through the same catalog compilation.
+However, the chosen approach could easily be extended to allow partial catalog compilations in the future.
+Additionally, the approach could be extended to allow the Project Syn ArgoCD instance to deploy manifests from multiple different catalog repositories.
 
 == References
 

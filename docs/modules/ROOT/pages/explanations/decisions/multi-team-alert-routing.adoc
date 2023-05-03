@@ -1,0 +1,67 @@
+= Multi-team alert routing
+
+== Problem
+
+Currently, we use complex, fragile (regex-based), manually managed routing rules in OpsGenie to forward selected alerts to teams other than the team owning the cluster.
+Instead of having to maintain those routing rules in OpsGenie, we want to manage alert routing through Project Syn.
+
+=== Goals
+
+* Multi-team alert routing for Project Syn-managed applications is managed through Project Syn
+
+=== Non-Goals
+
+* Define how to do alert routing for non-Project Syn managed applications
+* Change how cluster-level alerts are currently handled
+
+== Proposals
+
+=== Teams use the OpenShift user workload monitoring
+
+The first option is that additional teams who operate Project Syn-managed applications use the OpenShift user workload monitoring for their applications.
+
+The user workload monitoring can be fully configured through custom resources created in the applications' namespaces, so teams can deploy alert rules and alert routing configurations together with the application.
+
+Depending on the team's use case, this may be suitable.
+However, the approach doesn't allow the team to define alert routing rules and alert receivers which can be used by multiple applications in different namespaces.
+The root cause for this restriction is that the user workload monitoring ensures that all resources are prefixed with the namespace in which they're created.
+While users can configure global alert routing and receivers in the user workload monitoring, those configurations are currently intentionally not managed through Project Syn to allow the end-user of the cluster to configure the user workload monitoring as they wish.
+
+Because we've decided to use a single ArgoCD instance for all Project Syn-managed applications on a cluster, we need to route ArgoCD alerts to different teams in the cluster monitoring stack even teams generally use the user workload monitoring for their alerts.
+Additionally, there may be other alerts (such as `KubeJobFailed` or `KubeDeploymentReplicasMismatch`) which we'll want to route to different teams.
+The routing configuration for these alerts will need to be deployed into the cluster monitoring stack regardless of how we handle alerts for other teams.
+
+=== Teams use the OpenShift cluster monitoring
+
+The second option is that monitoring and alerting for all Project Syn-managed applications is done through the OpenShift cluster monitoring stack.
+
+This approach fits nicely with the current setup, as we generally use OpenShift's cluster monitoring stack for Project Syn-managed applications.
+Notably, the cluster monitoring stack's alert routing and receivers are already managed through Project Syn.
+Therefore, it should be straightforward to configure additional alert routes and receivers to route alerts to the appropriate team.
+
+Additionally, this approach will allow us to easily route cluster-level alerts (for example ArgoCD alerts) to the correct team, as those alerts are already flowing through the cluster monitoring stack.
+We'll still need to ensure that any alerts which can be raised for resources which can owned by different teams have well-defined labels which identify the responsible team (for ArgoCD, the ArgoCD project associated with the alert could be such an identifier).
+
+=== Teams install their own Prometheus stack
+
+A final option is that teams install their own Prometheus stack.
+This approach gives the greatest degree of freedom to teams, as they can configure and customize their monitoring stack as they desire.
+
+However, running a full Prometheus stack per team is quite expensive resource-wise.
+
+== Decision
+
+Teams use the OpenShift cluster monitoring
+
+== Rationale
+
+Using the cluster monitoring stack allows us to build on the existing configuration and infrastructure for metrics and alerting.
+Additionally, we don't need to configure per-team routing and receivers in two different monitoring stacks by allowing teams to use the cluster monitoring stack.
+Further, we ensure that any alerts deployed through Project Syn are seen by _a_ VSHN team by letting all teams use the cluster monitoring stack.
+
+Finally, if teams would use the user workload monitoring, they'd have to coordinate with the end customer if they want to configure global receivers and routing rules.
+Depending on the end customer's needs misrouted alerts might end up at the customer, if the customer wants to have a catch-all routing rule in the user workload monitoring stack.
+
+== References
+
+* xref:oc4:ROOT:explanations/decisions/syn-argocd-sharing.adoc[]

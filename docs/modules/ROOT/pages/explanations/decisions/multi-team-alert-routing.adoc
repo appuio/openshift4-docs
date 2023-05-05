@@ -37,7 +37,7 @@ The second option is that monitoring and alerting for all Project Syn-managed ap
 
 This approach fits nicely with the current setup, as we generally use OpenShift's cluster monitoring stack for Project Syn-managed applications.
 Notably, the cluster monitoring stack's alert routing and receivers are already managed through Project Syn.
-Therefore, it should be straightforward to configure additional alert routes and receivers to route alerts to the appropriate team.
+Because of this, it's straightforward to configure additional alert routes and receivers to route alerts to the appropriate teams.
 
 Additionally, this approach will allow us to easily route cluster-level alerts (for example ArgoCD alerts) to the correct team, as those alerts are already flowing through the cluster monitoring stack.
 We'll still need to ensure that any alerts which can be raised for resources which can owned by different teams have well-defined labels which identify the responsible team (for ArgoCD, the ArgoCD project associated with the alert could be such an identifier).
@@ -51,7 +51,8 @@ However, running a full Prometheus stack per team is quite expensive resource-wi
 
 == Decision
 
-Teams use the OpenShift cluster monitoring
+Teams use the OpenShift cluster monitoring.
+We route alerts to the responsible teams in Alertmanager.
 
 == Rationale
 
@@ -61,6 +62,9 @@ Further, we ensure that any alerts deployed through Project Syn are seen by _a_ 
 
 Finally, if teams would use the user workload monitoring, they'd have to coordinate with the end customer if they want to configure global receivers and routing rules.
 Depending on the end customer's needs misrouted alerts might end up at the customer, if the customer wants to have a catch-all routing rule in the user workload monitoring stack.
+
+We configure alert routing in Alertmanager on the cluster through Project Syn.
+This allows us to make use of Alertmanager's feature-rich alert routing mechanisms rather than having to manually maintain brittle routing rules in OpsGenie.
 
 == References
 

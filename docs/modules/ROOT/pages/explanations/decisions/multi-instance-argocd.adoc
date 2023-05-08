@@ -2,7 +2,7 @@
 
 == Problem
 
-If a customer also want's to use ArgoCD for their deployment, he currently has to install ArgoCD with the same version we use and not install any CRDs.
+If a customer also wants to use ArgoCD for their deployment, they currently have to install ArgoCD with the same version we use and not install any CRDs.
 This process needs synchronization between us and the customer, if there is a new version of ArgoCD to be rolled out.
 
 === Goals
@@ -10,26 +10,34 @@ This process needs synchronization between us and the customer, if there is a ne
 * We can deploy multiple instances of ArgoCD
 * No synchronization needed between us and customer, if an update needs to be rolled out
 
+=== Non-Goals
+
+* Allow multiple different versions of ArgoCD to be installed on the same cluster
+* Provide VSHN-managed ArgoCD instances to the customer
 
 == Proposals
 
 === Create separate ArgoCD project and root application for customer
 
-Using the same ArgoCD instance for managing the cluster and the customers isn't an option for various reasons:
-* Separation of concerns
-* Separation of responsibility / accountability
+Using the same ArgoCD instance for managing the cluster and the customers has multiple drawbacks.
+
+First off, having a single instance doesn't provide a clean separation of responsibility and accountability between Project Syn and the customer's deployments.
+Additionally, if we allow the customer to use the existing Project Syn ArgoCD, we'd need to invest a significant amount of time to ensure alerts regarding the customer's ArgoCD applications reach the customer and not us.
+Finally, to ensure separation of the Project Syn configuration and the customer's configuration, we'd have to implement authorization and authentication to properly separate the Project Syn configuration from the customer's configuration.
 
 === Make ArgoCD component multi-instance ready
 
-Making the ArgoCD component multi-instance ready would give us the option to deploy multiple instances of ArgoCD and controlling the version and configuration.
+Making the ArgoCD component multi-instance ready enables us to deploy multiple instances of ArgoCD while ensuring that there's no version mismatch between the CRD and the installations.
+Additionally, we could manage the ArgoCD configuration for all of the instances if desired.
 
 === Use ArgoCD operator and update ArgoCD component to use operator
 
-Using the ArgoCD operator would release us from managing customers instances. The customer would gain the ability to deploy as many instances as he'd like without any conflict with existing deployments.
+Using the ArgoCD operator enables us to offer customers a mechanism with which they can create as many ArgoCD instances as they need.
+This is an improvement over the current state and the other proposals which would still require us to create and manage the customer's instances.
 
-The engineering effort is higher, as we would also need to refactor the existing component to use the operator and possibly refactor steward so it also uses the operator.
+The engineering effort for this approach is higher, as we need to refactor the existing component to use the operator and may need to refactor Steward to bootstrap the ArgoCD operator instead of a standalone ArgoCD installation.
 
-This option would give us the highest degree of versatility in the future.
+However, this option gives us the highest degree of versatility in the future.
 
 
 == Decision
@@ -37,10 +45,9 @@ This option would give us the highest degree of versatility in the future.
 Use ArgoCD operator.
 
 Using the operator gives us the most versatility.
-Implementation can be done in multiple steps, steward and component-argocd can be adopted at a later point.
-When creating component-argocd-operator we need to make sure to remove 2 of the CRDs that come with the operator.
+Implementation can be done in multiple steps, Steward and the ArgoCD Commodore component can be migrated to use the operator at a later point.
 
-Ideally the operator should be handled by steward / component-argocd in the future.
+Ideally the operator should be installed by Steward and the ArgoCD Commodore component in the future.
 
 
 == References

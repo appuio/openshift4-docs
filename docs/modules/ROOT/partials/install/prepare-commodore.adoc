@@ -1,6 +1,9 @@
 === Prepare Cluster Repository
 
-For the following steps, change into a clean directory (for example a directory in your home).
+[TIP]
+====
+Starting with this section, we recommend that you change into a clean directory (for example a directory in your home).
+====
 
 [NOTE]
 ====

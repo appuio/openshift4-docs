@@ -143,7 +143,7 @@ The disadvantage over option one is that we would lose additional features such 
 
 ==== Design
 
-===== Cloudscale.ch Cloud Provider
+===== cloudscale.ch Cloud Provider
 
 We need to implement the interface for the upstream autoscaler to interact with cloudscale.ch.
 We should most likely implement this as a https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler/cloudprovider/externalgrpc[gRPC service].

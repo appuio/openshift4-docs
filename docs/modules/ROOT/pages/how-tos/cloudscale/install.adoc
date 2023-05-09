@@ -30,6 +30,8 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 * You already have a Tenant and its git repository
 * You have a CCSP Red Hat login and are logged into https://cloud.redhat.com/openshift/install/metal/user-provisioned[Red Hat Openshift Cluster Manager]
++
+IMPORTANT: Don't use your personal account to login to the cluster manager for installation.
 * You want to register a new cluster in Lieutenant and are about to install Openshift 4 on cloudscale.ch
 
 == Prerequisites

@@ -48,9 +48,9 @@ ifeval::["{cloud_provider}" == "exoscale"]
 ----
 jq --arg tfmodule "${TF_MODULE}" --arg index "${node_index}" -r \
   '.resources[] |
-   select(.module==$tfmodule and .type=="exoscale_compute") |
+   select(.module==$tfmodule and .type=="exoscale_compute_instance") |
    .instances[$index|tonumber] |
-   .attributes.hostname' \
+   .attributes.name' \
    .tfstate.json
 ----
 endif::[]
@@ -61,7 +61,7 @@ ifeval::["{cloud_provider}" == "exoscale"]
 [source,bash]
 ----
 terraform state rm "module.cluster.module.storage.random_id.node_id[$node_index]"
-terraform state rm "module.cluster.module.storage.exoscale_compute.nodes[$node_index]"
+terraform state rm "module.cluster.module.storage.exoscale_compute_instance.nodes[$node_index]"
 ----
 endif::[]
 ifeval::["{cloud_provider}" == "cloudscale"]
@@ -128,4 +128,4 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
 ----
 // "{cloud_provider}" == "exoscale"
-endif::[] 
+endif::[]

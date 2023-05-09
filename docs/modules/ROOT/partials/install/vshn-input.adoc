@@ -1,4 +1,6 @@
+ifeval::["{provider}" != "vsphere"]
 :needs_hieradata_edit: yes
+endif::[]
 
 include::partial$vshn-input.adoc[]
 

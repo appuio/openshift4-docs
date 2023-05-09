@@ -1,0 +1,189 @@
+= Install OpenShift 4 on vSphere
+:ocp-minor-version: 4.11
+:k8s-minor-version: 1.24
+:ocp-patch-version: {ocp-minor-version}.9
+:provider: vsphere
+
+[abstract]
+--
+Steps to install an OpenShift 4 cluster on VMWare vSphere.
+
+These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_vsphere/installing-vsphere-installer-provisioned-customizations.html[Installing a cluster on vSphere] docs to set up an installer provisioned installation (IPI).
+--
+
+[IMPORTANT]
+--
+This how-to guide is an early draft.
+So far, we've setup only one cluster using the instructions in this guide.
+--
+
+[NOTE]
+--
+The certificates created during bootstrap are only valid for 24h.
+So make sure you complete these steps within 24h.
+--
+
+== Starting situation
+
+* You already have a Project Syn Tenant and its Git repository
+* You have a CCSP Red Hat login and are logged into https://console.redhat.com/openshift/install/vsphere/installer-provisioned[Red Hat Openshift Cluster Manager]
++
+IMPORTANT: Don't use your personal account to login to the cluster manager for installation.
+* You have credentials for the target vSphere cluster with the permissions described in the https://docs.openshift.com/container-platform/4.12/installing/installing_vsphere/installing-vsphere-installer-provisioned.html#installation-vsphere-installer-infra-requirements-account_installing-vsphere-installer-provisioned[upstream documentation].
+* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on vSphere
+
+== Prerequisites
+
+include::partial$/install/prerequisites.adoc[]
+* `unzip`
+
+== Cluster Installation
+
+include::partial$install/register.adoc[]
+
+=== Configure input
+
+.vSphere API
+[source,bash]
+----
+export VCENTER_HOSTNAME=<vcenter hostname> <1>
+export VCENTER_API_URL="https://${VCENTER_HOSTNAME}"
+----
+<1> The vCenter hostname must be provided without the leading `https://`.
+
+.vSphere credentials
+[source,bash]
+----
+export VSPHERE_USERNAME=<username>
+export VSPHERE_PASSWORD=<password>
+----
+
+.vSphere resources
+[source,bash]
+----
+export VSPHERE_CLUSTER=<cluster name>
+export VSPHERE_DATACENTER=<datacenter name>
+export VSPHERE_DATASTORE=<datastore name>
+export VSPHERE_FOLDER=<folder name>
+export VSPHERE_NETWORK=<network name>
+----
+
+.Cluster machine network
+[source,bash]
+----
+export MACHINE_NETWORK_CIDR=<machine network cidr>
+export API_VIP=<api vip>
+export INGRESS_VIP=<ingress vip>
+----
+
+include::partial$install/vshn-input.adoc[]
+
+[#_set_vault_secrets]
+=== Set secrets in Vault
+
+include::partial$connect-to-vault.adoc[]
+
+.Store various secrets in Vault
+[source,bash]
+----
+# Store vSphere credentials
+vault kv put  clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vsphere/credentials \
+  username=${VSPHERE_USERNAME} \
+  password=${VSPHERE_PASSWORD}
+
+# Generate an HTTP secret for the registry
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
+  httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
+
+# Set the LDAP password
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
+  bindPassword=${LDAP_PASSWORD}
+
+# Generate a master password for K8up backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Generate a password for the cluster object backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Copy the VSHN acme-dns registration password
+vault kv get -format=json "clusters/kv/template/cert-manager" | jq '.data.data' \
+  | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cert-manager" -
+
+----
+
+include::partial$install/prepare-commodore.adoc[]
+
+[#_configure_installer]
+=== Configure the OpenShift Installer
+
+include::partial$install/configure-installer.adoc[]
+
+[#_prepare_installer]
+=== Prepare the OpenShift Installer
+
+include::partial$install/run-installer.adoc[]
+
+=== Update Project Syn cluster config
+
+include::partial$install/prepare-syn-config.adoc[]
+
+=== Provision the cluster
+
+[NOTE]
+====
+The steps in this section must be run on a host which can reach the vSphere API.
+If you can't reach the vSphere API directly, you can setup a SOCKS5 proxy with the following commands:
+
+[source,bash]
+----
+export JUMPHOST_FQDN=<jumphost fqdn or alias from your SSH config> <1>
+ssh -D 12000 -q -f -N ${JUMPHOST_FQDN} <2>
+export VCENTER_API_URL="https://$(ssh ${JUMPHOST_FQDN} dig +short ${VCENTER_HOSTNAME})" <2>
+export https_proxy=socks5://localhost:12000 <3>
+----
+<1> The FQDN or SSH alias of the host which can reach the vSphere API
+<2> This command expects that your SSH config is setup so that `ssh ${JUMPHOST_FQDN}` works without further configuration
+<3> The `openshift-install` tool respects the `https_proxy` environment variable
+====
+
+. Trust the vSphere CA certificate
++
+.Ubuntu 22.04
+[source,bash]
+----
+curl -kLo vsphere-ca.zip ${VCENTER_API_URL}/certs/download.zip <1>
+unzip vsphere-ca.zip
+for cert in certs/lin/*.0; do sudo cp $cert /usr/local/share/ca-certificates/$(basename ${cert}.crt); done
+rm vsphere-ca.zip
+sudo update-ca-certificates
+----
+
+. Run the OpenShift installer
++
+[source,bash]
+----
+openshift-install --dir "${INSTALLER_DIR}" \
+  create cluster --log-level=debug
+----
+
+=== Configure registry S3 credentials
+
+. Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
++
+[source,bash]
+----
+oc create secret generic image-registry-private-configuration-user \
+--namespace openshift-image-registry \
+--from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=<TBD> \
+--from-literal=REGISTRY_STORAGE_S3_SECRETKEY=<TBD>
+----
++
+include::partial$install/registry-samples-operator.adoc[]
+
+include::partial$install/finalize_part1.adoc[]
+
+//include::partial$install/registry-acl-fix.adoc[]
+
+include::partial$install/finalize_part2.adoc[]

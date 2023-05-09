@@ -52,6 +52,7 @@
 
 ** VMware vSphere
 *** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
+*** xref:oc4:ROOT:how-tos/vsphere/install.adoc[Install]
 *** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-creds.adoc[vSphere Credentials]
 *** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-params.adoc[vSphere Parameters]
 
@@ -75,6 +76,9 @@
 ** Exoscale
 *** xref:oc4:ROOT:references/exoscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Install]
+
+** vSphere
+*** xref:oc4:ROOT:how-tos/vsphere/install.adoc[Install]
 
 * Update
 ** xref:oc4:ROOT:how-tos/update_maintenance.adoc[Update/Maintenance]
@@ -196,7 +200,7 @@
 *** xref:oc4:ROOT:how-tos/exoscale/replace_storage_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_storage_node.adoc[]
 
-* Decomisioning
+* Decommissioning
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[cloudscale.ch]
 ** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Exoscale]
 ** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Google Compute Cloud]

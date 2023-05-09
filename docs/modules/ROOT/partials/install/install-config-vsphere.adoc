@@ -1,0 +1,58 @@
+[source,bash]
+----
+export INSTALLER_DIR="$(pwd)/target"
+mkdir -p "${INSTALLER_DIR}"
+
+cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
+apiVersion: v1
+metadata:
+  name: ${CLUSTER_ID}
+baseDomain: ${BASE_DOMAIN}
+compute: <1>
+  - architecture: amd64
+    hyperthreading: Enabled
+    name: worker
+    replicas: 3
+    platform:
+      vsphere:
+        cpus: 4
+        coresPerSocket: 4
+        memoryMB: 16384
+        osDisk:
+          diskSizeGB: 100
+controlPlane:
+  architecture: amd64
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+  platform:
+    vsphere:
+      cpus: 4
+      coresPerSocket: 4
+      memoryMB: 16384
+      osDisk:
+        diskSizeGB: 100
+platform:
+  vsphere:
+    apiVIP: ${API_VIP}
+    cluster: ${VSPHERE_CLUSTER}
+    datacenter: ${VSPHERE_DATACENTER}
+    defaultDatastore: ${VSPHERE_DATASTORE}
+    ingressVIP: ${INGRESS_VIP}
+    network: ${VSPHERE_NETWORK}
+    username: ${VSPHERE_USERNAME}
+    password: ${VSPHERE_PASSWORD}
+    vCenter: ${VCENTER_HOSTNAME}
+networking:
+  networkType: Cilium
+  machineNetwork:
+    - cidr: ${MACHINE_NETWORK_CIDR}
+pullSecret: |
+  ${PULL_SECRET}
+sshKey: "$(cat $SSH_PUBLIC_KEY)"
+capabilities:
+  baselineCapabilitySet: v4.11
+EOF
+----
+<1> We only provision a single compute machine set.
+The final machine sets will be configured through Project Syn.

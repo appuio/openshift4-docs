@@ -33,27 +33,15 @@ Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-vers
 For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
 --
 +
-[source,bash]
-----
-export INSTALLER_DIR="$(pwd)/target"
-mkdir -p "${INSTALLER_DIR}"
-
-cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
-apiVersion: v1
-metadata:
-  name: ${CLUSTER_ID}
-baseDomain: ${BASE_DOMAIN}
-platform:
-  none: {}
-networking:
-  networkType: Cilium
-pullSecret: |
-  ${PULL_SECRET}
-sshKey: "$(cat $SSH_PUBLIC_KEY)"
-capabilities:
-  baselineCapabilitySet: v4.11
-EOF
-----
+ifeval::["{provider}" == "vsphere"]
+include::partial$install/install-config-vsphere.adoc[]
+endif::[]
+ifeval::["{provider}" == "cloudscale"]
+include::partial$install/install-config-cloudscale-exoscale.adoc[]
+endif::[]
+ifeval::["{provider}" == "exoscale"]
+include::partial$install/install-config-cloudscale-exoscale.adoc[]
+endif::[]
 +
 [WARNING]
 If setting custom CIDR for the OpenShift networking, the corresponding values should be updated in your Commodore cluster definitions.

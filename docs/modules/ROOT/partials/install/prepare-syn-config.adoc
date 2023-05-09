@@ -22,6 +22,9 @@ yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID "${INSTALLER_DIR}
 yq eval -i ".parameters.openshift.clusterID = \"$(jq -r .clusterID "${INSTALLER_DIR}/metadata.json")\"" \
   ${CLUSTER_ID}.yml
 
+yq eval -i ".parameters.openshift.ssh_key = \"$(cat ${SSH_PUBLIC_KEY})\"" \
+  ${CLUSTER_ID}.yml
+
 yq eval -i ".parameters.vshnLdap.serviceId = \"${LDAP_ID}\"" \
   ${CLUSTER_ID}.yml
 ----
@@ -54,6 +57,9 @@ yq eval -i ".parameters.openshift4_version.spec.channel = \"fast-{ocp-minor-vers
 
 ifeval::["{provider}" != "vsphere"]
 include::partial$install/prepare-syn-config-terraform.adoc[]
+endif::[]
+ifeval::["{provider}" == "vsphere"]
+include::partial$install/prepare-syn-config-vsphere.adoc[]
 endif::[]
 
 ifeval::["{provider}" != "vsphere"]

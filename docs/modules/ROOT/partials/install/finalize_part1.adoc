@@ -1,4 +1,17 @@
 :dummy:
+ifeval::["{provider}" == "vsphere"]
+=== Set default storage class
+
+. Set storage class `thin-csi` as default
++
+[source,bash]
+----
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
+kubectl annotate storageclass thin storageclass.kubernetes.io/is-default-class-
+kubectl annotate storageclass thin-csi storageclass.kubernetes.io/is-default-class=true
+----
+
+endif::[]
 
 === Enable Project Syn
 

@@ -340,6 +340,7 @@ include::partial$install/registry-acl-fix.adoc[]
 include::partial$install/finalize_part2.adoc[]
 +
 . Remove bootstrap bucket
++
 [source,bash]
 ----
 mc rm -r --force "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"

@@ -14,7 +14,7 @@ Steps to remove a worker node of an OpenShift 4 cluster on https://cloudscale.ch
 
 == Starting situation
 
-* You already have a OpenShift 4 cluster on Cloudscale
+* You already have a OpenShift 4 cluster on cloudscale.ch
 * You have admin-level access to the cluster
 * You want to remove an existing worker node in the cluster
 

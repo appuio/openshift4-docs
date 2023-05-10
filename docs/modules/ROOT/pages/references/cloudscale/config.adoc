@@ -2,7 +2,7 @@
 
 [abstract]
 The OpenShift cluster setup can be customized by configuring `.parameters.openshift4_terraform.terraform_variables`.
-This page gives an overview of the configuration options, when setting up a cluster on Cloudscale.
+This page gives an overview of the configuration options, when setting up a cluster on cloudscale.ch.
 Further information on the Terraform module and its configuration can be found on https://github.com/appuio/terraform-openshift4-cloudscale[GitHub].
 
 

@@ -30,7 +30,9 @@ It's currently very specific to VSHN and needs further changes to be more generi
 
 * You already have a Tenant and its git repository
 * You have a CCSP Red Hat login and are logged into https://cloud.redhat.com/openshift/install/metal/user-provisioned[Red Hat Openshift Cluster Manager]
-* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on Cloudscale
++
+IMPORTANT: Don't use your personal account to login to the cluster manager for installation.
+* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on cloudscale.ch
 
 == Prerequisites
 
@@ -100,7 +102,7 @@ mc mb --ignore-existing \
 [#_upload_coreos_image]
 === Upload Red Hat CoreOS image
 
-. Export the Authorization header for the Cloudscale API.
+. Export the Authorization header for the cloudscale.ch API.
 +
 [source,bash]
 ----
@@ -110,7 +112,7 @@ export AUTH_HEADER="Authorization: Bearer ${CLOUDSCALE_API_TOKEN}"
 [NOTE]
 ====
 The variable `CLOUDSCALE_API_TOKEN` could be used directly.
-Exporting the variable `AUTH_HEADER` is done to be compatible with the https://www.cloudscale.ch/en/api/[Cloudscale API documentation].
+Exporting the variable `AUTH_HEADER` is done to be compatible with the https://www.cloudscale.ch/en/api/[cloudscale.ch API documentation].
 ====
 
 . Check if image already exists in the correct zone
@@ -157,7 +159,7 @@ The output should be
 ----
 ====
 
-. Import the image to Cloudscale
+. Import the image to cloudscale.ch
 +
 [source,bash,subs="attributes+"]
 ----
@@ -338,6 +340,7 @@ include::partial$install/registry-acl-fix.adoc[]
 include::partial$install/finalize_part2.adoc[]
 +
 . Remove bootstrap bucket
++
 [source,bash]
 ----
 mc rm -r --force "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"

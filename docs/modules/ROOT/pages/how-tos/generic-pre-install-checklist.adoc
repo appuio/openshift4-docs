@@ -26,7 +26,7 @@ Once setup, this allows us to progress with the cluster setup and management wit
 For clusters on Exoscale the Exoscale DNS service is used.
 Ask the customer to set the corresponding NS record when reaching that step within the setup.
 
-Cloudscale doesn't have a DNS service.
+cloudscale.ch doesn't have a DNS service.
 Use the VSHN DNS server instead.
 ====
 

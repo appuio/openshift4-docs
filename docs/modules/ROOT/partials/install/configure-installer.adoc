@@ -26,12 +26,12 @@ ssh-add $SSH_PRIVATE_KEY
 . Prepare `install-config.yaml`
 +
 [NOTE]
---
+====
 You can add more options to the `install-config.yaml` file.
 Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
 
 For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
---
+====
 +
 ifeval::["{provider}" == "vsphere"]
 include::partial$install/install-config-vsphere.adoc[]
@@ -44,6 +44,8 @@ include::partial$install/install-config-cloudscale-exoscale.adoc[]
 endif::[]
 +
 [WARNING]
+====
 If setting custom CIDR for the OpenShift networking, the corresponding values should be updated in your Commodore cluster definitions.
 See https://github.com/projectsyn/component-cilium/blob/master/class/defaults.yml[Cilium Component Defaults] and https://hub.syn.tools/cilium/references/parameters.html[Parameter Reference].
 Verify with `less catalog/manifests/cilium/olm/*ciliumconfig.yaml`.
+====

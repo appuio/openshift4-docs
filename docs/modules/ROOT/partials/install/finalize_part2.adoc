@@ -6,6 +6,9 @@ endif::[]
 ifeval::["{provider}" == "exoscale"]
 include::partial$install/finalize_part2_cloudscale_exoscale.adoc[]
 endif::[]
+ifeval::["{provider}" == "vsphere"]
+include::partial$install/finalize_part2_vsphere.adoc[]
+endif::[]
 
 . Delete local config files
 +
@@ -13,16 +16,6 @@ endif::[]
 ----
 rm -r ${INSTALLER_DIR}/
 ----
-
-ifeval::["{provider}" == "vsphere"]
-. Clean up the vSphere CA certificate
-+
-[source,bash]
-----
-for cert in certs/lin/*.0; do sudo rm /usr/local/share/ca-certificates/$(basename ${cert}.crt); done
-sudo update-ca-certificates
-----
-endif::[]
 
 === Post tasks
 

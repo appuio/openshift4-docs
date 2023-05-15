@@ -1,0 +1,65 @@
+. Verify that the Project Syn-managed machine sets have been provisioned
++
+[source,bash]
+----
+kubectl -n openshift-machine-api get machineset -l argocd.argoproj.io/instance
+----
++
+The command should show something like
++
+[source]
+----
+NAME    DESIRED   CURRENT   READY   AVAILABLE   AGE
+app     3         3         3       3           4d5h <1>
+infra   4         4         4       4           4d5h <1>
+----
+<1> The values for `DESIRED` and `AVAILABLE` should match.
++
+[TIP]
+====
+If there's discrepancies between the desired and available counts of the machine sets, you can list the machine objects which aren't in phase "Running":
+
+[source,bash]
+----
+kubectl -n openshift-machine-api get machine | grep -v Running
+----
+
+You can see errors by looking at an individual machine object with `kubectl describe`.
+====
+
+. If the Project Syn-managed machine sets are healthy, scale down the initial worker machine set
++
+[IMPORTANT]
+====
+If the Project Syn-managed machine sets aren't healthy, this step may reduce the cluster capacity to the point where infrastructure components can't run.
+Make sure you have sufficient cluster capa city before continuing.
+====
++
+[source,bash]
+----
+INFRA_ID=$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")
+kubectl patch machineset ${INFRA_ID}-worker -p '{"spec": {"replicas": 0}}'
+----
+
+. Once the initial machine set is scaled down, verify that all pods are still running.
+The command below should produce no output.
++
+[source,bash]
+----
+kubectl get pods -A | grep -vw -e Running -e Completed
+----
+
+. If all pods are still running, delete the initial machine set
++
+[source,bash]
+----
+kubectl -n openshift-machine-api delete machineset ${INFRA_ID}-worker
+----
+
+. Clean up the vSphere CA certificate
++
+[source,bash]
+----
+for cert in certs/lin/*.0; do sudo rm /usr/local/share/ca-certificates/$(basename ${cert}.crt); done
+sudo update-ca-certificates
+----

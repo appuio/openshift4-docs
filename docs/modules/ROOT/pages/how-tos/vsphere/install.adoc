@@ -47,7 +47,6 @@ include::partial$install/register.adoc[]
 [source,bash]
 ----
 export VCENTER_HOSTNAME=<vcenter hostname> <1>
-export VCENTER_API_URL="https://${VCENTER_HOSTNAME}"
 ----
 <1> The vCenter hostname must be provided without the leading `https://`.
 
@@ -139,8 +138,8 @@ If you can't reach the vSphere API directly, you can setup a SOCKS5 proxy with t
 ----
 export JUMPHOST_FQDN=<jumphost fqdn or alias from your SSH config> <1>
 ssh -D 12000 -q -f -N ${JUMPHOST_FQDN} <2>
-export VCENTER_API_URL="https://$(ssh ${JUMPHOST_FQDN} dig +short ${VCENTER_HOSTNAME})" <2>
 export https_proxy=socks5://localhost:12000 <3>
+export CURL_OPTS="--socks5-hostname localhost:12000"
 ----
 <1> The FQDN or SSH alias of the host which can reach the vSphere API
 <2> This command expects that your SSH config is setup so that `ssh ${JUMPHOST_FQDN}` works without further configuration
@@ -152,7 +151,7 @@ export https_proxy=socks5://localhost:12000 <3>
 .Ubuntu 22.04
 [source,bash]
 ----
-curl -kLo vsphere-ca.zip ${VCENTER_API_URL}/certs/download.zip <1>
+curl ${CURL_OPTS:-} -kLo vsphere-ca.zip https://${VCENTER_HOSTNAME}/certs/download.zip
 unzip vsphere-ca.zip
 for cert in certs/lin/*.0; do sudo cp $cert /usr/local/share/ca-certificates/$(basename ${cert}.crt); done
 rm vsphere-ca.zip

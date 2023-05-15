@@ -182,6 +182,4 @@ include::partial$install/registry-samples-operator.adoc[]
 
 include::partial$install/finalize_part1.adoc[]
 
-//include::partial$install/registry-acl-fix.adoc[]
-
 include::partial$install/finalize_part2.adoc[]

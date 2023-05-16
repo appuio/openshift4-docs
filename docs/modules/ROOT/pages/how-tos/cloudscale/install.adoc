@@ -243,28 +243,7 @@ export TF_VAR_ignition_bootstrap=$(mc share download \
 
 === Terraform Cluster Config
 
-include::partial$install/prepare-terraform.adoc[]
-
-[#_compile_catalog]
-=== Commit changes and compile cluster catalog
-
-. Review changes.
-Have a look at the file `${CLUSTER_ID}.yml`.
-Override default parameters or add more component configurations as required for your cluster.
-
-. Commit changes
-+
-[source,bash]
-----
-git commit -a -m "Setup cluster ${CLUSTER_ID}"
-git push
-
-popd
-----
-
-. Compile and push cluster catalog
-+
-include::partial$install/commodore-dynfacts.adoc[]
+include::partial$install/prepare-syn-config.adoc[]
 
 === Provision Infrastructure
 

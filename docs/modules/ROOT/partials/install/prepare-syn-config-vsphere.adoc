@@ -1,0 +1,16 @@
+. Configure vSphere parameters
++
+[source,bash]
+----
+yq eval -i ".parameters.openshift.vsphere.network_name = \"${VSPHERE_NETWORK}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.vsphere.datacenter = \"${VSPHERE_DATACENTER}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.vsphere.datastore = \"${VSPHERE_DATASTORE}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.vsphere.server = \"${VCENTER_HOSTNAME}\"" \
+  ${CLUSTER_ID}.yml
+----

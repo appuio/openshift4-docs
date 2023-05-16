@@ -169,35 +169,7 @@ exo storage upload "${INSTALLER_DIR}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstr
 
 === Terraform Cluster Config
 
-include::partial$install/prepare-terraform.adoc[]
-
-[#_compile_catalog]
-=== Commit changes and compile cluster catalog
-
-. Review changes.
-Have a look at the file `${CLUSTER_ID}.yml`.
-Override default parameters or add more component configurations as required for your cluster.
-+
-[IMPORTANT]
-====
-Ensure that you're using component `openshift4-terraform` v5.0.0 or newer.
-Otherwise the instructions in this how-to might not apply.
-====
-
-. Commit changes
-+
-[source,bash]
-----
-git commit -a -m "Setup cluster ${CLUSTER_ID}"
-git push
-
-popd
-----
-
-. Compile and push cluster catalog
-+
-include::partial$install/commodore-dynfacts.adoc[]
-
+include::partial$install/prepare-syn-config.adoc[]
 
 === Provision Infrastructure
 

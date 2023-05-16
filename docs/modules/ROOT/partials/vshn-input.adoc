@@ -1,10 +1,16 @@
-.Access to various API
+ifeval::["{provider}" != "vsphere"]
+.Access to VSHN GitLab
 [source,bash]
 ----
 # From https://git.vshn.net/-/profile/personal_access_tokens, "api" scope is sufficient
 export GITLAB_TOKEN=<gitlab-api-token>
 export GITLAB_USER=<gitlab-user-name>
+----
+endif::[]
 
+.Access to VSHN Lieutenant
+[source,bash]
+----
 # For example: https://api.syn.vshn.net
 # IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
 export COMMODORE_API_URL=<lieutenant-api-endpoint>

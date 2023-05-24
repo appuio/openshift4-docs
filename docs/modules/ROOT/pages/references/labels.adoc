@@ -35,9 +35,9 @@ They indicate that there's an issue which is blocking the maintenance, or that s
 This label is intended to help engineers to find the source code where the alert rule is defined or adjusted.
 
 |`syn_team`
-|The team responsible for this component
-|This label indicates the team that manages alerts for this component.
-This label is used to route the alert to the team responsible for handling this component.
+|A team name
+|This label indicates the team which is responsible for this alert.
+The label is used to route the alert in Alertmanager.
 
 |`cluster_id`
 |A Project Syn cluster ID

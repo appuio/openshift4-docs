@@ -34,6 +34,11 @@ They indicate that there's an issue which is blocking the maintenance, or that s
 |This label indicates the Commodore component which manages the alert rule.
 This label is intended to help engineers to find the source code where the alert rule is defined or adjusted.
 
+|`syn_team`
+|The team responsible for this component
+|This label indicates the team that manages alerts for this component.
+This label is used to route the alert to the team responsible for handling this component.
+
 |`cluster_id`
 |A Project Syn cluster ID
 |This label identifies the cluster from which the alert originates.

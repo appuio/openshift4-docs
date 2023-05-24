@@ -53,7 +53,7 @@ git push -u origin add-worker-node
 :kubectl_extra_args: --as=cluster-admin
 include::partial$install/approve-node-csrs.adoc[]
 
-== Label Node 
+== Label Node
 
 . Check for the node name
 +
@@ -67,4 +67,11 @@ kubectl get node
 [source,bash]
 ----
 kubectl --as=cluster-admin label node worker-XXXX node-role.kubernetes.io/app=""
+----
+
+. [APPUiO Cloud only] Add node-class label (flex or plus)
++
+[source,bash]
+----
+kubectl --as=cluster-admin label node worker-XXXX appuio.io/node-class=xxxx
 ----

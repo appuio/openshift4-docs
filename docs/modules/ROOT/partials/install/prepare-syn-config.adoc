@@ -9,10 +9,6 @@ pushd "inventory/classes/${TENANT_ID}/"
 +
 [source,bash,subs="attributes+"]
 ----
-ifeval::["{provider}" == "vsphere"]
-pushd "inventory/classes/${TENANT_ID}/"
-endif::[]
-
 yq eval -i ".parameters.openshift.baseDomain = \"${CLUSTER_DOMAIN}\"" \
   ${CLUSTER_ID}.yml
 

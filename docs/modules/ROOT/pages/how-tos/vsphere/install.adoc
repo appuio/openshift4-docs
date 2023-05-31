@@ -139,7 +139,7 @@ If you can't reach the vSphere API directly, you can setup a SOCKS5 proxy with t
 export JUMPHOST_FQDN=<jumphost fqdn or alias from your SSH config> <1>
 ssh -D 12000 -q -f -N ${JUMPHOST_FQDN} <2>
 export https_proxy=socks5://localhost:12000 <3>
-export CURL_OPTS="--socks5-hostname localhost:12000"
+export CURL_OPTS="-xsocks5h://localhost:12000"
 ----
 <1> The FQDN or SSH alias of the host which can reach the vSphere API
 <2> This command expects that your SSH config is setup so that `ssh ${JUMPHOST_FQDN}` works without further configuration
@@ -151,7 +151,7 @@ export CURL_OPTS="--socks5-hostname localhost:12000"
 .Ubuntu 22.04
 [source,bash]
 ----
-curl ${CURL_OPTS:-} -kLo vsphere-ca.zip https://${VCENTER_HOSTNAME}/certs/download.zip
+curl ${CURL_OPTS:-} -kLo vsphere-ca.zip https://"${VCENTER_HOSTNAME}"/certs/download.zip
 unzip vsphere-ca.zip
 for cert in certs/lin/*.0; do sudo cp $cert /usr/local/share/ca-certificates/$(basename ${cert}.crt); done
 rm vsphere-ca.zip
@@ -165,6 +165,35 @@ sudo update-ca-certificates
 openshift-install --dir "${INSTALLER_DIR}" \
   create cluster --log-level=debug
 ----
+
+=== Access cluster API
+
+. Export kubeconfig
++
+[source,bash]
+----
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
+----
+
+. Verify API access
++
+[source,bash]
+----
+kubectl cluster-info
+----
+
+[NOTE]
+====
+If the cluster API is only reachable with a SOCKS5 proxy, run the following commands instead:
+
+[source,bash]
+----
+cp ${INSTALLER_DIR}/auth/kubeconfig ${INSTALLER_DIR}/auth/kubeconfig-socks5
+yq eval -i '.clusters[0].cluster.proxy-url="socks5://localhost:12000"' \
+    ${INSTALLER_DIR}/auth/kubeconfig-socks5
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig-socks5"
+----
+====
 
 === Configure registry S3 credentials
 

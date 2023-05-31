@@ -166,6 +166,35 @@ openshift-install --dir "${INSTALLER_DIR}" \
   create cluster --log-level=debug
 ----
 
+=== Access cluster API
+
+. Export kubeconfig
++
+[source,bash]
+----
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
+----
+
+. Verify API access
++
+[source,bash]
+----
+kubectl cluster-info
+----
+
+[NOTE]
+====
+If the cluster API is only reachable with a SOCKS5 proxy, run the following commands instead:
+
+[source,bash]
+----
+cp ${INSTALLER_DIR}/auth/kubeconfig ${INSTALLER_DIR}/auth/kubeconfig-socks5
+yq eval -i '.clusters[0].cluster.proxy-url="socks5://localhost:12000"' \
+    ${INSTALLER_DIR}/auth/kubeconfig-socks5
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig-socks5"
+----
+====
+
 === Configure registry S3 credentials
 
 . Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]

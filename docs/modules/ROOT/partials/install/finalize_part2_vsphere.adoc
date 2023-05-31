@@ -38,7 +38,8 @@ Make sure you have sufficient cluster capa city before continuing.
 [source,bash]
 ----
 INFRA_ID=$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")
-kubectl patch machineset ${INFRA_ID}-worker -p '{"spec": {"replicas": 0}}'
+kubectl -n openshift-machine-api patch machineset ${INFRA_ID}-worker \
+-p '{"spec": {"replicas": 0}}' --type merge
 ----
 
 . Once the initial machine set is scaled down, verify that all pods are still running.

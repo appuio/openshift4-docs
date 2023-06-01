@@ -32,13 +32,14 @@ You can see errors by looking at an individual machine object with `kubectl desc
 [IMPORTANT]
 ====
 If the Project Syn-managed machine sets aren't healthy, this step may reduce the cluster capacity to the point where infrastructure components can't run.
-Make sure you have sufficient cluster capa city before continuing.
+Make sure you have sufficient cluster capacity before continuing.
 ====
 +
 [source,bash]
 ----
 INFRA_ID=$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")
-kubectl patch machineset ${INFRA_ID}-worker -p '{"spec": {"replicas": 0}}'
+kubectl -n openshift-machine-api patch machineset ${INFRA_ID}-worker \
+  -p '{"spec": {"replicas": 0}}' --type merge
 ----
 
 . Once the initial machine set is scaled down, verify that all pods are still running.

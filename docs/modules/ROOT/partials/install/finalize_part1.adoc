@@ -6,7 +6,6 @@ ifeval::["{provider}" == "vsphere"]
 +
 [source,bash]
 ----
-export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
 kubectl annotate storageclass thin storageclass.kubernetes.io/is-default-class-
 kubectl annotate storageclass thin-csi storageclass.kubernetes.io/is-default-class=true
 ----

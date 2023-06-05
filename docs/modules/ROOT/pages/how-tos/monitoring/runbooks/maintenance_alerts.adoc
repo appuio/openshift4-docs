@@ -1,0 +1,47 @@
+= Maintenance Alert Handling
+
+This runbook describes how to handle alerts during automated Openshift maintenance.
+
+
+== Handling
+
+=== icon:search[] Investigate
+
+* Check https://insights.appuio.net/d/d77e71e3-0f31-48b8-acdc-69ef1828429c/openshift-maintenance[Openshift maintenance dashboard]
+* Identify cluster or clusters with a blocked maintenance
+* Identify problems that block automated maintenance
+
+=== icon:wrench[] Resolve
+
+Resolve alert as described in the runbook.
+
+* https://hub.syn.tools/openshift-upgrade-controller/runbooks/NodeDrainStuck.html[NodeDrainStuck]
+
+
+== Feedback
+
+To resolve recurring problems and improve automated maintenance we need feedback for every problem that blocked the automated maintenance.
+
+=== During Maintenance
+
+* Create a Jira ticket
+** Project: APPUiO Managed OpenShift 4 (OCP)
+** Issue Type: Task
+
+[TIP]
+====
+You don't need to create a separate ticket for every cluster or problem that came up during maintenance.
+One ticket per maintenance window, including all encountered issues, is fine.
+====
+
+* For every cluster that alerted provide the following infos in the ticket:
+** Link to the indivudial alerts from the Openshift dashboard
+** Describtion of the problem
+** Describtion of how the problem was solved, if not already covered by the alerts runbook
+** Was the alert a false positive, did it resolve itself (needs tuning)
+
+* The ticket must be linked in maintenance log under `Post-Tasks`
+
+=== Follow Up
+
+The dedicated Openshift team will refine the created ticket and / or create follow ups during office hours the next day.

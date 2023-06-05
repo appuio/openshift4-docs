@@ -218,3 +218,4 @@
 ** xref:oc4:ROOT:explanations/decisions/syn-argocd-sharing.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/multi-instance-argocd.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/multi-team-alert-routing.adoc[]
+** xref:oc4:ROOT:explanations/decisions/shipping-metrics-to-centralized-instance[]

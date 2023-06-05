@@ -1,0 +1,78 @@
+= Shipping Metrics to Centralized Instance
+
+== Problem
+
+We want to ship metrics from our OpenShift clusters to a centralized instance.
+This will allow us to keep an overview over our managed clusters and keep us up-to-date on meta topics like managed upgrades.
+
+OpenShift clusters may have millions of metrics, which - while technically easily possible - may come with a lot of resource usage, and thus cost.
+To reduce spending we need to be able to select which metrics to ship to the centralized instance.
+
+
+=== Goals
+
+* Allow selecting metrics to be shipped to a centralized instance
+
+
+=== Non-Goals
+
+* Manage the centralized instance
+* Manage scraping of metrics in the cluster
+
+
+== Proposals
+
+=== Ship all recording rules
+
+All recording rules are shipped to the centralized instance.
+
+This automatically ships alerts and many series from the OpenShift console dashboards.
+
+It makes aggregation of metrics very easy and forces the user to think how and if the metrics should be aggregated.
+
+
+=== Label metrics with a specific label if they should be shipped
+
+Metrics that should be shipped are labeled with a static label like `ship: true`.
+This moves the configuration very close to the metric implementation.
+
+The labeling would need to be done in the ServiceMonitor or PodMonitor resources.
+Most of those resources can't be edited or patched on OpenShift clusters.
+This would make many metrics non-shippable.
+
+
+=== Have an explicit list of time series to ship in the config hierarchy
+
+We currently have a huge Regex in the Commodore hierarchy that selects metrics to be shipped.
+This is hard to maintain and not very flexible.
+
+Through some Jsonnet functions, building the Regex, we can engineer a better way to manage which metrics to ship.
+
+This allows us to store the configuration in a single place and have it easily editable.
+
+
+=== Use separate tooling to ship metrics
+
+We could use a separate tool to ship metrics to the centralized instance with more ergonomic shipping rules.
+
+Grafana Agent has the exact same configuration as Prometheus and would not improve the configuration.
+It would also require us to run another tool on the cluster.
+
+Telegraf doesn't seem to be configurable and can't filter metrics.
+
+There's some SaaS offerings, such as NewRelic, that have fancier filtering options.
+They're not free and would require us to ship metrics to a third party.
+
+
+== Decision
+
+We should ship all recording rules AND have an explicit list of time series to ship in the config hierarchy.
+
+
+== Rationale
+
+Shipping all recording rules is a manageable amount of metrics and gives us a head start on identifying the most important metrics.
+It allows users to define recording rules for their own metrics and have them automatically shipped to the centralized instance.
+
+Having an explicit list of time series to ship in the config hierarchy allows us to have a single source of truth for the metrics we want to ship.
+Allows experimentation and makes shipping metrics more accessible to users.

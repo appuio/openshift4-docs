@@ -36,8 +36,8 @@ One ticket per maintenance window, including all encountered issues, is fine.
 
 * For every cluster that alerted provide the following infos in the ticket:
 ** Link to the indivudial alerts from the Openshift dashboard
-** Describtion of the problem
-** Describtion of how the problem was solved, if not already covered by the alerts runbook
+** Description of the problem
+** Description of how the problem was solved, if not already covered by the alerts runbook
 ** Was the alert a false positive, did it resolve itself (needs tuning)
 
 * The ticket must be linked in maintenance log under `Post-Tasks`

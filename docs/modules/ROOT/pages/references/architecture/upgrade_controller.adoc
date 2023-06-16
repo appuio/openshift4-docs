@@ -268,10 +268,10 @@ If the upgrade doesn't start within this time window, for example when the contr
 
 === UpgradeJobHook
 
-The `UpgradeHook` CRD allows to run arbitrary jobs before and after the upgrade.
-The hook can be run once, for the next upgrade, or for every upgrade.
+The `UpgradeJobHook` CRD allows to run arbitrary jobs before and after the upgrade.
+The hook can be run once for the next upgrade, or for every upgrade.
 
-Data about the upgrade is passed to the hook by environment variables.
+Data about the upgrade is passed to the hook in environment variables.
 
 [source,yaml]
 ----
@@ -326,7 +326,7 @@ See `pinVersionWindow` in <<upgrade-config>>.
 +
 [NOTE]
 ====
-Using the Jobs fields more advanced failure policies https://kubernetes.io/docs/concepts/workloads/controllers/job/#handling-pod-and-container-failures[can be implemented].
+More advanced failure policies can be handled through the built-in https://kubernetes.io/docs/concepts/workloads/controllers/job/#handling-pod-and-container-failures[Job failure handling mechanisms].
 ====
 <4> The selector to select the `UpgradeJob` objects to run the hook for.
 <5> The https://pkg.go.dev/k8s.io/api/batch/v1#JobTemplateSpec[batchv1.JobTemplateSpec] to run.

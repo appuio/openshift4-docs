@@ -33,61 +33,11 @@ It's managed through a Custom Resource Definition (CRD) called `UpgradeConfig`.
 
 image:explanations/upgrade-controller-high-level-flow-chart.svg[]
 
-=== The controller is extendable through webhooks [[upgrade-webhooks]]
+=== The controller is extendable through hooks
 
-The controller should be able to send notifications to a webhook.
-Every step of the upgrade process should be notified.
-Failed notification deliveries must not block the upgrade flow.
-
-We might want to reuse the Alertmanager webhook definition, they already thought about TLS and authentication and other necessary features.
-
-[source,yaml]
-----
-url: "https://example.com/webhook"
-http_config: <1>
-  authorization:
-    credentials: "token"
-  proxy_url: "http://proxy.example.com"
-annotations: <2>
-  cluster_id: "bar"
-  tenant_id: "foo"
-----
-<1> https://prometheus.io/docs/alerting/latest/configuration/#http_config[Alertmanager HTTP Config]
-<2> Additional annotations to send with the webhook.
-
-The controller should send a POST request to the webhook with a JSON payload.
-
-[source,json]
-----
-{
-  "version": "1", <1>
-
-  "type": "UpgradeSkipped", <2>
-  "status": "True", <3>
-  "reason": "ClusterUnhealthy", <4>
-  "message": "Critical alerts [MultipleDefaultStorageClasses, NodeFilesystemAlmostOutOfFiles] are firing", <5>
-
-  "desiredVersion": { <6>
-    "version": "4.6.34",
-    "image": "quay.io/openshift-release-dev/ocp-release@sha256:1234567890abcdef"
-  },
-
-  "annotations": { <7>
-    "cluster_id": "bar",
-    "tenant_id": "foo"
-  }
-}
-----
-<1> The version of the webhook payload
-<2> The type of the notification.
-Inspired by https://github.com/kubernetes/apimachinery/blob/8d1258da8f386b809d312cdda316366d5612f54e/pkg/apis/meta/v1/types.go#L1481[`metav1.Condition`].
-<3> The status of the notification.
-`True`, `False`, `Unknown`.
-<4> The programmatic identifier of the notification indicating the reason for the notification.
-<5> The human-readable message indicating the reason for the notification.
-<6> The desired version of the cluster.
-Only present for certain notifications.
-<7> Additional annotations from the webhook configuration.
+The controller can run arbitrary commands if certain events happen during the upgrade.
+The commands are executed as Kubernetes jobs.
+Information about the running upgrade is passed to the jobs through environment variables.
 
 === The controller manages the content of the `ClusterVersion/version` object [[manage-version-object]]
 
@@ -105,7 +55,6 @@ The controller creates an `UpgradeJob` object at a time configured in the `Upgra
 The `UpgradeJob` contains a snapshot of the most recent version in the `.status.availableUpdates` field and a timestamp when the upgrade should start.
 
 The `UpgradeJob` rechecks the available updates at the time of the upgrade.
-If the version is no longer available, the upgrade is skipped and a notification is send to the webhook.
 
 [source,yaml]
 ----
@@ -150,10 +99,8 @@ Initially supported values are `@odd` and `@even`.
 The controller shouldn't try to upgrade a cluster that isn't healthy.
 
 An `UpgradeJob` checks the cluster health before the upgrade and skips the upgrade if the cluster is unhealthy.
-If an update is skipped, the controller should send a notification to the webhook.
 
 The controller should also check the cluster health after the upgrade.
-If the cluster is unhealthy, the controller should send a notification to the webhook.
 
 Having custom queries allows customers or VSHN to extend checks to skip upgrades easily.
 
@@ -248,7 +195,7 @@ spec:
   jobTemplate:
     metadata:
       labels:
-        upgrade-config: cluster-upgrade <8>
+        upgrade-config: cluster-upgrade <7>
     spec:
       config:
         upgradeTimeout: "2h" <4>
@@ -276,16 +223,6 @@ spec:
           - openshift-monitoring
           customQueries:
           - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
-        webhooks: <7>
-          - url: "https://example.com/webhook"
-            annotations:
-              cluster_id: "bar"
-              tenant_id: "foo"
-  webhooks: <7>
-    - url: "https://example.com/webhook"
-      annotations:
-        cluster_id: "bar"
-        tenant_id: "foo"
 ----
 <1> The upgrade schedule as defined in <<upgrade-schedule>>.
 <2> The time window before the maintenance window in which the upgrade version is pinned.
@@ -296,10 +233,7 @@ Influences the `UpgradeJob`'s `.status.upgradeBefore` field.
 The upgrade is marked as failed if it takes longer than this.
 <5> The health checks to perform before the upgrade as defined in <<upgrade-health-checks>>.
 <6> The health checks to perform after the upgrade as defined in <<upgrade-health-checks>>.
-<7> The webhook to send notifications to as defined in <<upgrade-webhook>>.
-Having multiple webhooks allows to send notifications to different systems.
-Both the `UpgradeConfig` and the `UpgradeJob` have a `webhooks` field since both might send notifications.
-<8> Set a label on the `UpgradeJob`.
+<7> Set a label on the `UpgradeJob`.
 Allow selecting the created jobs in the `UpgradeJobHook` manifest.
 
 === UpgradeJob
@@ -323,7 +257,6 @@ spec:
     upgradeTimeout: "2h"
     preUpgradeHealthChecks: {} ...
     postUpgradeHealthChecks: {} ...
-    webhooks: []
 ----
 <1> The name of the `UpgradeJob` is the timestamp when the upgrade should start plus a hash of the `UpgradeConfig` object.
 The timestamp is primarily used for sorting the `UpgradeJob` objects should multiple exist.

@@ -226,7 +226,7 @@ spec:
 <1> Template for the `ClusterVersion/version` object.
 <2> The `desiredUpdate` is ignored and set by the `UpgradeJob` controller.
 
-=== UpgradeConfig
+=== UpgradeConfig [[upgrade-config]]
 
 The `UpgradeConfig` CRD defines the upgrade schedule and the upgrade job template.
 The reconciliation loop of the controller creates `UpgradeJob` objects based on the `UpgradeConfig` object.
@@ -246,6 +246,9 @@ spec:
   pinVersionWindow: "4h" <2>
   maxUpgradeStartDelay: "1h" <3>
   jobTemplate:
+    metadata:
+      labels:
+        upgrade-config: cluster-upgrade <8>
     spec:
       config:
         upgradeTimeout: "2h" <4>
@@ -296,6 +299,8 @@ The upgrade is marked as failed if it takes longer than this.
 <7> The webhook to send notifications to as defined in <<upgrade-webhook>>.
 Having multiple webhooks allows to send notifications to different systems.
 Both the `UpgradeConfig` and the `UpgradeJob` have a `webhooks` field since both might send notifications.
+<8> Set a label on the `UpgradeJob`.
+Allow selecting the created jobs in the `UpgradeJobHook` manifest.
 
 === UpgradeJob
 
@@ -327,6 +332,97 @@ The timestamp is primarily used for sorting the `UpgradeJob` objects should mult
 If the upgrade doesn't start within this time window, for example when the controller is unavailable, the upgrade is marked as skipped.
 <4> The version to upgrade to.
 <5> The config as defined in <<upgrade-config>> and copied from the `UpgradeConfig` object.
+
+=== UpgradeJobHook
+
+The `UpgradeHook` CRD allows to run arbitrary jobs before and after the upgrade.
+The hook can be run once, for the next upgrade, or for every upgrade.
+
+Data about the upgrade is passed to the hook by environment variables.
+
+[source,yaml]
+----
+apiVersion: managedupgrade.appuio.io/v1beta1
+kind: UpgradeJobHook
+metadata:
+  name: cluster-upgrade-notify-ext
+spec:
+  on: <1>
+    - create
+    - start
+    - finish
+    - success
+    - failure
+  run: next # [next, all] <2>
+  failurePolicy: Ignore # [Abort, Ignore] <3>
+  selector: <4>
+    matchLabels:
+      upgrade-config: cluster-upgrade
+  template: <5>
+    spec:
+      template:
+        spec:
+          containers:
+          - name: notify
+            image: curlimages/curl:8.1.2 # sponsored OSS image
+            args:
+            - -XPOST
+            - -H
+            - Content-Type: application/json
+            - -d
+            - '{"event": $(EVENT_NAME), "version": $(JOB_spec_desiredVersion_image)}' <6>
+            - https://example.com/webhook
+          restartPolicy: Never
+      backoffLimit: 3
+      ttlSecondsAfterFinished: 43200 # 12h <7>
+      activeDeadlineSeconds: 300 # 5m <8>
+----
+<1> The events when to run the hook.
+`create` runs the hook when the `UpgradeJob` is created.
+The version is pinned at this point and the job is waiting for `startAfter`.
+This can be used to communicate the pending upgrade to other systems.
+See `pinVersionWindow` in <<upgrade-config>>.
+`start` runs the hook when the `UpgradeJob` starts.
+`finish` runs the hook when the `UpgradeJob` finishes, regardless of the outcome.
+`success` runs the hook when the `UpgradeJob` finishes successfully.
+`failure` runs the hook when the `UpgradeJob` finishes with an error.
+<2> Whether to run the hook for the next upgrade or for every upgrade.
+<3> What to do when the hook fails.
+`Ignore` is the default and continues the upgrade process.
+`Abort` marks the upgrade as failed and stops the upgrade process.
++
+[NOTE]
+====
+Using the Jobs fields more advanced failure policies https://kubernetes.io/docs/concepts/workloads/controllers/job/#handling-pod-and-container-failures[can be implemented].
+====
+<4> The selector to select the `UpgradeJob` objects to run the hook for.
+<5> The https://pkg.go.dev/k8s.io/api/batch/v1#JobTemplateSpec[batchv1.JobTemplateSpec] to run.
+<6> The controller injects the following environment variables:
+* `EVENT`: The event that triggered the hook as JSON.
++
+[NOTE]
+====
+The event definition isn't complete yet. It will be extended in the future.
+Guaranteed to be present are the `name`, `time`, `reason`, `message` fields.
+====
+* `EVENT_*`: The event definition is flattened into environment variables.
+The values are JSON encoded; `"string"` is encoded as `"\"string\""`, `null` is encoded as `null`.
+The keys are the field paths separated by `_`.
+For example:
+** `EVENT_name`: The name of the event that triggered the hook.
+** `EVENT_reason`: The reason why the event was triggered.
+* `JOB`: The full `UpgradeJob` object as JSON.
+* `JOB_*`: The job definition is flattened into environment variables.
+The values are JSON encoded; `"string"` is encoded as `"\"string\""`, `null` is encoded as `null`.
+The keys are the field paths separated by `_`.
+For example:
+** `JOB_metadata_name`: The name of the `UpgradeJob` that triggered the hook.
+** `JOB_metadata_labels_my_var_io_info`: The label `my-var.io/info` of the `UpgradeJob` that triggered the hook.
+** `JOB_spec_desiredVersion_image`: The image of the `UpgradeJob` that triggered the hook.
+<7> Jobs aren't deleted automatically.
+Use `ttlSecondsAfterFinished` to delete the job after a certain time.
+<8> There is no automatic timeout for jobs.
+Use `activeDeadlineSeconds` to set a timeout.
 
 == Resources
 

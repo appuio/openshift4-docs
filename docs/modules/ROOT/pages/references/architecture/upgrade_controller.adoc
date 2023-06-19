@@ -281,12 +281,12 @@ metadata:
   name: cluster-upgrade-notify-ext
 spec:
   on: <1>
-    - create
-    - start
-    - finish
-    - success
-    - failure
-  run: next # [next, all] <2>
+    - Create
+    - Start
+    - Finish
+    - Success
+    - Failure
+  run: Next # [Next, All] <2>
   failurePolicy: Ignore # [Abort, Ignore] <3>
   selector: <4>
     matchLabels:
@@ -311,14 +311,14 @@ spec:
       activeDeadlineSeconds: 300 # 5m <8>
 ----
 <1> The events when to run the hook.
-`create` runs the hook when the `UpgradeJob` is created.
+`Create` runs the hook when the `UpgradeJob` is created.
 The version is pinned at this point and the job is waiting for `startAfter`.
 This can be used to communicate the pending upgrade to other systems.
 See `pinVersionWindow` in <<upgrade-config>>.
-`start` runs the hook when the `UpgradeJob` starts.
-`finish` runs the hook when the `UpgradeJob` finishes, regardless of the outcome.
-`success` runs the hook when the `UpgradeJob` finishes successfully.
-`failure` runs the hook when the `UpgradeJob` finishes with an error.
+`Start` runs the hook when the `UpgradeJob` starts.
+`Finish` runs the hook when the `UpgradeJob` finishes, regardless of the outcome.
+`Success` runs the hook when the `UpgradeJob` finishes successfully.
+`Failure` runs the hook when the `UpgradeJob` finishes with an error.
 <2> Whether to run the hook for the next upgrade or for every upgrade.
 <3> What to do when the hook fails.
 `Ignore` is the default and continues the upgrade process.

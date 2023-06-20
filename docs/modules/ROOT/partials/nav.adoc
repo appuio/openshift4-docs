@@ -178,6 +178,7 @@
 ** xref:oc4:ROOT:how-tos/debug-nodes.adoc[Debugging Nodes]
 
 ** Runbooks
+*** xref:oc4:ROOT:how-tos/monitoring/runbooks/maintenance_alerts.adoc[MaintenanceAlertFiring]
 *** xref:oc4:ROOT:how-tos/monitoring/runbooks/prometheus_remotewrite.adoc[PrometheusRemoteWrite]
 
 ** cloudscale.ch

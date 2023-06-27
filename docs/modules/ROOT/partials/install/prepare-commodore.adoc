@@ -40,6 +40,24 @@ git push
 popd
 ----
 
+
+ifeval::["{provider}" == "cloudscale"]
+. Add AppCat to cluster configuration
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i '.classes += ["global.apps.appcat"]' ${CLUSTER_ID}.yml
+
+git commit -a -m "Add AppCat addon to ${CLUSTER_ID}"
+
+git push
+popd
+----
+endif::[]
+
+
 . Compile catalog
 +
 include::partial$install/commodore-dynfacts.adoc[]

@@ -280,7 +280,7 @@ kind: UpgradeJobHook
 metadata:
   name: cluster-upgrade-notify-ext
 spec:
-  on: <1>
+  events: <1>
     - Create
     - Start
     - Finish

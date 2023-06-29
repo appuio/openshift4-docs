@@ -5,7 +5,7 @@ In practice, this means that there is no difference between "updating the operat
 
 [IMPORTANT]
 ====
-For an upgrade to `4.9`, see xref:oc4:ROOT:how-tos/update_maintenance/v_4_9.adoc[Upgrade to OpenShift 4.9] first.
+For an upgrade to `4.12`, see xref:oc4:ROOT:how-tos/update_maintenance/v_4_12.adoc[Upgrade to OpenShift 4.12] first.
 ====
 
 . Get list of available updates:

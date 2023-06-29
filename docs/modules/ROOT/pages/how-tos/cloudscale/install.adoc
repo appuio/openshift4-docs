@@ -1,7 +1,7 @@
 = Install OpenShift 4 on cloudscale.ch
-:ocp-minor-version: 4.11
-:k8s-minor-version: 1.24
-:ocp-patch-version: {ocp-minor-version}.9
+:ocp-minor-version: 4.12
+:k8s-minor-version: 1.25
+:ocp-patch-version: {ocp-minor-version}.17
 :provider: cloudscale
 
 [abstract]

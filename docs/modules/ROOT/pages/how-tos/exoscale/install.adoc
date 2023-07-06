@@ -1,7 +1,7 @@
 = Installation on Exoscale
-:ocp-minor-version: 4.12
-:k8s-minor-version: 1.25
-:ocp-patch-version: {ocp-minor-version}.17
+:ocp-minor-version: 4.13
+:k8s-minor-version: 1.26
+:ocp-patch-version: {ocp-minor-version}.0
 :provider: exoscale
 :kubectl_extra_args:
 
@@ -152,7 +152,7 @@ RHCOS_VERSION="{ocp-patch-version}"
 
 curl "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/${RHCOS_VERSION}/rhcos-${RHCOS_VERSION}-x86_64-openstack.x86_64.qcow2.gz" | gunzip > rhcos-${RHCOS_VERSION}.qcow2
 
-virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
+sudo virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
   -m /dev/sda3:/ /loader/entries/ostree-1-rhcos.conf \
   -e 's/openstack/exoscale/'
 

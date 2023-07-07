@@ -19,6 +19,8 @@ This how-to guide is still a work in progress and will change.
 It's currently very specific to VSHN and needs further changes to be more generic.
 --
 
+NOTE: This guide is currently assuming that you're using https://github.com/appuio/terraform-openshift4-exoscale/releases/tag/v4.0.0[`terraform-openshift4-exoscale` v4] (component https://github.com/appuio/component-openshift4-terraform/releases/tag/v6.0.0[openshift4-terraform v6])
+
 == Starting situation
 
 * You already have a Tenant and its Git repository

@@ -19,6 +19,8 @@ This how-to guide is still a work in progress and will change.
 It's currently very specific to VSHN and needs further changes to be more generic.
 --
 
+NOTE: This guide is currently assuming that you're using https://github.com/appuio/terraform-openshift4-exoscale/releases/tag/v4.0.0[`terraform-openshift4-exoscale` v4] (component https://github.com/appuio/component-openshift4-terraform/releases/tag/v6.0.0[openshift4-terraform v6])
+
 == Starting situation
 
 * You already have a Tenant and its Git repository
@@ -33,9 +35,8 @@ include::partial$install/prerequisites.adoc[]
 * `md5sum`
 * `virt-edit`
 * `cpio`
-//* Clone of the https://github.com/appuio/terraform-openshift4-exoscale[terraform-openshift4-exoscale] repository
-* `exo` >= v1.48.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
-* An unrestricted Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
+* `exo` >= v1.71.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* An Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key] with full permissions
 * https://community.exoscale.com/documentation/dns/quick-start/#subscribing-to-the-service[DNS subscription] activated in the Exoscale organisation
 
 [WARNING]
@@ -56,14 +57,78 @@ include::partial$install/vshn-input.adoc[]
 [#_create_iam_keys]
 === Create restricted Exoscale IAM keys for the LBs and object storage
 
+[NOTE]
+====
+If creating the API key fails, please retry the commands starting from the command which contains `exo x create-api-key`.
+It may take a second or two for the newly created role to be available to reference for an API key.
+====
+
 . Create restricted API key for Exoscale object storage
 +
 [source,bash]
 ----
-exoscale_s3_credentials=$(exo iam access-key create "${CLUSTER_ID}_object_storage" \
-  --tag sos -O json)
-export EXOSCALE_S3_ACCESSKEY=$(echo "${exoscale_s3_credentials}" | jq -r '.api_key')
-export EXOSCALE_S3_SECRETKEY=$(echo "${exoscale_s3_credentials}" | jq -r '.api_secret')
+# Create SOS IAM role, if it doesn't exist yet in the organization
+sos_iam_role_id=$(exo x list-iam-roles | \
+  jq -r '."iam-roles"[] | select(.name=="sos-full-access") | .id')
+if [ -z "${sos_iam_role_id}" ]; then
+sos_iam_role_id=$(echo '{
+  "name": "sos-full-access",
+  "policy": {
+    "default-service-strategy": "deny",
+    "services": {
+      "sos": {"type": "allow"}
+    }
+  }
+}' | exo x  create-iam-role | jq -r '.reference.id')
+fi
+# Create access key
+exoscale_s3_credentials=$(echo '{
+  "name": "'"${CLUSTER_ID}"'_object_storage",
+  "role-id": "'"${sos_iam_role_id}"'"
+}' | exo x create-api-key)
+export EXOSCALE_S3_ACCESSKEY=$(echo "${exoscale_s3_credentials}" | jq -r '.key')
+export EXOSCALE_S3_SECRETKEY=$(echo "${exoscale_s3_credentials}" | jq -r '.secret')
+----
+
+. Create restricted API key for Floaty
++
+[source,bash]
+----
+# Create Floaty IAM role if it doesn't exist yet in the organization
+floaty_iam_role_id=$(exo x list-iam-roles | \
+  jq -r '."iam-roles"[] | select(.name=="floaty") | .id')
+if [ -z "${floaty_iam_role_id}" ]; then
+cat >floaty-role.json <<EOF
+{
+  "name": "floaty",
+  "policy": {
+    "default-service-strategy": "deny",
+    "services": {
+      "compute-legacy": {
+        "type": "rules",
+        "rules": [
+          {
+            "action": "allow",
+            "expression": "operation in ['compute-add-ip-to-nic', 'compute-list-nics', 'compute-list-resource-details', 'compute-list-virtual-machines', 'compute-query-async-job-result', 'compute-remove-ip-from-nic']"
+          }
+        ]
+      }
+    }
+  }
+}
+EOF
+floaty_iam_role_id=$(exo x create-iam-role < floaty-role.json | jq -r '.reference.id')
+rm floaty-role.json
+fi
+# Create access key
+exoscale_floaty_credentials=$(echo '{
+  "name": "'"${CLUSTER_ID}"'_floaty",
+  "role-id": "'"${floaty_iam_role_id}"'"
+}' | exo x create-api-key)
+export TF_VAR_lb_exoscale_api_key=$(echo "${exoscale_floaty_credentials}" | \
+  jq -r '.key')
+export TF_VAR_lb_exoscale_api_secret=$(echo "${exoscale_floaty_credentials}" | \
+  jq -r '.secret')
 ----
 
 [#_bootstrap_bucket]
@@ -193,21 +258,6 @@ module "cluster" {
 }
 EOF
 terraform apply
-----
-
-. Set Exoscale Elastic IP reverse DNS
-+
-[source,bash]
-----
-terraform state pull > state.json
-
-ingress_id=$(jq -r '.resources[] | select(.type == "exoscale_elastic_ip" and .name == "ingress") | .instances[0].attributes.id' state.json)
-api_id=$(jq -r '.resources[] | select(.type == "exoscale_elastic_ip" and .name == "api") | .instances[0].attributes.id' state.json)
-# Use auto-generated Exoscale API V2 OpenAPI command to set EIP reverse DNS
-echo "{\"domain-name\": \"ingress.${CLUSTER_DOMAIN}.\"}" | exo x --zone "${EXOSCALE_ZONE}" update-reverse-dns-elastic-ip "$ingress_id"
-echo "{\"domain-name\": \"api.${CLUSTER_DOMAIN}.\"}" | exo x --zone "${EXOSCALE_ZONE}" update-reverse-dns-elastic-ip "$api_id"
-
-rm state.json
 ----
 
 . Create LB hieradata

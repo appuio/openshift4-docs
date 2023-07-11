@@ -34,11 +34,13 @@ controlPlane:
         diskSizeGB: 100
 platform:
   vsphere:
-    apiVIP: ${API_VIP}
+    apiVIPs:
+      - ${API_VIP}
     cluster: ${VSPHERE_CLUSTER}
     datacenter: ${VSPHERE_DATACENTER}
     defaultDatastore: ${VSPHERE_DATASTORE}
-    ingressVIP: ${INGRESS_VIP}
+    ingressVIPs:
+      - ${INGRESS_VIP}
     network: ${VSPHERE_NETWORK}
     username: ${VSPHERE_USERNAME}
     password: ${VSPHERE_PASSWORD}

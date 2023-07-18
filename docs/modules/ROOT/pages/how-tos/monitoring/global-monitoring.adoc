@@ -19,7 +19,7 @@ There is an overview dashboard available at https://insights.appuio.net/d/high-l
 === Changes to the dashboards
 
 Users with the `Openshiftroot` role are able to change the dashboards.
-Please notify [Team Tarazed](https://vshn.chat/channel/tarazed) if you want to make changes to the dashboards in the Tarazed folder.
+Please notify https://vshn.chat/channel/tarazed[Team Tarazed] if you want to make changes to the dashboards in the Tarazed folder.
 
 == Alerts
 

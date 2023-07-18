@@ -6,7 +6,7 @@ This page describes how to delete an operator and troubleshoot certain failure s
 
 If the operator is managed by a Syn component, remove the component (instance) from your cluster.
 
-Follow the [Deleting Operators from a cluster using the CLI](https://docs.openshift.com/container-platform/4.9/operators/admin/olm-deleting-operators-from-cluster.html#olm-deleting-operator-from-a-cluster-using-cli_olm-deleting-operators-from-a-cluster) guide from Red Hat.
+Follow the https://docs.openshift.com/container-platform/4.9/operators/admin/olm-deleting-operators-from-cluster.html#olm-deleting-operator-from-a-cluster-using-cli_olm-deleting-operators-from-a-cluster[Deleting Operators from a cluster using the CLI] guide from Red Hat.
 
 == Troubleshooting
 

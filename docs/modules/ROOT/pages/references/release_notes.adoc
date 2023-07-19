@@ -2,10 +2,78 @@
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 
+== OpenShift 4.13
+
+OpenShift version 4.13 is available since 2023-03-17.
+This version is based on Kubernetes 1.26.
+The RHCOS image now uses RHEL 9.2 packages.
+Find the release notes in the upstream documentation as https://docs.openshift.com/container-platform/4.13/release_notes/ocp-4-13-release-notes.html[OpenShift Container Platform 4.13 release notes].
+The https://www.redhat.com/en/blog/red-hat-openshift-413-now-available[Red Hat OpenShift 4.13 is now available] blog post is also a valuable resource.
+
+API deprecations::
+
+Multiple APIs are deprecated in Kubernetes 1.26.
+Before updating a cluster to OpenShift 4.13, check for usage of the following APIs:
+
+* `flowschemas.flowcontrol.apiserver.k8s.io/v1beta1`
+* `horizontalpodautoscalers.autoscaling/v2beta2`
+* `prioritylevelconfigurations.flowcontrol.apiserver.k8s.io/v1beta1`
+
++
+See the upstream documentation on https://docs.openshift.com/container-platform/4.13/updating/updating-cluster-prepare.html#updating-cluster-prepare[preparing to update to OpenShift Container Platform 4.13] for detailed instructions to check for usage of these APIs.
+If any of the APIs are used, inform the affected users and ask them to update their workloads to use the APIs indicated in the upstream documentation.
+
+Zone aware OpenShift in VMware vSphere::
+
+OpenShift 4.13 supports installation across multiple vSphere datacenters and clusters.
+Defining logic failure domains allows reducing the risk of data loss and downtime.
+
+Additionally vSphere persistent disks encryption is now generally available.
+
+Cgroup v2 GA improves node stability::
+
+Cgroup v2 is now generally available in OpenShift 4.13.
+It provides a more robust and flexible mechanism for allocating resources to containers.
+
+RedHat reports better node stability when there is I/O pressure due to throttling.
+On cgroup v1 such nodes will go not ready but the node stays stable on v2.
+
+New web console features::
+
+The developer view in the OpenShift web console provides multiple new features.
+Serverless functions can now be added to the cluster by either importing them from a Git repository or by creating them from a template.
+The topology view, the pod details and the pod list now shows which pods receive traffic.
+
+If using Loki for logging, the web console now allows to visualize log based alerts.
+
+OpenShift managed cert-manager::
+
+OpenShift 4.13 includes an operated version of cert-manager.
+
+RHCOS image layering is generally available::
+
+The RHCOS image layering feature is now generally available.
+This feature should make it easier to add additional packages and configuration to the RHCOS image.
+
+Reminder: Pod Security Admission is enabled::
+
+https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] runs globally with restricted audit logging and API warnings.
+This means while everything should still run as it did before, if users rely on security contexts being set by OpenShift's SCCs they'll encounter warnings like the following:
++
+[source,console]
+----
+Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "nginx" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "nginx" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "nginx" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "nginx" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
+----
++
+Users need to explicitly set security contexts in their manifests to avoid these warnings.
++
+Red Hat plans to switch Pod Security Admission to restricted enforcement globally in a future minor release.
+When restricted enforcement will be enabled, pods with pod security violations will be rejected.
+
 == OpenShift 4.12
 
 OpenShift version 4.12 is available since 2023-01-17.
-This version is based on Kubernetes 1.25
+This version is based on Kubernetes 1.25.
 The RHCOS image now uses RHEL 8.6 packages.
 Find the release notes in the upstream documentation as https://docs.openshift.com/container-platform/4.12/release_notes/ocp-4-12-release-notes.html[OpenShift Container Platform 4.12 release notes].
 The https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.12-blog[What's New in Red Hat OpenShift 4.12] blog post is also a valuable resource.
@@ -35,7 +103,7 @@ Additionally, resource quota alerts are now visible in the web console "Topology
 
 Reminder: Pod Security Admission is enabled::
 
-https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] runs globally with restricted audit logging and API warnings. 
+https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] runs globally with restricted audit logging and API warnings.
 This means while everything should still run as it did before, if users rely on security contexts being set by OpenShift's SCCs they'll encounter warnings like the following:
 +
 [source,console]
@@ -124,7 +192,7 @@ If used, inform the affected users and ask them to update to `snapshot.storage.k
 
 Pod Security Admission is now enabled::
 
-https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] now runs globally with restricted audit logging and API warnings. 
+https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] now runs globally with restricted audit logging and API warnings.
 This means while everything should still run as it did before, if users rely on security contexts being set by OpenShift's SCCs they'll most likely encounter warnings like the following:
 +
 [source,console]

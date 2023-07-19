@@ -37,7 +37,7 @@ IMPORTANT: Don't use your personal account to login to the cluster manager for i
 == Prerequisites
 
 include::partial$install/prerequisites.adoc[]
-* `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
+* `mc` >= `RELEASE.2021-07-27T06-46-19Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 
 [WARNING]
 ====
@@ -139,7 +139,7 @@ curl -L https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-mi
 [source,bash,subs="attributes+"]
 ----
 mc cp rhcos-{ocp-minor-version}.qcow2 "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/"
-mc policy set download "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2"
+mc anonymous set download "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2"
 ----
 +
 [TIP]
@@ -148,7 +148,7 @@ You can check that the download policy is applied successfully with
 
 [source,bash,subs="attributes+"]
 ----
-mc policy get "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2"
+mc anonymous get "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2"
 ----
 
 The output should be

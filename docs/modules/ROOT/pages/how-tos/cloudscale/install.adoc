@@ -37,7 +37,7 @@ IMPORTANT: Don't use your personal account to login to the cluster manager for i
 == Prerequisites
 
 include::partial$install/prerequisites.adoc[]
-* `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
+* `mc` >= `RELEASE.2021-07-27T06-46-19Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 
 [WARNING]
 ====

@@ -1,0 +1,88 @@
+= Upgrade to OpenShift 4.13 / Administrator Acknowledgment
+
+OpenShift Container Platform 4.13 uses Kubernetes 1.26, which removed some of the deprecated `v1beta1` APIs.
+A manual acknowledgment must be provided before the cluster can be upgraded to 4.13.
+
+More information can be found in https://access.redhat.com/articles/6958394.
+
+== Upgrade to 4.13
+
+. Check requests to removed APIs
++
+[source,bash]
+----
+kubectl get apirequestcounts \
+  --as=cluster-admin \
+  -o jsonpath='{range .items[?(@.status.removedInRelease!="")]}{.status.removedInRelease}{"\t"}{.metadata.name}{"\t"}{.status.requestCount}{"\n"}{end}'
+----
++
+Should print a report like the sample below.
+The last column is requests in the last 24 hours.
++
+[source,bash]
+----
+1.26    flowschemas.v1beta1.flowcontrol.apiserver.k8s.io        3630
+1.26    horizontalpodautoscalers.v2beta2.autoscaling    281
+1.26    prioritylevelconfigurations.v1beta1.flowcontrol.apiserver.k8s.io        329
+----
++
+If you see counts `> 0` you can check from whom the API calls are originating.
++
+[source,bash]
+----
+kubectl get apirequestcounts horizontalpodautoscalers.v2beta2.autoscaling \
+  --as=cluster-admin \
+  -o jsonpath='{range ..username}{$}{"\n"}{end}' \
+  | sort | uniq
+----
++
+[NOTE]
+====
+Some services autodiscover supported APIs, notably https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/[kube-controller-manager] (`system:kube-controller-manager`) and ArgoCD (`system:serviceaccount:syn:argocd-application-controller`).
+These services will show up as using deprecated APIs.
+====
++
+More advanced query: Show only resources with create and update requests.
++
+[source,bash]
+----
+kubectl --as=cluster-admin get apirequestcount -ojson | jq '
+    .items[] |
+        select(
+            .status.removedInRelease == "1.26" and .status.requestCount > 0
+        ) |
+        {
+            resource: .metadata.name,
+            requests: (
+                reduce .status.last24h[] as $hour ({"requests": 0}; .requests += (
+                    reduce $hour.byNode[]? as $node ({"requests": 0}; .requests += (
+                        reduce $node.byUser[]? as $user ({"requests": 0}; .requests += (
+                            reduce $user.byVerb[]? as $verb (0; . + (
+                                if $verb.verb == "watch" or $verb.verb == "list" or $verb.verb == "get" then
+                                    0
+                                else
+                                    $verb.requestCount
+                                end
+                            ))
+                        ))
+                    ).requests)
+                ).requests)
+            ).requests
+        }
+'
+----
+
+. Provide the Acknowledgment
++
+[source,bash]
+----
+kubectl patch cm admin-acks \
+  --as=cluster-admin \
+  -n openshift-config \
+  --patch '{"data":{"ack-4.12-kube-1.26-api-removals-in-4.13":"true"}}' \
+  --type=merge
+----
+
+. Upgrade the cluster
++
+Follow the steps in xref:oc4:ROOT:how-tos/update_maintenance.adoc[Update/Maintenance].

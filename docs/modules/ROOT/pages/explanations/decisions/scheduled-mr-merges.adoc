@@ -1,0 +1,65 @@
+= Scheduling the merge of a GitLab merge request
+
+== Problem
+
+We want to be able to merge GitLab merge requests at preset times.
+This enables us to roll out changes during maintenance windows in an automated fashion.
+
+While there is an open request for such a feature in GitLab, the implementation isn't on the horizon yet, and no suitable functionality exists at present.
+
+=== Goals
+
+* Allow merge requests to be scheduled for merge in a specific time window
+
+=== Non-Goals
+
+* Schedule merges of GitHub pull requests
+* Automatically rebase merge requests (might be added later)
+
+== Proposals
+
+=== Create an automation to merge MRs based on labels and comments or in-repo configs
+
+We develop a new service, to be run on our infrastructure, which periodically checks all open MRs that have a specific label set.
+
+In addition to the label, a merge window needs to be specified.
+This could be either via an in-repo config (similar to Renovate automerge schedules), or via a command that can be commented into the merge request, or both.
+
+If the label is set, and the merge window is currently active, and the MR has no failing pipelines or file conflicts, the MR gets merged.
+
+This automation should run frequently enough so it's unlikely to miss a merge window. For example, every 10 minutes.
+
+In the future, the automation could also automatically rebase all MRs with the label, if necessary.
+This could happen outside of the configured window, to ensure the MR is up-to-date once the window rolls around.
+
+
+=== Integrate the merging of MRs into the automated cluster upgrade process
+
+We develop a Job that checks a cluster's tenant repository for MRs with a specific label, and merges them via the GitLab API.
+The Job is run as an UpgradeJob hook during cluster maintenance.
+Any MR that needs to be merged during maintenance simply needs to have the corresponding label.
+
+This would marry the merge automation to the cluster upgrade process, which would automatically ensure it runs during cluster maintenance while adding little complexity.
+However, in this case, there is no merge automation for arbitrary other cases (for example, for scheduling a rollout in global-defaults).
+Only tenant repos could benefit from this automation.
+Furthermore, it's also not straightforward to teach this automation to keep the MRs up-to-date.
+
+Each tenant repository would ideally have its own access token for this automation, which then somehow needs to be made available to the automation.
+Ideally, this would be automated.
+
+== Decision
+
+We should create our own automation to schedule the merging of arbitrary MRs based on in-repo configs and labels.
+
+
+== Rationale
+
+Creating a service that's separate from the cluster upgrade process doesn't incur that much extra complexity, but gives us a lot more flexibility.
+Marrying the MR scheduling to the cluster upgrade process is in some ways a convenient solution, but seems like a coupling of systems that shouldn't be connected in this way.
+
+Furthermore, any system that can merge MRs for us will require a GitLab access token.
+Managing such a token is much easier with one centralized service, as opposed to maintaining a separate token for each tenant.
+
+We already rely on in-repo configurations to schedule Renovate MRs.
+It makes sense to schedule other MRs in the same way, so the use of the new system will be familiar.
+If we later require the ability to quickly create very specific schedules for individual MRs, we can still add a feature to override the configured schedule with a comment to the MR.

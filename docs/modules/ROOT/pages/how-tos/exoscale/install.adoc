@@ -131,6 +131,35 @@ export TF_VAR_lb_exoscale_api_secret=$(echo "${exoscale_floaty_credentials}" | \
   jq -r '.secret')
 ----
 
+. Create restricted API key for AppCat Provider Exoscale
++
+[source,bash]
+----
+# Create AppCat Provider Exoscale IAM role, if it doesn't exist yet in the organization
+appcat_role_id=$(exo x list-iam-roles | \
+  jq -r '."iam-roles"[] | select(.name=="appcat-provider-exoscale") | .id')
+if [ -z "${sos_iam_role_id}" ]; then
+appcat_role_id=$(echo '{
+  "name": "appcat-provider-exoscale",
+  "policy": {
+    "default-service-strategy": "deny",
+    "services": {
+      "sos": {"type": "allow"},
+      "dbaas": {"type": "allow"},
+      "iam": {"type": "allow"}
+    }
+  }
+}' | exo x  create-iam-role | jq -r '.reference.id')
+fi
+# Create access key
+appcat_credentials=$(echo '{
+  "name": "appcat-provider-exoscale",
+  "role-id": "'"${appcat_role_id}"'"
+}' | exo x create-api-key)
+export APPCAT_ACCESSKEY=$(echo "${appcat_credentials}" | jq -r '.key')
+export APPCAT_SECRETKEY=$(echo "${appcat_credentials}" | jq -r '.secret')
+----
+
 [#_bootstrap_bucket]
 === Set up S3 bucket for cluster bootstrap
 
@@ -209,6 +238,11 @@ vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
 # Copy the VSHN acme-dns registration password
 vault kv get -format=json "clusters/kv/template/cert-manager" | jq '.data.data' \
   | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cert-manager" -
+
+# Set the AppCat Provider Exoscale Credentials
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/appcat/provider-exoscale \
+  access-key=${APPCAT_ACCESSKEY} \
+  secret-key=${APPCAT_SECRETKEY}
 ----
 
 include::partial$get-hieradata-token-from-vault.adoc[]

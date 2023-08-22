@@ -15,7 +15,5 @@ networking:
 pullSecret: |
   ${PULL_SECRET}
 sshKey: "$(cat $SSH_PUBLIC_KEY)"
-capabilities:
-  baselineCapabilitySet: v4.12
 EOF
 ----

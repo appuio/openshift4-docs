@@ -52,8 +52,6 @@ networking:
 pullSecret: |
   ${PULL_SECRET}
 sshKey: "$(cat $SSH_PUBLIC_KEY)"
-capabilities:
-  baselineCapabilitySet: v4.11
 EOF
 ----
 <1> We only provision a single compute machine set.

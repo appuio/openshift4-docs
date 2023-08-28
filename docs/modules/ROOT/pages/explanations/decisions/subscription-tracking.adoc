@@ -36,7 +36,7 @@ Grafana most likely doesn't support editing data.
 
 We store the bought subscriptions in a ConfigMap managed by Commodore.
 This gives us free versioning and a history of changes.
-Coupled with a Jira ticket we can track who bought and licenses for which customer.
+Coupled with a Jira ticket we can track who requested changes for which customer.
 
 We don't need to build a custom UI or any other tooling.
 

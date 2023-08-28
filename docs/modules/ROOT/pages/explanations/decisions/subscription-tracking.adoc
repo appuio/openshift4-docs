@@ -1,0 +1,71 @@
+= Subscription tracking
+
+== Problem
+
+We need to track the yearly subscriptions bought for OpenShift 4 clusters.
+Subscription count is required for a monthly report to RedHat.
+RedHat subscriptions are based on (v)CPU count.
+We need to cover the difference of the yearly subscription count and the actual CPU count with monthly subscriptions.
+
+Buying yearly subscriptions saves us money compared to buying monthly subscriptions.
+
+It also adds a small amount of risk if a customer decides to cancel their clusters before the year is over.
+
+=== Goals
+
+* Yearly subscriptions are tracked in a central place
+* Subscription count is available for an automated monthly report to RedHat
+* A suggestion for how many yearly subscriptions to buy is available to the account manager
+
+=== Non-goals
+
+* Full automation of subscription buying
+
+== Proposals
+
+=== Option 1: Database and Web UI (custom/ Grafana)
+
+We store subscriptions in a database and build a custom UI or Grafana dashboard to visualize the data.
+
+This allows instant feedback and would allow account managers to track subscriptions themselves without having to ask our team.
+
+Building the UI would take time and we would need to maintain it.
+
+Grafana most likely doesn't support editing data.
+
+=== Option 2: Store in ConfigMap managed by Commodore
+
+We store the bought subscriptions in a ConfigMap managed by Commodore.
+This gives us free versioning and a history of changes.
+Coupled with a Jira ticket we can track who bought and licenses for which customer.
+
+We don't need to build a custom UI or any other tooling.
+
+The only visualization will be the monthly report to RedHat.
+
+The ConfigMap can contain JSON or YAML which natively is supported by most editors.
+
+=== Option 3: Store in Odoo
+
+We store the bought subscriptions in Odoo.
+This would allow us to track the subscriptions in the same place as the customer data and contracts.
+
+We would not need to build a custom UI but might have to create a custom Odoo module.
+
+Currently we're migrating Odoo versions but the timeline isn't clear yet.
+There's a lot of other work to do in Odoo and we don't want to add more work to the migration.
+
+== Decision
+
+We decided to go with option 2 and track the bought subscriptions in a ConfigMap managed by Commodore.
+
+== Rationale
+
+We like to start simple and first see if the effort of a custom UI is worth it.
+
+A account manager needs to act on the suggestion of how many subscriptions to buy.
+The manager will decide on external factors, like how likely it's the customer stays with us, that aren't known to the system.
+
+This happens once a month and most likely doesn't lead to any changes.
+
+A monthly report should be enough visualization for the account manager to make a decision.

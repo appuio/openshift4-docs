@@ -5,7 +5,7 @@
 We need to track the yearly subscriptions bought for OpenShift clusters.
 The exact SKU count is required for a monthly report to Red Hat.
 Red Hat OpenShift SKU subscriptions are based on cores or vCPU count (called `CORE BAND`), in our case we use vCPU count.
-We need to track how many long-term SKU subscriptions (Yearly or 3 Years) we bought, in which timeframe they are valid (there can be multiple ranges, depending on when they where bought) and how many are assigned.
+We need to track how many long-term SKU subscriptions (Yearly or 3 Years) we bought, in which timeframe they're valid (there can be multiple ranges, depending on when they where bought) and how many are assigned.
 And with that information, we also need to report on the difference so buy additional monthly SKUs, should there be a difference.
 
 A monthly usage report has to be sent to Red Hat, detailing the use of SKUs, assigned to consumers of them (our customers).

@@ -2,20 +2,19 @@
 
 == Problem
 
-We need to track the yearly subscriptions bought for OpenShift 4 clusters.
-Subscription count is required for a monthly report to RedHat.
-RedHat subscriptions are based on (v)CPU count.
-We need to cover the difference of the yearly subscription count and the actual CPU count with monthly subscriptions.
+We need to track the yearly subscriptions bought for OpenShift clusters.
+The exact SKU count is required for a monthly report to Red Hat.
+Red Hat OpenShift SKU subscriptions are based on cores or vCPU count (called `CORE BAND`), in our case we use vCPU count.
+We need to track how many long-term SKU subscriptions (Yearly or 3 Years) we bought, in which timeframe they are valid (there can be multiple ranges, depending on when they where bought) and how many are assigned.
+And with that information, we also need to report on the difference so buy additional monthly SKUs, should there be a difference.
 
-Buying yearly subscriptions saves us money compared to buying monthly subscriptions.
-
-It also adds a small amount of risk if a customer decides to cancel their clusters before the year is over.
+A monthly usage report has to be sent to Red Hat, detailing the use of SKUs, assigned to consumers of them (our customers).
 
 === Goals
 
-* Yearly subscriptions are tracked in a central place
-* Subscription count is available for an automated monthly report to RedHat
-* A suggestion for how many yearly subscriptions to buy is available to the account manager
+* Long-term SKU subscriptions (Yearly or 3 Years) are tracked in a central place, including validity information
+* Detailed SKU subscription count is available for an automated monthly report to Red Hat
+* A suggestion for how many yearly subscriptions to buy is available to the account or partner manager
 
 === Non-goals
 
@@ -63,7 +62,7 @@ We decided to go with option 2 and track the bought subscriptions in a ConfigMap
 
 We like to start simple and first see if the effort of a custom UI is worth it.
 
-A account manager needs to act on the suggestion of how many subscriptions to buy.
+An account manager needs to act on the suggestion of how many subscriptions to buy.
 The manager will decide on external factors, like how likely it's the customer stays with us, that aren't known to the system.
 
 This happens once a month and most likely doesn't lead to any changes.

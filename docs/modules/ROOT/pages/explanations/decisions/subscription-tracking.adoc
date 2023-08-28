@@ -1,0 +1,74 @@
+= Subscription tracking
+
+== Problem
+
+We need to track the yearly subscriptions bought for OpenShift clusters.
+The exact SKU count is required for a monthly report to Red Hat.
+Red Hat OpenShift SKU subscriptions are based on cores or vCPU count (called `CORE BAND`), in our case we use vCPU count.
+We need to track how many long-term SKU subscriptions (Yearly or 3 Years) we bought, in which timeframe they're valid (there can be multiple ranges, depending on when they where bought) and how many are assigned.
+And with that information, we also need to report on the difference so buy additional monthly SKUs, should there be a difference.
+
+A monthly usage report has to be sent to Red Hat, detailing the use of SKUs, assigned to consumers of them (our customers).
+
+=== Goals
+
+* Long-term SKU subscriptions (Yearly or 3 Years) are tracked in a central place, including validity information
+* Detailed SKU subscription count is available for an automated monthly report to Red Hat
+* A suggestion for how many yearly subscriptions to buy is available to the account or partner manager
+
+=== Non-goals
+
+* Full automation of subscription buying
+
+== Proposals
+
+=== Option 1: Database and Web UI (custom/ Grafana)
+
+We store subscriptions in a database and build a custom UI or Grafana dashboard to visualize the data.
+
+This allows instant feedback and would allow account managers to track subscriptions themselves without having to ask our team.
+
+Building the UI would take time and we would need to maintain it.
+
+Grafana most likely doesn't support editing data.
+
+=== Option 2: Store in ConfigMap managed by Commodore
+
+We store the bought subscriptions in a ConfigMap managed by Commodore.
+This gives us free versioning and a history of changes.
+Coupled with a Jira ticket we can track who requested changes for which customer.
+
+We don't need to build a custom UI or any other tooling.
+
+The only visualization will be the monthly report to Red Hat.
+
+The ConfigMap can contain JSON or YAML which natively is supported by most editors.
+
+Our team would update and maintain the ConfigMap.
+Account managers would open a Jira ticket to request a change, if they decide to buy more subscriptions.
+Current state can be read from GitLab, be shown in monthly report, and will be linked in the documentation.
+
+=== Option 3: Store in Odoo
+
+We store the bought subscriptions in Odoo.
+This would allow us to track the subscriptions in the same place as the customer data and contracts.
+
+We would not need to build a custom UI but might have to create a custom Odoo module.
+
+Currently we're migrating Odoo versions but the timeline isn't clear yet.
+There's a lot of other work to do in Odoo and we don't want to add more work to the migration.
+
+== Decision
+
+We decided to go with option 2 and track the bought subscriptions in a ConfigMap managed by Commodore.
+
+== Rationale
+
+We like to start simple and first see if the effort of a custom UI is worth it.
+
+An account manager needs to act on the suggestion of how many subscriptions to buy.
+The manager will decide on external factors, like how likely it's the customer stays with us, that aren't known to the system.
+
+This happens once a month and most likely doesn't lead to any changes.
+
+A monthly report should be enough visualization for the account manager to make a decision.

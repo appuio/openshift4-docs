@@ -44,6 +44,10 @@ The only visualization will be the monthly report to RedHat.
 
 The ConfigMap can contain JSON or YAML which natively is supported by most editors.
 
+Our team would update and maintain the ConfigMap.
+Account managers would open a Jira ticket to request a change, if they decide to buy more subscriptions.
+Current state can be read from GitLab, be shown in monthly report, and will be linked in the documentation.
+
 === Option 3: Store in Odoo
 
 We store the bought subscriptions in Odoo.

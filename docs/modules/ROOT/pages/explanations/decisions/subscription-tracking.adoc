@@ -40,7 +40,7 @@ Coupled with a Jira ticket we can track who bought and licenses for which custom
 
 We don't need to build a custom UI or any other tooling.
 
-The only visualization will be the monthly report to RedHat.
+The only visualization will be the monthly report to Red Hat.
 
 The ConfigMap can contain JSON or YAML which natively is supported by most editors.
 

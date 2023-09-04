@@ -31,7 +31,7 @@ It's managed through a Custom Resource Definition (CRD) called `UpgradeConfig`.
 
 === Basic upgrade flow
 
-image:explanations/upgrade-controller-high-level-flow-chart.svg[]
+image:upgrade-controller-high-level-flow-chart.svg[]
 
 === The controller is extendable through hooks
 

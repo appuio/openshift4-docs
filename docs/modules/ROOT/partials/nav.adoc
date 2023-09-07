@@ -175,7 +175,7 @@
 // Serverless
 
 * Day two operations
-** xref:oc4:ROOT:how-tos/update_maintenance.adoc[Update/Maintenance]
+** xref:oc4:ROOT:how-tos/maintenance_troubleshooting.adoc[Maintenance troubleshooting]
 ** xref:oc4:ROOT:how-tos/debug-nodes.adoc[Debugging Nodes]
 
 ** Runbooks

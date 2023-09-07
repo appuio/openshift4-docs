@@ -85,4 +85,4 @@ kubectl patch cm admin-acks \
 
 . Upgrade the cluster
 +
-Follow the steps in xref:oc4:ROOT:how-tos/update_maintenance.adoc[Update/Maintenance].
+Set the desired minor version in https://github.com/appuio/component-openshift-upgrade-controller/blob/master/docs/modules/ROOT/pages/references/parameters.adoc#cluster_versionopenshiftversion[`openshift_upgrade_controller.cluster_version.openshiftVersion.Minor`]. The ugprade controller will use this upgrade channel in the next maintenance window.

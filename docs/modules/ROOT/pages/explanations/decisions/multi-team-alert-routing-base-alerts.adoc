@@ -14,7 +14,7 @@ It would be better to route those alerts dynamically based on some criteria, suc
 === Non-Goals
 
 * Define alert routing for custom alerts
-* Handle alerts in namespaces that aren't syn-managed
+* Handle alerts in namespaces that aren't managed through Project Syn
 
 == Proposals
 
@@ -24,7 +24,8 @@ One option is to modify the alert queries to join the `kube_namespace_labels` me
 This implies that namespace ownership is configured by setting a specific label on the namespace in question.
 No suitable label currently exists, so all components would need to be updated to provide one, for example based on component ownership.
 
-However, not all alert rules have the namespace label, since not all are namespace scoped. Blindly joining the namespace label metric will therefore lead to some broken alerts.
+However, not all alert rules have the namespace label, since not all are namespace scoped.
+Blindly joining the namespace label metric will therefore lead to some broken alerts.
 This problem can be solved by creating a new configuration option in `component-openshift4-monitoring`, in which a list of alerts and a list of labels can be specified.
 All listed alert rules will be modified to append the listed labels.
 

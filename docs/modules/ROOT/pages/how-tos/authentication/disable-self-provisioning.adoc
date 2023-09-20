@@ -1,4 +1,4 @@
-= Disable access to one or more OpenShift 4 clusters
+= Disable project self-provisioning on OpenShift 4
 
 [abstract]
 This guide describes how to remove permission for users to self-provision projects on OpenShift 4 clusters.

@@ -1,0 +1,32 @@
+= Disable access to one or more OpenShift 4 clusters
+
+[abstract]
+This guide describes how to remove permission for users to self-provision projects on OpenShift 4 clusters.
+It's based on https://docs.openshift.com/container-platform/4.13/applications/projects/configuring-project-creation.html#disabling-project-self-provisioning_configuring-project-creation[this OpenShift documentation].
+
+== Prerequisites
+
+* Access to the respective cluster's tenant repository.
+
+== Procedure
+
+To disable self-provisioning, patch the `self-provisioners` CRB with the following `Patch` (for example via adhoc-configurations):
+
+[source,yaml]
+----
+kind: Patch
+metadata:
+  name: self-provisioning
+spec:
+  patches:
+    self-provisioning-patch:
+      patchTemplate: |-
+        [{"op": "remove", "path": "/subjects/0"}]
+      patchType: application/json-patch+json
+      targetObjectRef:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        name: self-provisioners
+----
+
+Roll out this patch and verify it applies. This disables self-provisioning for general authenticated users.

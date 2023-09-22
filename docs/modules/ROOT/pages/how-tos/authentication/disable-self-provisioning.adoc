@@ -20,8 +20,7 @@ metadata:
 spec:
   patches:
     self-provisioning-patch:
-      patchTemplate: |-
-        [{"op": "remove", "path": "/subjects/0"}]
+      patchTemplate: '[{"op": "replace", "path": "/subjects", "value": null}]'
       patchType: application/json-patch+json
       targetObjectRef:
         apiVersion: rbac.authorization.k8s.io/v1

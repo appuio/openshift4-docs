@@ -104,6 +104,7 @@
 
 * Ingress
 ** xref:oc4:ROOT:how-tos/ingress/self-signed-ingress-cert.adoc[]
+** xref:oc4:ROOT:how-tos/ingress/xff-configuration.adoc[]
 
 
 * Storage

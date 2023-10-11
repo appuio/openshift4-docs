@@ -48,6 +48,19 @@ Additionally, verify that alert rules defined by other components are still pick
 +
 For example, we needed to update component `resource-locker` to explicitly create ServiceAccount token secrets for OpenShift 4.11 / Kubernetes 1.24.
 
+. If there's changes with a potential impact on customer workloads (for example the switch to `cgroupv2` as default in OCP 4.13), create a ticket to research these changes.
+The minimum amount of research for such a change should be to search the internet for `<feature> problems` or `<feature> issues` (or similar) and note any issues that other people have talked about.
+The research ticket should have roughly the following acceptance criteria:
++
+[source]
+----
+* We understand the impact of rolling out the change
+* We understand how the change may impact customer workload
+* The impact of the change is highlighted in the release notes created as part of step 1
+* Follow-up tickets for the rollout are refined and estimated
+** Per-customer tickets are created, if we believe it's necessary to inform customers ahead of the rollout
+----
+
 . Upgrade to a supported OpenShift Cluster Logging version on the upgraded cluster
 +
 TIP: Usually you'll want to upgrade to the latest OpenShift Cluster Logging version.

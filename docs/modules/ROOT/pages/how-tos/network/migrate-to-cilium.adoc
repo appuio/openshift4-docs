@@ -1,0 +1,264 @@
+= Migrate to Cilium CNI
+
+== Prerequisites
+
+* `cluster-admin` privileges
+* `kubectl`
+* `jq`
+* `curl`
+* Working `commodore` command
+
+== Prepare for migration
+
+IMPORTANT: Make sure that your `$KUBECONFIG` points to the cluster you want to migrate before starting.
+
+:duration: +120 minutes
+include::partial$create-alertmanager-silence-all-projectsyn.adoc[]
+
+. Select cluster
++
+[source,bash]
+----
+export CLUSTER_ID=c-cluster-id-1234 <1>
+export COMMODORE_API_URL=https://api.syn.vshn.net <2>
+export TENANT_ID=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" \
+  "${COMMODORE_API_URL}/clusters/${CLUSTER_ID}" | jq -r '.tenant')
+----
+<1> Replace with the Project Syn cluster ID of the cluster to migrate
+<2> Replace with the Lieutenant API on which the cluster is registered
+
+. Disable ArgoCD auto sync for components `openshift4-nodes` and `openshift-upgrade-controller`
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn patch apps root --type=json \
+  -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
+kubectl --as=cluster-admin -n syn patch apps openshift4-nodes --type=json \
+  -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
+kubectl --as=cluster-admin -n syn patch apps openshift-upgrade-controller --type=json \
+  -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
+----
+
+. Disable the cluster-network-operator.
+This is necessary to ensure that we can migrate to Cilium without the cluster-network-operator trying to interfere.
+We also need to scale down the upgrade controller, so that we can patch the `ClusterVersion` object.
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n appuio-openshift-upgrade-controller \
+  scale deployment openshift-upgrade-controller-controller-manager --replicas=0
+----
++
+[source,bash]
+----
+kubectl --as=cluster-admin patch clusterversion version \
+  --type=merge \
+  -p '
+  {"spec":{"overrides":[
+    {
+      "kind": "Deployment",
+      "group": "apps",
+      "name": "network-operator",
+      "namespace": "openshift-network-operator",
+      "unmanaged": true
+    }
+  ]}}'
+----
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n openshift-network-operator \
+  scale deploy network-operator --replicas=0
+----
+
+. Verify that the network operator has been scaled down.
++
+[source,bash]
+----
+kubectl -n openshift-network-operator get pods <1>
+----
+<1> This should return `No resources found in openshift-network-operator namespace`.
++
+[TIP]
+====
+If the operator is still running, check the following conditions:
+
+* The APPUiO OpenShift upgrade controller must be scaled down.
+* The `ClusterVersion` object must have an override to make the network operator deployment unmanaged.
+====
+
+. Remove network operator applied state
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n openshift-network-operator \
+  delete configmap applied-cluster
+----
+
+. Pause all machine config pools
++
+[source,bash]
+----
+for mcp in $(kubectl get mcp -o name); do
+kubectl --as=cluster-admin patch $mcp --type=merge -p '{"spec": {"paused": true}}'
+done
+----
+
+== Migrate to Cilium
+
+. Get local cluster working directory
++
+[source,bash]
+----
+commodore catalog compile "$CLUSTER_ID" <1>
+----
+<1> We recommend switching to an empty directory to run this command.
+Alternatively, switch to your existing directory for the cluster.
+
+. Enable component `cilium`
++
+[source,bash]
+----
+pushd inventory/classes/"${TENANT_ID}"
+yq -i '.applications += "cilium"' "${CLUSTER_ID}.yml"
+----
+
+. Update `upstreamRules` for monitoring
++
+[source,bash]
+----
+yq -i ".parameters.openshift4_monitoring.upstreamRules.networkPlugin = \"cilium\"" \
+  "${CLUSTER_ID}.yml"
+----
+
+. Update component `networkpolicy` config
++
+[source,bash]
+----
+yq eval -i '.parameters.networkpolicy.networkPlugin = "cilium"' \
+  "${CLUSTER_ID}.yml"
+yq eval -i '.parameters.networkpolicy.ignoredNamespaces = ["openshift-oauth-apiserver"]' \
+  "${CLUSTER_ID}.yml"
+----
+
+. Configure component `cilium`.
+We explicitly configure the K8s API endpoint to ensure that the Cilium operator doesn't access the API through the cluster network during the migration.
++
+TIP: When running Cilium with `kubeProxyReplacement=partial`, the API endpoint configuration can be removed after the migration is completed.
++
+.Explicitly configure the K8s API endpoint
+[source,bash]
+----
+yq -i '.parameters.cilium.cilium_helm_values.k8sServiceHost="api-int.${openshift:baseDomain}"' \
+  "${CLUSTER_ID}.yml" <1>
+yq -i '.parameters.cilium.cilium_helm_values.k8sServicePort="6443"' \
+  "${CLUSTER_ID}.yml"
+----
+<1> On vSphere clusters, you may need to use `api.${openshift:baseDomain}`.
++
+.Configure the cluster Pod and Service CIDRs
+[source,bash]
+----
+POD_CIDR=$(kubectl get network.config cluster \
+  -o jsonpath='{.spec.clusterNetwork[0].cidr}')
+HOST_PREFIX=$(kubectl get network.config cluster \
+  -o jsonpath='{.spec.clusterNetwork[0].hostPrefix}')
+
+yq -i '.parameters.cilium.cilium_helm_values.ipam.operator.clusterPoolIPv4MaskSize = "'"${HOST_PREFIX}"'"' \
+  "${CLUSTER_ID}.yml"
+yq -i '.parameters.cilium.cilium_helm_values.ipam.operator.clusterPoolIPv4PodCIDR = "'"${POD_CIDR}"'"' \
+  "${CLUSTER_ID}.yml"
+----
+
+. Commit changes
++
+[source,bash]
+----
+git commit -am "Migrate ${CLUSTER_ID} to Cilium"
+git push origin master
+popd
+----
+
+. Compile catalog
++
+[source,yaml]
+----
+commodore catalog compile "${CLUSTER_ID}"
+----
+
+. Patch cluster network config
++
+[source,bash]
+----
+kubectl --as=cluster-admin patch network.config cluster \
+  --type=merge -p '{"spec":{"networkType":"Cilium"},"status":null}'
+kubectl --as=cluster-admin patch network.operator cluster \
+  --type=merge -p '{"spec":{"defaultNetwork":{"type":"Cilium"}},"status":null}'
+----
+
+. Apply Cilium manifests.
+We need to execute the `apply` twice, since the first apply will fail to create the `CiliumConfig` resource.
++
+[source,bash]
+----
+kubectl --as=cluster-admin apply -Rf catalog/manifests/cilium/
+----
++
+[source,bash]
+----
+kubectl --as=cluster-admin apply -Rf catalog/manifests/cilium/
+----
+
+. Wait until Cilium CNI is up and running
++
+[source,bash]
+----
+kubectl -n cilium get pods -w
+----
+
+== Finalize migration
+
+. Re-enable cluster network operator
++
+[IMPORTANT]
+====
+This will remove the previously active CNI plugin and will deploy the kube-proxy daemonset.
+As soon as you complete this step, existing pods may go into `CrashLoopBackOff` since they were started with CNI IPs managed by the old network plugin.
+====
+
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n openshift-network-operator \
+  scale deployment network-operator --replicas=1
+kubectl --as=cluster-admin patch clusterversion version \
+ --type=merge -p '{"spec":{"overrides":null}}'
+----
+
+. Unpause MCPs
++
+[source,bash]
+----
+for mcp in $(kubectl get mcp -o name); do
+kubectl --as=cluster-admin patch $mcp --type=merge -p '{"spec":{"paused":false}}'
+done
+----
++
+[NOTE]
+====
+You may need to grab the cluster-admin credentials to complete this step since the OpenShift OAuth components may be unavailable until they're restarted with Cilium-managed IPs.
+====
++
+[TIP]
+====
+It may be necessary to force drain nodes manually to allow the machine-config-operator to reboot the nodes.
+Use `kubectl --as=cluster-admin drain --ignore-daemonsets --delete-emptydir-data --force --disable-eviction` to circumvent PDB violations if necessary.
+
+Start with a master node, and ensure that the machine-config-operator is running on that master node after it's been drained and rebooted.
+====
+
+include::partial$enable-argocd-autosync.adoc[]
+
+== Cleanup alert silence
+
+include::partial$remove-alertmanager-silence-all-projectsyn.adoc[]

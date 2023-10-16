@@ -19,7 +19,7 @@ spec:
     restartPolicy: Never
     containers:
       - name: silence
-        image: quay.io/appuio/oc:v4.6
+        image: quay.io/appuio/oc:v4.13
         command:
         - bash
         - -c
@@ -41,6 +41,12 @@ ifeval::["{argo_app}" == ""]
                 "name": "syn",
                 "value": "true",
                 "isRegex": false
+              },
+              {
+                "name": "alertname",
+                "value": "Watchdog",
+                "isRegex": false,
+                "isEqual": false
               }
 endif::[]
             ],
@@ -65,12 +71,22 @@ endif::[]
         - mountPath: /etc/ssl/certs/serving-certs/
           name: ca-bundle
           readOnly: true
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access
+          readOnly: true
     serviceAccountName: prometheus-k8s
     volumes:
     - name: ca-bundle
       configMap:
         defaultMode: 288
         name: serving-certs-ca-bundle
+    - name: kube-api-access
+      projected:
+        defaultMode: 420
+        sources:
+          - serviceAccountToken:
+              expirationSeconds: 3607
+              path: 'token'
 EOJ
 ----
 ifeval::["{http-method}" == "POST"]

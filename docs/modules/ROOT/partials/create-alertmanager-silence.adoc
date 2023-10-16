@@ -4,6 +4,7 @@
 // the list flow.
 :http-method: POST
 :alertmanager-endpoint: /api/v2/silences
+:silence-target: {argo_app}
 
 . Set a silence in Alertmanager for all {argo_app} alerts
 +

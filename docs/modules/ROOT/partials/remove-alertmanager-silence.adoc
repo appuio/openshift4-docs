@@ -4,6 +4,7 @@
 // the list flow.
 :http-method: DELETE
 :alertmanager-endpoint: /api/v2/silence/${silence_id}
+:silence-target: {argo_app}
 
 . Remove silence in Alertmanager
 +
@@ -13,5 +14,5 @@ include::partial$alertmanager-silence-job.adoc[]
 +
 [source,bash,subs="attributes+"]
 ----
-kubectl --as=cluster-admin -n openshift-monitoring delete jobs -l app=silence-{argo_app}-alerts
+kubectl --as=cluster-admin -n openshift-monitoring delete jobs -l app=silence-{silence-target}-alerts
 ----

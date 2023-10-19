@@ -1,7 +1,7 @@
 [source,bash,subs="attributes+"]
 ----
 if [[ "$OSTYPE" == "darwin"* ]]; then alias date=gdate; fi
-job_name=$(printf "{http-method}-silence-{argo_app}-alerts-$(date +%s)" | tr '[:upper:]' '[:lower:]')
+job_name=$(printf "{http-method}-silence-{silence-target}-alerts-$(date +%s)" | tr '[:upper:]' '[:lower:]')
 ifeval::["{http-method}" == "POST"]
 silence_duration='{duration}' <1>
 endif::[]
@@ -11,7 +11,7 @@ kind: Job
 metadata:
   name: ${job_name}
   labels:
-    app: silence-{argo_app}-alerts
+    app: silence-{silence-target}-alerts
 spec:
  backoffLimit: 0
  template:
@@ -19,7 +19,7 @@ spec:
     restartPolicy: Never
     containers:
       - name: silence
-        image: quay.io/appuio/oc:v4.6
+        image: quay.io/appuio/oc:v4.13
         command:
         - bash
         - -c
@@ -29,16 +29,31 @@ ifeval::["{http-method}" == "POST"]
           read -d "" body << EOF
           {
             "matchers": [
+ifeval::["{argo_app}" != ""]
               {
                 "name": "syn_component",
                 "value": "{argo_app}",
                 "isRegex": false
               }
+endif::[]
+ifeval::["{argo_app}" == ""]
+              {
+                "name": "syn",
+                "value": "true",
+                "isRegex": false
+              },
+              {
+                "name": "alertname",
+                "value": "Watchdog",
+                "isRegex": false,
+                "isEqual": false
+              }
+endif::[]
             ],
             "startsAt": "$(date -u +'%Y-%m-%dT%H:%M:%S')",
             "endsAt": "$(date -u +'%Y-%m-%dT%H:%M:%S' --date "${silence_duration}")",
             "createdBy": "$(kubectl config current-context | cut -d/ -f3)",
-            "comment": "Silence all {argo_app} alerts"
+            "comment": "Silence {silence-target} alerts"
           }
           EOF
 
@@ -56,12 +71,22 @@ endif::[]
         - mountPath: /etc/ssl/certs/serving-certs/
           name: ca-bundle
           readOnly: true
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access
+          readOnly: true
     serviceAccountName: prometheus-k8s
     volumes:
     - name: ca-bundle
       configMap:
         defaultMode: 288
         name: serving-certs-ca-bundle
+    - name: kube-api-access
+      projected:
+        defaultMode: 420
+        sources:
+          - serviceAccountToken:
+              expirationSeconds: 3607
+              path: 'token'
 EOJ
 ----
 ifeval::["{http-method}" == "POST"]

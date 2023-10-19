@@ -2,11 +2,16 @@
 // list. I was unable to figure out how to define the page attributes in a way
 // that works for the alertmanager-silence-job.adoc partial without breaking
 // the list flow.
+:silence-target: all
+ifndef::duration[]
+:duration: +60 minutes
+endif::[]
 :http-method: POST
 :alertmanager-endpoint: /api/v2/silences
-:silence-target: {argo_app}
 
-. Set a silence in Alertmanager for all {argo_app} alerts
+. Silence all Project Syn alerts
++
+TIP: If customer alerts are routed through the cluster-monitoring alertmanager, you should inform the customer that their alerts will be silenced during the migration.
 +
 include::partial$alertmanager-silence-job.adoc[]
 
@@ -17,3 +22,4 @@ include::partial$alertmanager-silence-job.adoc[]
 silence_id=$(kubectl --as=cluster-admin -n openshift-monitoring logs jobs/${job_name} | \
   jq -r '.silenceID')
 ----
+

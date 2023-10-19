@@ -2,9 +2,9 @@
 // list. I was unable to figure out how to define the page attributes in a way
 // that works for the alertmanager-silence-job.adoc partial without breaking
 // the list flow.
-:http-method: DELETE
 :alertmanager-endpoint: /api/v2/silence/${silence_id}
-:silence-target: {argo_app}
+:silence-target: all
+:http-method: DELETE
 
 . Remove silence in Alertmanager
 +

@@ -100,7 +100,8 @@
 ** xref:oc4:ROOT:how-tos/authentication/disable-self-provisioning.adoc[Disable project self-provisioning]
 ** xref:oc4:ROOT:explanations/sudo.adoc[]
 
-// Networking
+* Networking
+** xref:oc4:ROOT:how-tos/network/migrate-to-cilium.adoc[]
 
 * Ingress
 ** xref:oc4:ROOT:how-tos/ingress/self-signed-ingress-cert.adoc[]

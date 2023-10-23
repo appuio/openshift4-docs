@@ -1,0 +1,123 @@
+= Resource Usage Reporting for APPUiO Managed
+
+
+[abstract]
+====
+https://docs.central.vshn.ch/metered-data-flow.html[Data model and data flow for Resource Usage Reporting] explains how usage data gets reported and billed in general.
+This page explains in detail how the general concept is applied for APPUiO Managed.
+====
+
+The system for APPUiO Managed usage reporting must provide usage data for customer resources in all APPUiO Managed clusters, at cluster granularity.
+
+Usage data is stored in a central Mimir instance and queried via the Prometheus Query API.
+A reporting tool implements the ETL process described in https://docs.central.vshn.ch/metered-data-flow.html[Data model and data flow for Resource Usage Reporting].
+
+== Data Flow Overview
+
+All usage data is stored in Mimir.
+This makes it possible to obtain all the necessary information for usage data reporting via the Prometheus Query API.
+
+The reporting interval for APPUiO Managed resource usage is 1 hour.
+The PromQL queries executed against Mimir therefore need to sum up the resource usage accordingly.
+
+Any metadata that's required by the Metered Billing API needs to be present in Mimir, for instance, in the form of labels on timeseries.
+In particular, this is relevant for the Sales Order ID, which is needed for reporting.
+
+=== Example configuration
+
+
+[code:yaml]
+----
+parameters:
+  prometheus_metered_usage_reporting:
+    rules:
+      appuio_managed_rule_one:
+        products:
+          - product_id: 'odoo_product_variant_id_string'
+            params:
+              sla: best-effort
+              cloud_provider: cloudscale
+          - product_id: 'odoo_product_variant_id_string'
+            params:
+              sla: guaranteed-availability
+              cloud_provider: cloudscale
+          - product_id: 'odoo_product_variant_id_string'
+            params:
+              sla: best-effort
+              cloud_provider: exoscale
+          - product_id: 'odoo_product_variant_id_string'
+            params:
+              sla: guaranteed-availability
+              cloud_provider: exoscale
+        instance_id_pattern: '%(cluster)s'
+        item_description_pattern: 'All Compute Resources'
+        item_group_description_pattern: 'APPUiO Managed OpenShift - Cluster: %(cluster)s'
+        unit_id: '300'
+        query_pattern: ''
+----
+
+=== Billing API Parameters
+
+For APPUiO Managed, the *Instance ID* is equal to the cluster name.
+The *item group description* is also the cluster name, since it happens to also be a sensible grouping parameter.
+The *item description* doesn't need to provide dynamic information (since that information is all redundant with the item group description), and can thus be a static description of the context in which a metric is being measured.
+Note that it's not necessary to say what the metric is; that information is already contained in the product name.
+Alternatively, this parameter could also be omitted.
+
+=== Extract
+
+From the static configuration, a number of query jobs are generated for each query rule and each billing time interval (default 1h).
+
+For a given rule and time interval, a separate job is created for each listed product.
+The product params are substituted into the query pattern, resulting in an unique query for each product, which only returns results for that specific product.
+
+The query must be formulated in such a way that the resulting timeseries contains the `sales_order_id` label, which determines the particular sales order to which this usage record should be billed.
+
+Each query result represents a usage data record, to be transformed and loaded into the target system.
+
+=== Transform
+
+In the transformation phase, the usage records need to be enriched with metadata.
+This is taken from the static configuration.
+
+* The product or product variant ID is taken from the static configuration; the query was generated with a specific product's parameters, and that product's ID is to be used.
+* The instance ID is generated using the `instance_id_pattern` from the reporting rule; the query result should contain all the labels necessary to expand that pattern.
+* The item description is generated using the `item_description_pattern` from the reporting rule; the query result should contain all the labels necessary to expand that pattern.
+* The item group is generated using the `item_group_description_pattern` from the reporting rule; the query result should contain all the labels necessary to expand that pattern.
+* The unit ID is taken directly from the reporting rule configuration.
+* The time range is taken from the job's arguments.
+* The sales order ID must be present in the query result's labels; if it isn't present, an error must be reported.
+
+=== Load
+
+Each transformed query result is sent to the https://docs.central.vshn.ch/metered-billing.html[Metered Billing API] for the given time interval.
+
+==== Examples
+
+This is an (excerpt of an) example payload that's sent to the Metered Billing API:
+
+[code:json]
+----
+{
+    "product_id": "ID_of_cloudscale_besteffort_vCPU",
+    "instance_id": "c-my-awesome-cluster",
+    "item_description": "All compute resources", <1>
+    "item_group_description": "APPUiO Managed - Cluster: c-my-awesome-cluster",
+    ...
+}
+----
+<1> The `item_group_description` already contains all information necessary to identify which cluster this is about.
+So the description just provides some generic context.
+It could also be omitted in this case.
+
+== Managing Sales Orders
+
+The Sales Order ID is an important parameter to associate products with where they should get billed.
+Each usage data record must be associated with an Odoo Sales Order.
+This section describes how Sales Orders are managed, and how the Sales Order ID can be retrieved.
+
+The Sales Order ID must be present as a label on each Prometheus query result.
+To enable this, metrics containing the Sales Order ID need to be present in Mimir.
+
+For APPUiO Managed clusters, the sales order for a given cluster is stored in a static cluster fact, and maintained manually.
+The cluster fact is shipped to Mimir via the `appuio_managed_info` metric, and can be used in queries to associate usage data with the correct Sales Order ID.

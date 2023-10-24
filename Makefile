@@ -14,7 +14,7 @@ else
 	engine_opts ?= --rm --tty --user "$$(id -u)"
 endif
 
-preview_cmd ?= $(engine_cmd) run --rm --publish 35729:35729 --publish 2020:2020 --volume "${PWD}":/preview/antora ghcr.io/vshn/antora-preview:3.1.2.3 --antora=docs --style=vshn
+preview_cmd ?= $(engine_cmd) run --rm --publish 35729:35729 --publish 2020:2020 --volume "${PWD}":/preview/antora ghcr.io/vshn/antora-preview:3.1.4 --antora=docs --style=vshn
 vale_cmd ?= $(engine_cmd) run $(engine_opts) --volume "$${PWD}"/docs/modules:/pages:Z ghcr.io/vshn/vale:2.15.5 --minAlertLevel=error --config=/pages/ROOT/pages/.vale.ini /pages
 
 UNAME := $(shell uname)

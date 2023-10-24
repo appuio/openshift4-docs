@@ -3,14 +3,14 @@
 
 [abstract]
 ====
-https://docs.central.vshn.ch/metered-data-flow.html[Data model and data flow for Resource Usage Reporting] explains how usage data gets reported and billed in general.
+https://docs.central.vshn.ch/metered-billing-data-flow.html[Data model and data flow for Resource Usage Reporting] explains how usage data gets reported and billed in general.
 This page explains in detail how the general concept is applied for APPUiO Managed.
 ====
 
 The system for APPUiO Managed usage reporting must provide usage data for customer resources in all APPUiO Managed clusters, at cluster granularity.
 
 Usage data is stored in a central Mimir instance and queried via the Prometheus Query API.
-A reporting tool implements the ETL process described in https://docs.central.vshn.ch/metered-data-flow.html[Data model and data flow for Resource Usage Reporting].
+A reporting tool implements the ETL process described in https://docs.central.vshn.ch/metered-billing-data-flow.html[Data model and data flow for Resource Usage Reporting].
 
 == Data Flow Overview
 

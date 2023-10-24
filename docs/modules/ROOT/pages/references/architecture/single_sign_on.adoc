@@ -1,0 +1,215 @@
+= Single Sign On
+
+== Problem Statement
+
+Our current log in system, which is based on LDAP, has security issues.
+It doesn't allow for 2FA, and we enter our password in a lot of different masks that could be compromised.
+
+We use Keycloak as the SSO solution for internal services and want to use it for customer clusters as well.
+Keycloak uses `Clients` to represent applications that can be logged into.
+We need to create a `Client` for each customer cluster and configure it to map the correct service group in LDAP.
+
+Creating such clients in Keycloak is a manual process and very error prone, as it involves a lot of manual steps and a rather interesting UI.
+We need to automate this process.
+
+All known clusters are tracked in link:https://products.vshn.ch/appuio/managed/index.html#_project_syn_features[Lieutenant], our configuration database.
+We can use this information to create the `Clients` in Keycloak.
+Secrets are stored in Vault.
+We can use the Vault API to store the client secrets.
+
+== High Level Goals
+
+* *Keycloak configuration is automatically created for all current and future OpenShift 4 clusters*
+* Keycloak configuration is automatically created for all vClusters running on OpenShift 4
+* OIDC client secrets are automatically added to the cluster configuration
+* LDAP Group can be mapped to cluster roles
+* As many configuration parameters as possible are inferred from the cluster configuration, but can be overridden.
+
+== Non-Goals
+
+* SSO for non-standard RKE/* clusters Aldebaran still manages.
+
+== Implementation
+
+A controller is deployed on the Lieutenant vCluster, reconciling the `Cluster` objects.
+It creates the `Clients` in Keycloak and adds the client secret to Vault.
+
+Missing information is inferred from dynamic facts or annotations on the `Cluster` object.
+
+=== Components
+
+image:sso-components.svg[]
+
+=== The `Cluster` object, and its facts, are the source of truth
+
+The `Cluster` object is the source of truth for the client configuration.
+The controller reconciles the `Cluster` object and creates, or, if differing, updates the `Client` in Keycloak.
+
+=== The Keycloak client objects can be templated
+
+The controller calls a Jsonnet template and makes the cluster and tenant objects available.
+The result of the file is used to create or update the `Client` in Keycloak.
+This allows us to expand the template without having to change the controller.
+
+[code,jsonnet]
+----
+local cluster = std.native('cluster')();
+local tenant = std.native('tenant')();
+
+local redirectUris = if cluster.spec.facts.distribution == 'openshift4' then
+  [
+    cluster.status.facts.oauthDomain + '/oauth2/callback',
+  ]
+else
+  [
+    'http://localhost:18000',
+    'http://localhost:8000',
+  ];
+
+{
+  clientID: 'cluster_' + cluster.metadata.name,
+  optionalClientScopes+: [ 'custom' ],
+  redirectUris: redirectUris,
+}
+----
+
+=== The controller writes the client secrets to Vault
+
+The controller writes the client secret to Vault.
+Both the cluster id and the tenant id are used as path segments.
+`t-ancient-morning-1764/c-413-clouscale/vshn-keycloak-secret` for example.
+
+=== Steward is extended to write the OAuth domain to the Lieutenant dynamic facts
+
+Steward provides the oauth domain in the dynamic facts by reading the cluster route.
+
+[source,shell]
+----
+❯ kubectl -n openshift-authentication get route oauth-openshift -o=jsonpath='{.spec.host}'
+oauth-openshift.apps.cluster-domain.dev
+----
+
+=== Steward is extended to write a defined ConfigMap to the Lieutenant dynamic facts
+
+To allow for a way to write back static "dynamic" facts, we add a ConfigMap to the Lieutenant namespace that gets added to the dynamic facts.
+This config map is managed by `component-steward` and new facts can be added through the hierarchy.
+
+[source,yaml]
+----
+parameters:
+  steward:
+    additionalFacts:
+      vshnLdapServiceId: "${vshnLdap:serviceId}"
+----
+
+=== The controller maps LDAP groups to local client roles
+
+The controller creates client roles in Keycloak.
+It registers the client local roles with the matching groups in LDAP.
+
+The group mapping can also be manipulated in a template:
+
+[code,jsonnet]
+----
+local cluster = std.native('cluster')();
+local tenant = std.native('tenant')();
+
+local serviceGroup = '/LDAP_Customers/Service ' + if std.objectHas(cluster.status.facts, 'vshnLdapId') then
+  cluster.status.facts.vshnLdapId
+else
+  cluster.metadata.name;
+
+[
+  {
+    group: '/LDAP/VSHN openshiftroot', <1>
+    role: 'vshn-openshiftroot', <2>
+  },
+  { group: '/LDAP/VSHN openshiftrootswissonly', role: 'vshn-openshiftrootswissonly' },
+  { group: serviceGroup, role: 'customer' },
+]
+----
+<1> Keycloak group from LDAP
+<2> Keycloak client role
+
+== Example Cluster Manifest
+
+[source,yaml]
+----
+apiVersion: syn.tools/v1alpha1
+kind: Cluster
+metadata:
+  finalizers:
+  - cluster.lieutenant.syn.tools
+  - sso.syn.tools/keycloak-client <1>
+  name: c-holy-fire-9875
+  namespace: lieutenant
+  annotations:
+    oidc.sso.syn.tools/redirect-uris: '["localhost:18000","localhost:8000"]' <2>
+    sso.vshn.net/ldap-id: ClusterHolyFire9875 <3>
+spec:
+  displayName: Cybertron Prod 1
+  facts:
+    distribution: openshift4 <4>
+  [...]
+  tenantRef:
+    name: t-frosty-forest-1224 <5>
+status:
+  facts:
+    kubernetesVersion: '{"buildDate":"2023-09-11T02:22:18Z","compiler":"gc","gitCommit":"f10a517f7199bdae922a70893d85eb96a76f5c2d","gitTreeState":"clean","gitVersion":"v1.26.7+c7ee51f","goVersion":"go1.19.10
+      X:strictfipsruntime","major":"1","minor":"26","platform":"linux/amd64"}'
+    openshiftVersion: '{"Major":"4","Minor":"13","Patch":"13"}'
+    oauthDomain: https://oauth-openshift.apps.c-holy-fire-9875.dev <6>
+    vshnLdapServiceId: ClusterHolyFire9875 <7>
+----
+<1> The `sso.syn.tools/keycloak-client` finalizer is added to the cluster object to allow cleanup of the Keycloak client when the cluster is deleted.
+<2> The `oidc.sso.syn.tools/redirect-uris` annotation is used to override the default redirect uris.
+<3> The `sso.vshn.net/ldap-id` annotation is used to override the default LDAP group mapping.
+<4> The `distribution` fact is used to determine if Openshift specific redirect URIs should be used.
+<5> The `tenantRef` is used to determine the tenant the cluster belongs to.
+The tenant should be included in the templates.
+<6> The `oauthDomain` fact is used to determine the redirect URI on Openshift 4 clusters.
+<7> The `vshnLdapId` fact is used to determine the LDAP group mapping.
+It's read from a config map in the Steward namespace.
+
+== Example Keycloak Client Manifest
+
+[source,json]
+----
+{
+  "clientId": "cluster_c-holy-fire-9875", <1>
+  "name": "Cybertron Prod 1 (c-holy-fire-9875)",
+  "description": "",
+  "rootUrl": "https://oauth-openshift.apps.c-holy-fire-9875.dev", <2>
+  "adminUrl": "",
+  "baseUrl": "",
+  "surrogateAuthRequired": false,
+  "enabled": true,
+  "alwaysDisplayInConsole": false,
+  "clientAuthenticatorType": "client-secret",
+  "secret": "SED4zzNnlYsdWQhA4yugynze1yZLYelr4hMZfv4K", <3>
+  "redirectUris": [
+    "/oauth2/callback" <4>
+  ],
+  "webOrigins": [],
+  ...,
+  "protocol": "openid-connect",
+  "attributes": { ... },
+  "authenticationFlowBindingOverrides": {},
+  "fullScopeAllowed": true,
+  "nodeReRegistrationTimeout": -1,
+  "defaultClientScopes": [ ... ],
+  "optionalClientScopes": [ ... ],
+}
+----
+<1> The client ID is derived from the cluster name.
+<2> The root URL is derived from the `oauthDomain` fact on Openshift 4 clusters.
+<3> The client secret is stored in Vault.
+<4> The redirect URI is derived from the `oauthDomain` fact on Openshift 4 clusters or overridden by the `oidc.sso.syn.tools/redirect-uris` annotation.
+
+== Resources
+
+- link:https://id.test.vshn.net/auth/admin/master/console/#/VSHN-main-dev-realm/groups/648eec9f-a722-4c57-909a-0203f1e64efa/591a45bf-f039-4395-9c24-9dcf8cb8a014[id.test.vshn.net Example group with mapping]
+- link:https://id.test.vshn.net/auth/admin/master/console/#/VSHN-main-dev-realm/clients/f88b2360-a774-4461-b9f0-4b387c43dc68/settings[id.test.vshn.net Example client]
+- link:https://gist.github.com/bastjan/a4f457358c29d06319477ba41e80886a[go-jsonnet example with native function]
+- link:https://pkg.go.dev/github.com/Nerzal/gocloak/v13#GoCloak.AddClientRolesToGroup[`GoCloak.AddClientRolesToGroup`]
+- link:https://pkg.go.dev/github.com/Nerzal/gocloak/v13#GoCloak.CreateClientRole[`GoCloak.CreateClientRole`]

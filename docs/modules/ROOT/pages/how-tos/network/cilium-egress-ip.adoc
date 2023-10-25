@@ -1,0 +1,163 @@
+= Configure static Egress IPs with Cilium
+
+== Prerequisites
+
+* `cluster-admin` privileges
+* Cluster is running Cilium.
+See the xref:how-tos/network/migrate-to-cilium.adoc[migrating to Cilium] how-to for a guide to migrate a cluster to Cilium.
+* `kubectl`
+* `jq`
+* `curl`
+* Working `commodore` command
+
+== Prepare for configuration
+
+. Select cluster
++
+[source,bash]
+----
+export CLUSTER_ID=c-cluster-id-1234 <1>
+export COMMODORE_API_URL=https://api.syn.vshn.net <2>
+export TENANT_ID=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" \
+  "${COMMODORE_API_URL}/clusters/${CLUSTER_ID}" | jq -r '.tenant')
+----
+<1> Replace with the Project Syn cluster ID of the cluster to migrate
+<2> Replace with the Lieutenant API on which the cluster is registered
+
+== Configure Cilium to support static egress IPs
+
+. Compile cluster catalog
++
+[source,bash]
+----
+commodore catalog compile "$CLUSTER_ID" <1>
+----
+<1> We recommend switching to an empty directory to run this command.
+Alternatively, switch to your existing directory for the cluster.
+
+. Configure Cilium
++
+[source,bash]
+----
+pushd "inventory/classes/$TENANT_ID"
+yq -i '.parameters.cilium.egress_gateway.enabled=true' \
+  "${CLUSTER_ID}.yml" <1>
+----
+<1> Currently (as of Cilium 1.14), the egress gateway feature isn't fully compatible with L7 policies.
+To avoid issues, Cilium recommends disabling the L7 proxy when using egress gateway.
+Due to that, component cilium sets `l7Proxy=false` by default when `egress_gateway.enabled=true` is set.
+See also https://github.com/cilium/cilium/issues/19642[GitHub issue cilium/cilium#19642].
+
+. Commit and push changes
++
+[source,bash]
+----
+git commit -am "Configure Cilium egress gateway on $CLUSTER_ID"
+git push origin master <1>
+----
+<1> Optionally, you can push to a branch and merge once you're satisfied with the change.
+
+. Compile catalog
++
+[source,bash]
+----
+popd
+commodore catalog compile "$CLUSTER_ID" --push -i
+----
+
+. After the change has been rolled out by ArgoCD, restart the Cilium daemonset and operator
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n cilium rollout restart ds/cilium
+kubectl --as=cluster-admin -n cilium rollout restart deploy/cilium-operator
+----
+
+== Configure egress IPs
+
+.Exoscale
+[%collapsible]
+====
+On Exoscale, you can allocate https://community.exoscale.com/documentation/compute/eip/[elastic IPs (EIPs)] to use as static egress IPs.
+To use an EIP as a static egress IP, you need to attach it to a cluster node.
+
+Once you've done that, you can configure `CiliumEgresGatewayPolicy` through component `cilium`:
+
+[source,yaml]
+----
+parameters:
+  cilium:
+    egress_gateway:
+      egress-ip: <1>
+        spec:
+          destinationCIDRs:
+          - 0.0.0.0/0 <2>
+          egressGroups: <3>
+          - egressIP: 203.0.113.100 <4>
+            nodeSelector:
+              matchLabels:
+                kubernetes.io/hostname: infra-abcd <5>
+          selectors: <6>
+          - podSelector:
+              matchLabels:
+                io.kubernetes.pod.namespace: example-namespace <7>
+----
+<1> Name of the policy, select a descriptive name if possible.
+<2> Destination CIDRs which should be routed through the static egress IP.
+In-cluster CIDRs are automatically excluded by Cilium.
+<3> `egressGroups` is only supported by Cilium Enterprise Edition.
+See this https://isovalent.com/blog/post/2022-05-static-egress-gateway[blog post] for more details on the enterprise-only egress gateway features.
+<4> Exoscale EIP which you've allocated and attached to a cluster node.
+<5> Cluster node to which you've attached the Exoscale EIP.
+<6> This section allows you to select pods whose traffic should be routed through the static egress IP
+Generally, entries are standard pod selectors.
+<7> Cilium supports a special label key `io.kubernetes.pod.namespace` which allows selecting all pods in a specific namespace.
+
+IMPORTANT: If the `egressIP` and `nodeSelector` of the entry in `egressGroups` don't match, egress traffic will be dropped.
+====
+
+.Cluster in private network
+[%collapsible]
+====
+For clusters deployed in a private network, you can use the following configuration to use an IP outside the DHCP range as a static egress IP
+
+[source,yaml]
+----
+parameters:
+  cilium:
+    egress_gateway:
+      egress-ip: <1>
+        spec:
+          destinationCIDRs:
+          - 0.0.0.0/0 <2>
+          excludedCIDRs:
+          - 172.18.200.0/24 <3>
+          egressGroups:
+          - egressIP: 172.18.200.30 <4>
+            nodeSelector:
+              matchLabels:
+                node-role.kubernetes.io/infra: "" <5>
+          selectors: <6>
+          - podSelector:
+              matchLabels:
+                io.kubernetes.pod.namespace: example-namespace <7>
+----
+<1> Name of the policy, select a descriptive name if possible.
+<2> Destination CIDRs which should be routed through the static egress IP.
+In-cluster CIDRs are automatically excluded by Cilium.
+<3> We exclude the cluster's private network CIDR from the set of destinations that should be routed through the static egress IP.
+While Cilium automatically excludes the cluster node IPs, we most likely want the whole private network CIDR to be excluded from the egress gateway policy.
+Omit this configuration if you want traffic to other systems in the cluster's private network CIDR to be routed through the static egress IP.
+<4> Select an IP in the cluster's private network CIDR (outside the DHCP range) as the static egress IP.
+<5> Select infra nodes as egress gateway nodes.
+Cilium will select one of the nodes to route egress traffic through the defined static egress IP.
+<6> This section allows you to select pods whose traffic should be routed through the static egress IP
+Generally, entries are standard pod selectors.
+<7> Cilium supports a special label key `io.kubernetes.pod.namespace` which allows selecting all pods in a specific namespace.
+
+NOTE: This configuration is untested, please update the documentation once you've tested this.
+====
+
+== Upstream documentation
+
+* https://docs.cilium.io/en/stable/network/egress-gateway/[Cilium egress gateway documentation]

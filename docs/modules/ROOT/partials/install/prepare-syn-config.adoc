@@ -59,15 +59,21 @@ yq eval -i ".parameters.openshift4_version.spec.channel = \"fast-{ocp-minor-vers
 ----
 ====
 
+ifeval::["{provider}" == "cloudscale"]
+:is-terraform: yes
+endif::[]
+ifeval::["{provider}" == "exoscale"]
+:is-terraform: yes
+endif::[]
 
-ifeval::["{provider}" != "vsphere"]
+ifeval::["{is-terraform}" == "yes"]
 include::partial$install/prepare-syn-config-terraform.adoc[]
 endif::[]
 ifeval::["{provider}" == "vsphere"]
 include::partial$install/prepare-syn-config-vsphere.adoc[]
 endif::[]
 
-ifeval::["{provider}" != "vsphere"]
+ifeval::["{is-terraform}" == "yes"]
 [TIP]
 ====
 You now have the option to further customize the cluster by editing `terraform_variables`.

@@ -1,0 +1,10 @@
+. Configure OpenStack parameters
++
+[source,bash]
+----
+yq eval -i ".parameters.openshift.openstack.app_flavor = \"${APP_FLAVOR}\"" \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift.openstack.infra_flavor = \"${INFRA_FLAVOR}\"" \
+  ${CLUSTER_ID}.yml
+----

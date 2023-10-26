@@ -1,0 +1,290 @@
+= Install OpenShift 4 on OpenStack
+:ocp-minor-version: 4.13
+:k8s-minor-version: 1.26
+:ocp-patch-version: {ocp-minor-version}.0
+:provider: openstack
+
+[abstract]
+--
+Steps to install an OpenShift 4 cluster on Red Hat OpenStack.
+
+These steps follow the https://docs.openshift.com/container-platform/4.13/installing/installing_openstack/installing-openstack-installer-custom.html[Installing a cluster on OpenStack] docs to set up an installer provisioned installation (IPI).
+--
+
+[IMPORTANT]
+--
+This how-to guide is an early draft.
+So far, we've setup only one cluster using the instructions in this guide.
+--
+
+[NOTE]
+--
+The certificates created during bootstrap are only valid for 24h.
+So make sure you complete these steps within 24h.
+--
+
+== Starting situation
+
+* You already have a Project Syn Tenant and its Git repository
+* You have a CCSP Red Hat login and are logged into https://console.redhat.com/openshift/install/openstack/installer-provisioned[Red Hat Openshift Cluster Manager]
++
+IMPORTANT: Don't use your personal account to login to the cluster manager for installation.
+* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on OpenStack
+
+== Prerequisites
+
+include::partial$/install/prerequisites.adoc[]
+* `unzip`
+* `openstack` CLI
++
+[TIP]
+====
+The OpenStack CLI is available as a Python package.
+
+.Ubuntu/Debian
+[source,bash]
+----
+sudo apt install python3-openstackclient
+----
+
+.Arch
+[source,bash]
+----
+sudo yay -S python-openstackclient
+----
+
+Optionally, you can also install additional CLIs for object storage (`swift`) and images (`glance`).
+====
+
+== Cluster Installation
+
+include::partial$install/register.adoc[]
+
+=== Configure input
+
+.OpenStack API
+[source,bash]
+----
+export OS_AUTH_URL=<openstack authentication URL> <1>
+----
+<1> Provide the URL with the leading `https://`
+
+.OpenStack credentials
+[source,bash]
+----
+export OS_USERNAME=<username>
+export OS_PASSWORD=<password>
+----
+
+.OpenStack project, region and domain details
+[source,bash]
+----
+export OS_PROJECT_NAME=<project name>
+export OS_PROJECT_DOMAIN_NAME=<project domain name>
+export OS_USER_DOMAIN_NAME=<user domain name>
+export OS_REGION_NAME=<region name>
+export OS_PROJECT_ID=$(openstack project show $OS_PROJECT_NAME -f json | jq -r .id) <1>
+----
+<1> TBD if really needed
+
+.Cluster machine network
+[source,bash]
+----
+export MACHINE_NETWORK_CIDR=<machine network cidr>
+export EXTERNAL_NETWORK_NAME=<external network name> <1>
+----
+<1> The instructions create floating IPs for the API and ingress in the specified network.
+
+.VM flavors
+[source,bash]
+----
+export CONTROL_PLANE_FLAVOR=<flavor name> <1>
+export INFRA_FLAVOR=<flavor name> <1>
+export APP_FLAVOR=<flavor name> <1>
+----
+<1> Check `openstack flavor list` for available options.
+
+include::partial$install/vshn-input.adoc[]
+
+[#_set_vault_secrets]
+=== Set secrets in Vault
+
+include::partial$connect-to-vault.adoc[]
+
+.Store various secrets in Vault
+[source,bash]
+----
+# Store OpenStack credentials
+vault kv put  clusters/kv/${TENANT_ID}/${CLUSTER_ID}/openstack/credentials \
+  username=${OS_USERNAME} \
+  password=${OS_PASSWORD}
+
+# Generate an HTTP secret for the registry
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
+  httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
+
+# Set the LDAP password
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
+  bindPassword=${LDAP_PASSWORD}
+
+# Generate a master password for K8up backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Generate a password for the cluster object backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Copy the VSHN acme-dns registration password
+vault kv get -format=json "clusters/kv/template/cert-manager" | jq '.data.data' \
+  | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cert-manager" -
+
+----
+
+=== Setup floating IPs and DNS records for the API and ingress
+
+. Create floating IPs in the OpenStack API
++
+[source,bash]
+----
+export API_VIP=$(openstack floating ip create \
+  --description "API ${CLUSTER_ID}.${BASE_DOMAIN}" "${EXTERNAL_NETWORK_NAME}" \
+  -f json | jq -r .floating_ip_address)
+export INGRESS_VIP=$(openstack floating ip create \
+  --description "Ingress ${CLUSTER_ID}.${BASE_DOMAIN}" "${EXTERNAL_NETWORK_NAME}" \
+  -f json | jq -r .floating_ip_address)
+----
+
+. Create the initial DNS zone for the cluster
++
+[source,bash]
+----
+cat <<EOF
+\$ORIGIN ${CLUSTER_ID}.${BASE_DOMAIN}.
+
+api       IN A     ${API_VIP}
+ingress   IN A     ${INGRESS_VIP}
+
+*.apps    IN CNAME ingress.${CLUSTER_ID}.${BASE_DOMAIN}.
+EOF
+----
++
+[TIP]
+====
+This step assumes that DNS for the cluster is managed by VSHN.
+See the https://git.vshn.net/vshn/vshn_zonefiles[VSHN zonefiles repo] for details.
+====
+
+=== Create security group for Cilium
+
+. Create a security group
++
+[source,bash]
+----
+CILIUM_SECURITY_GROUP_ID=$(openstack security group create ${CLUSTER_ID}-cilium \
+  --description "Cilium CNI security group rules for ${CLUSTER_ID}" -f json | \
+  jq -r .id)
+----
+
+. Create rules for Cilium traffic
++
+[source,bash]
+----
+openstack security group rule create --protocol tcp --remote-ip "$MACHINE_NETWORK_CIDR" \
+  --dst-port 4240 --description "Cilium health checks" "$CILIUM_SECURITY_GROUP_ID"
+openstack security group rule create --protocol tcp --remote-ip "$MACHINE_NETWORK_CIDR" \
+  --dst-port 4244 --description "Cilium Hubble server" "$CILIUM_SECURITY_GROUP_ID"
+openstack security group rule create --protocol tcp --remote-ip "$MACHINE_NETWORK_CIDR" \
+  --dst-port 4245 --description "Cilium Hubble relay" "$CILIUM_SECURITY_GROUP_ID"
+openstack security group rule create --protocol tcp --remote-ip "$MACHINE_NETWORK_CIDR" \
+  --dst-port 6942 --description "Cilium operator metrics" "$CILIUM_SECURITY_GROUP_ID"
+openstack security group rule create --protocol tcp --remote-ip "$MACHINE_NETWORK_CIDR" \
+  --dst-port 2112 --description "Cilium Hubble enterprise metrics" "$CILIUM_SECURITY_GROUP_ID"
+openstack security group rule create --protocol udp --remote-ip "$MACHINE_NETWORK_CIDR" \
+  --dst-port 8472 --description "Cilium VXLAN" "$CILIUM_SECURITY_GROUP_ID"
+----
+
+include::partial$install/prepare-commodore.adoc[]
+
+[#_configure_installer]
+=== Configure the OpenShift Installer
+
+include::partial$install/configure-installer.adoc[]
+
+[#_prepare_installer]
+=== Prepare the OpenShift Installer
+
+include::partial$install/run-installer.adoc[]
+
+=== Update Project Syn cluster config
+
+include::partial$install/prepare-syn-config.adoc[]
+
+=== Provision the cluster
+
+include::partial$install/socks5-proxy.adoc[]
+
+. Run the OpenShift installer
++
+[source,bash]
+----
+openshift-install --dir "${INSTALLER_DIR}" \
+  create cluster --log-level=debug
+----
+
+=== Access cluster API
+
+. Export kubeconfig
++
+[source,bash]
+----
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
+----
+
+. Verify API access
++
+[source,bash]
+----
+kubectl cluster-info
+----
+
+[NOTE]
+====
+If the cluster API is only reachable with a SOCKS5 proxy, run the following commands instead:
+
+[source,bash]
+----
+cp ${INSTALLER_DIR}/auth/kubeconfig ${INSTALLER_DIR}/auth/kubeconfig-socks5
+yq eval -i '.clusters[0].cluster.proxy-url="socks5://localhost:12000"' \
+    ${INSTALLER_DIR}/auth/kubeconfig-socks5
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig-socks5"
+----
+====
+
+=== Create a server group for the infra nodes
+
+. Create the server group
++
+[source,bash]
+----
+openstack server group create $(jq -r '.infraID "${INSTALLER_DIR}/metadata.json")-infra \
+  --policy soft-anti-affinity
+----
+
+=== Configure registry S3 credentials
+
+. Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
++
+[source,bash]
+----
+oc create secret generic image-registry-private-configuration-user \
+  --namespace openshift-image-registry \
+  --from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=<TBD> \
+  --from-literal=REGISTRY_STORAGE_S3_SECRETKEY=<TBD>
+----
++
+include::partial$install/registry-samples-operator.adoc[]
+
+include::partial$install/finalize_part1.adoc[]
+
+include::partial$install/finalize_part2.adoc[]

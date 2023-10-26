@@ -2,6 +2,10 @@ ifeval::["{provider}" == "vsphere"]
 :needs_hieradata_edit: no
 :needs_gitlab: no
 endif::[]
+ifeval::["{provider}" == "openstack"]
+:needs_hieradata_edit: no
+:needs_gitlab: no
+endif::[]
 
 include::partial$vshn-input.adoc[]
 

@@ -1,0 +1,69 @@
+[source,bash]
+----
+export INSTALLER_DIR="$(pwd)/target"
+mkdir -p "${INSTALLER_DIR}"
+
+cat > "${INSTALLER_DIR}/clouds.yaml" <<EOF
+clouds:
+  shiftstack:
+    auth:
+      auth_url: ${OS_AUTH_URL}
+      project_name: ${OS_PROJECT_NAME}
+      username: ${OS_USERNAME}
+      password: ${OS_PASSWORD}
+      user_domain_name: ${OS_USER_DOMAIN_NAME}
+      project_domain_name: ${OS_PROJECT_DOMAIN_NAME}
+EOF
+
+cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
+apiVersion: v1
+metadata:
+  name: ${CLUSTER_ID}
+baseDomain: ${BASE_DOMAIN}
+compute: <1>
+  - architecture: amd64
+    hyperthreading: Enabled
+    name: worker
+    replicas: 3
+    platform:
+      openstack:
+        type: ${APP_FLAVOR}
+        rootVolume:
+          size: 100
+          type: __DEFAULT__ # TODO: is this generally applicable?
+        additionalSecurityGroupIDs: <2>
+          - ${CILIUM_SECURITY_GROUP_ID}
+controlPlane:
+  architecture: amd64
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+  platform:
+    openstack:
+      type: ${CONTROL_PLANE_FLAVOR}
+      rootVolume:
+        size: 100
+        type: __DEFAULT__ # TODO: is this generally applicable?
+      additionalSecurityGroupIDs: <2>
+        - ${CILIUM_SECURITY_GROUP_ID}
+platform:
+  openstack:
+    cloud: shiftstack <3>
+    externalNetwork: ${EXTERNAL_NETWORK_NAME}
+    apiFloatingIP: ${API_VIP}
+    ingressFloatingIP: ${INGRESS_VIP}
+networking:
+  networkType: Cilium
+  machineNetwork:
+    - cidr: ${MACHINE_NETWORK_CIDR}
+pullSecret: |
+  ${PULL_SECRET}
+sshKey: "$(cat $SSH_PUBLIC_KEY)"
+EOF
+----
+<1> We only provision a single compute machine set.
+The final machine sets will be configured through Project Syn.
+<2> We attach the Cilium security group to both the control plane and the worker nodes.
+This ensures that there's no issues with Cilium traffic during bootstrapping.
+<3> This field must match the entry in `clouds` in the `clouds.yaml` file.
+If you're following this guide, you shouldn't need to adjust this.

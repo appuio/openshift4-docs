@@ -58,6 +58,9 @@
 *** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-creds.adoc[vSphere Credentials]
 *** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-params.adoc[vSphere Parameters]
 
+** OpenStack
+*** xref:oc4:ROOT:how-tos/openstack/install.adoc[Install]
+
 ** Google Cloud Platform
 *** xref:oc4:ROOT:how-tos/gcp/project.adoc[Project Setup]
 *** xref:oc4:ROOT:how-tos/gcp/install.adoc[Install]
@@ -81,6 +84,9 @@
 
 ** vSphere
 *** xref:oc4:ROOT:how-tos/vsphere/install.adoc[Install]
+
+** OpenStack
+*** xref:oc4:ROOT:how-tos/openstack/install.adoc[Install]
 
 * Update
 ** xref:oc4:ROOT:how-tos/update_maintenance/automated-upgrades-at-vshn.adoc[]

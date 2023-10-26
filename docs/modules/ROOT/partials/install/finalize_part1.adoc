@@ -1,3 +1,10 @@
+ifeval::["{provider}" == "cloudscale"]
+:acme-dns-update-zone: yes
+endif::[]
+ifeval::["{provider}" == "openstack"]
+:acme-dns-update-zone: yes
+endif::[]
+
 :dummy:
 ifeval::["{provider}" == "vsphere"]
 === Set default storage class
@@ -32,7 +39,7 @@ fulldomain=$(kubectl -n syn-cert-manager \
 echo "$fulldomain"
 ----
 
-ifeval::["{provider}" == "cloudscale"]
+ifeval::["{acme-dns-update-zone}" == "yes"]
 . Add the following CNAME records to the cluster's DNS zone
 +
 [IMPORTANT]

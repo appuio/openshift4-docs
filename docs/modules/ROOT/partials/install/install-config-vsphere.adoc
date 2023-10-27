@@ -1,3 +1,9 @@
+[NOTE]
+====
+You can add more options to the `install-config.yaml` file.
+Have a look at the https://docs.openshift.com/container-platform/4.13/installing/installing_vsphere/installing-vsphere-installer-provisioned-customizations.html#installation-configuration-parameters_installing-vsphere-installer-provisioned-customizations[installation configuration parameters] for more information.
+====
++
 [source,bash]
 ----
 export INSTALLER_DIR="$(pwd)/target"

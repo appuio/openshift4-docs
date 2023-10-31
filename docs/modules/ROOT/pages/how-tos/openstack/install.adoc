@@ -53,6 +53,12 @@ sudo apt install python3-openstackclient
 sudo yay -S python-openstackclient
 ----
 
+.MacOS
+[source,bash]
+----
+brew install openstackclient
+----
+
 Optionally, you can also install additional CLIs for object storage (`swift`) and images (`glance`).
 ====
 

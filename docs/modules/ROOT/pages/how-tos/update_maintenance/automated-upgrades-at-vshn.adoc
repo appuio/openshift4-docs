@@ -1,4 +1,4 @@
-:page-alias: how-tos/update_maintenance.adoc
+:page-aliases: how-tos/update_maintenance.adoc
 = Automated Upgrades at VSHN
 
 [IMPORTANT]

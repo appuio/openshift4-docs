@@ -325,3 +325,5 @@ include::partial$install/finalize_part2.adoc[]
 mc rm -r --force "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
 ----
+
+include::partial$install/post-tasks.adoc[]

@@ -1,0 +1,10 @@
+=== Post tasks
+
+==== VSHN
+
+. xref:oc4:ROOT:how-tos/update_maintenance/automated-upgrades-at-vshn.adoc[Enable automated upgrades]
+. Add the cluster to the https://wiki.vshn.net/pages/templates2/editpagetemplate.action?entityId=137527297&key=VT[maintenance template], if necessary
+
+==== Generic
+
+. Do a https://docs.openshift.com/container-platform/latest/updating/updating-cluster-cli.html#updating-cluster-cli[first maintenance]

@@ -5,7 +5,7 @@
 ====
 This page is VSHN-specific and uses VSHN configuration.
 
-To implement your own automated upgrades, please take a look at the underlying https://hub.syn.tools/openshift-upgrade-controller/references/parameters.html#_upgrade_configs[components documentation
+To implement your own automated upgrades, please take a look at the underlying https://hub.syn.tools/openshift-upgrade-controller/references/parameters.html#_upgrade_configs[components documentation].
 ====
 
 VSHN has predefined maintenance schedules defined for OpenShift clusters.

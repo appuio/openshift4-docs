@@ -20,8 +20,4 @@ rm -r ${INSTALLER_DIR}/
 === Post tasks
 
 . VSHN: xref:oc4:ROOT:how-tos/update_maintenance/automated-upgrades-at-vshn.adoc[Enable automated upgrades]
-
-OR
-
-. Doing a https://kb.vshn.ch/oc4/how-tos/update_maintenance.html[first maintenance]
 . Add the cluster to the https://wiki.vshn.net/pages/templates2/editpagetemplate.action?entityId=137527297&key=VT[maintenance template]

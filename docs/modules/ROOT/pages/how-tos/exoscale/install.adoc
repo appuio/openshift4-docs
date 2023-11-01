@@ -358,3 +358,5 @@ include::partial$install/registry-samples-operator.adoc[]
 include::partial$install/finalize_part1.adoc[]
 
 include::partial$install/finalize_part2.adoc[]
+
+include::partial$install/post-tasks.adoc[]

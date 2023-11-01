@@ -7,7 +7,10 @@ ifeval::["{provider}" == "exoscale"]
 include::partial$install/finalize_part2_cloudscale_exoscale.adoc[]
 endif::[]
 ifeval::["{provider}" == "vsphere"]
-include::partial$install/finalize_part2_vsphere.adoc[]
+include::partial$install/finalize_part2_ipi.adoc[]
+endif::[]
+ifeval::["{provider}" == "openstack"]
+include::partial$install/finalize_part2_ipi.adoc[]
 endif::[]
 
 . Delete local config files

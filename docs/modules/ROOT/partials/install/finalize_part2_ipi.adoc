@@ -57,6 +57,7 @@ kubectl get pods -A | grep -vw -e Running -e Completed
 kubectl -n openshift-machine-api delete machineset ${INFRA_ID}-worker
 ----
 
+ifeval::["{provider}" == "vsphere"]
 . Clean up the vSphere CA certificate
 +
 [source,bash]
@@ -64,3 +65,4 @@ kubectl -n openshift-machine-api delete machineset ${INFRA_ID}-worker
 for cert in certs/lin/*.0; do sudo rm /usr/local/share/ca-certificates/$(basename ${cert}.crt); done
 sudo update-ca-certificates
 ----
+endif::[]

@@ -188,6 +188,7 @@
 * Day two operations
 ** xref:oc4:ROOT:how-tos/maintenance_troubleshooting.adoc[Maintenance troubleshooting]
 ** xref:oc4:ROOT:how-tos/debug-nodes.adoc[Debugging Nodes]
+** xref:oc4:ROOT:how-tos/force-reboot.adoc[]
 
 ** Runbooks
 *** xref:oc4:ROOT:how-tos/monitoring/runbooks/maintenance_alerts.adoc[MaintenanceAlertFiring]

@@ -1,0 +1,90 @@
+= Force reboot of all nodes in a machine config pool
+
+== Starting situation
+
+* You have admin-level access to the OpenShift 4 cluster
+* You want to trigger node reboots for a whole machine config pool
+
+== Prerequisites
+
+The following CLI utilities need to be available
+
+* `kubectl`
+* `oc` (The commands assume you have v4.13 or newer)
+* `jq`
+
+== Reboot nodes
+
+. Select machine config pool for which you want to reboot all nodes
++
+[source,bash]
+----
+MCP=<name> <1>
+----
+<1> Replace with the name of the machine config pool for which you want to reboot the nodes
+
+. List all nodes belonging to the pool
++
+[source,bash]
+----
+node_selector=$( \
+  kubectl get mcp "${MCP}" -ojsonpath='{.spec.nodeSelector.matchLabels}' | \
+  jq -r '. as $root | [. | keys[] | "\(.)=\($root[.])"] | join(",")' \
+)
+kubectl get nodes -l $node_selector
+----
+
+. Prepare the nodes for a force machine config resync
++
+[source,bash]
+----
+for node in $(kubectl get nodes -oname -l $node_selector); do
+  oc --as=cluster-admin debug $node -- chroot /host touch /run/machine-config-daemon-force
+done
+----
+
+. Select an old rendered machine config for the pool
++
+[TIP]
+====
+The command selects the second newest rendered machine config.
+The exact value doesn't matter, but we want to overwrite the `currentConfig` annotation with an existing machine config, so that the operator doesn't mark the nodes as degraded.
+====
++
+[source,bash]
+----
+old_mc=$(kubectl get mc -o json | \
+  jq --arg mcp rendered-$MCP -r \
+  '[.items[] | select(.metadata.name | contains($mcp))] 
+  | sort_by(.metadata.creationTimestamp) | reverse 
+  | .[1] | .metadata.name' \
+)
+----
+
+. Trigger machine config daemon resync for *one node at a time*
++
+[IMPORTANT]
+====
+Don't do this for multiple nodes at the same time, all the nodes for which this step is executed are immediately drained and rebooted.
+====
++
+[source,bash]
+----
+timeout=300s <1>
+for node in $(kubectl get node -o name -l $node_selector); do
+  echo "Rebooting $node"
+  kubectl annotate --overwrite $node \
+    machineconfiguration.openshift.io/currentConfig=$old_mc
+  echo "Waiting for drain... (up to $timeout)"
+  if !oc wait --timeout=$timeout $node --for condition=notready; then
+    echo "$node didn't drain and reboot, please check status, aborting loop"
+    break
+  fi
+  echo "Waiting for reboot completed... (up to $timeout)"
+  if !oc wait --timeout=$timeout $node --for condition=ready; then
+    echo "$node didn't become ready, please check status, aborting loop"
+    break
+  fi
+done
+----
+<1> Adjust if you expect node drains and reboots to be slower or faster than 5 minutes

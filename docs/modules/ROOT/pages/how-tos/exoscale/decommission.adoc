@@ -124,6 +124,6 @@ NOTE: Don't forget to remove the LB configuration in the https://git.vshn.net/ap
 
 . Remove cluster DNS records from VSHN DNS
 
-. Remove cluster IPs from LDAP allowlist, if applicable
+include::partial$decommission/idp.adoc[]
 
 . https://kb.vshn.ch/vshnsyn/how-tos/decommission.html[Decommission cluster in Project Syn]

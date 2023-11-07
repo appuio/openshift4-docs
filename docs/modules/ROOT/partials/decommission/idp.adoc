@@ -1,0 +1,33 @@
+. Delete the IDP service
++
+[%collapsible]
+.LDAP
+====
+. Delete LDAP service (via portal)
++
+Go to https://control.vshn.net/vshn/services
++
+- Search cluster name
++
+- Delete cluster entry service using the delete button
+
+. Remove IPs from LDAP allowlist
++
+Edit https://git.vshn.net/vshn-puppet/vshn_hieradata/-/blob/master/corp/prod/ldap.yaml
++
+- Search cluster IPs and remove those lines and any comments related.
++
+- Create a Merge Request and invite a colleague for a review/approve/merge
+====
++
+[%collapsible]
+.Keycloak
+====
+. Delete Keycloak client
++
+Go to https://TBD
++
+- Search cluster name
++
+- Delete cluster client using the delete button
+====

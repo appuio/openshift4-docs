@@ -165,7 +165,7 @@
 
 * Monitoring
 ** xref:oc4:ROOT:explanations/cluster_monitoring.adoc[]
-** xref:oc4:ROOT:explanations/slos.adoc[]
+** xref:oc4:ROOT:explanations/slis.adoc[]
 ** xref:oc4:ROOT:how-tos/monitoring/global-monitoring.adoc[]
 ** xref:oc4:ROOT:how-tos/monitoring/handle_alerts.adoc[]
 ** xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[]

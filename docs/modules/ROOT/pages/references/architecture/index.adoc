@@ -1,0 +1,34 @@
+= APPUiO Managed OpenShift 4 Architecture
+
+Every APPUiO Managed OpenShift 4 has 3 control plane nodes.
+Additionally, APPUiO Managed OpenShift 4 clusters have https://docs.openshift.com/container-platform/4.13/nodes/nodes/nodes-nodes-creating-infrastructure-nodes.html[4 infrastructure nodes].
+Finally, APPUiO Managed OpenShift 4 clusters have 3 worker nodes by default.
+The minimum size for each node is 4 vCPUs, 16 GiB of RAM and 100 GiB root disk.
+
+All APPUiO Managed OpenShift 4 clusters use https://cilium.io[Cilium] as the network plugin.
+APPUiO Managed OpenShift 4 uses the default OpenShift IP CIDRs for the pod and service networks: 10.128.0.0/14 for the pod network and 172.30.0.0/24 for the service network.
+There's no standard IP CIDR for the cluster machine network (sometimes also "cluster network" or "machine network") for APPUiO Managed OpenShift 4 clusters.
+However, a default IP CIDR for the machine network is defined for some infrastructure providers.
+
+Each cluster is configured with two floating IPs, one for the Kubernetes API (the "API VIP") and one for the ingress router (the "Ingress VIP").
+On most providers, a third floating IP (the "Egress VIP") is configured and all outgoing traffic from the machine network is SNATed to this IP.
+
+.APPUiO Managed OpenShift 4 base architecture
+image::ocp4-architecture.svg[alt=OCP4 Architecture, width=640]
+
+https://syn.tools[Project Syn] is used to configure APPUiO Managed OpenShift 4 clusters.
+Apart from deploying custom configurations for OpenShift components, Project Syn is also used to deploy multiple third party components, such as https://cilium.io[Cilium] and https://cert-manager.io[cert-manager] on each APPUiO Managed OpenShift 4 cluster.
+
+Each APPUiO Managed OpenShift 4 cluster depends on multiple external systems.
+Some of those systems are owned and operated by VSHN while others are operated by Red Hat.
+Additionally, APPUiO Managed OpenShift 4 makes use of some SaaS services, such as https://letsencrypt.org/[Let's Encrypt], https://www.passbolt.com/[Passbolt], various container registries, and https://www.atlassian.com/software/opsgenie[OpsGenie].
+The mandatory external systems are shown in the diagram below.
+
+.APPUiO Managed OpenShift 4 external dependencies
+image::ocp4-external-dependencies.svg[alt=OCP4 external dependencies, width=800]
+
+The architecture documentation for the supported infrastructure providers provides details on how the architecture is adapted to work within the constraints imposed by the provider.
+
+* cloudscale.ch (coming soon)
+* Exoscale (coming soon)
+* VMWare vSphere (coming soon)

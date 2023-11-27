@@ -1,0 +1,317 @@
+= APPUiO Managed OpenShift 4 on VMWare vSphere
+
+== Architecture overview
+
+The APPUiO Managed OpenShift 4 architecture on VMWare vSphere is based on the xref:references/architecture/index.adoc[generic APPUiO Managed OpenShift 4 architecture].
+We expect that readers of this document are familiar with the xref:references/architecture/index.adoc[generic APPUiO Managed OpenShift 4 architecture] and the overall Kubernetes and OpenShift 4 architecture.
+
+The APPUiO Managed OpenShift 4 VMWare vSphere architecture extends the generic architecture by defining how the APPUiO Managed OpenShift 4 cluster is embedded into the VMWare vSphere environment.
+The diagram below shows a detailed view of how an APPUiO Managed OpenShift 4 cluster is embedded into an existing VMWare vSphere environment.
+
+.APPUiO Managed OpenShift4 on vSphere architecture
+image::ocp4-architecture-vsphere.svg[alt=OCP4 vSphere architecture, width=900]
+
+The following sections of this document provide detailed descriptions for the elements shown in the architecture diagram.
+
+== vSphere requirements
+
+Red Hat OpenShift 4 requires VMWare virtual hardware version `15` or later.
+Additionally, Red Hat OpenShift 4 requires vSphere ESXi and vCenter to be at version `7.0 Update 2` or later.
+See the https://docs.openshift.com/container-platform/latest/installing/installing_vsphere/installing-vsphere-installer-provisioned.html#installation-vsphere-infrastructure_installing-vsphere-installer-provisioned[upstream documentation] for further details on required VMWare vSphere requirements.
+
+APPUiO Managed OpenShift 4 needs credentials to access the vSphere API for three main reasons:
+
+1. The OpenShift 4 installer needs access to vSphere to setup the OpenShift 4 cluster
++
+NOTE: The installer also needs to be able to access at least one ESXi host to upload the VM template from which all the cluster VMs will be created.
+2. OpenShift 4 manages the VMs making up the cluster from within the cluster.
+3. The vSphere CSI driver manages additional block devices that can be used by applications
+
+The upstream OpenShift 4 documentation has detailed informations about the https://docs.openshift.com/container-platform/latest/installing/installing_vsphere/installing-vsphere-installer-provisioned.html#installation-vsphere-installer-infra-requirements_installing-vsphere-installer-provisioned[required permissions on vSphere].
+
+NOTE: Entries for "VMWare vSphere CSI Driver Operator" are required.
+
+== Networking
+
+=== Bastion host
+
+To deploy an APPUiO Managed OpenShift 4 cluster on VMWare vSphere, a bastion host inside the customer's premise is required.
+The bastion host:
+
+* must be accessible via SSH from a management system operated by VSHN
+* must have access to the vCenter API
+* must have access to at least one ESXi host to import the RHCOS VM template
+* must have unrestricted network access to the cluster's machine network
+* must run a recent Ubuntu version
+
+The bastion host is used to run the installer from, and for troubleshooting access to both the cluster and the vCenter.
+The bastion host must be provided by the vSphere infrastructure operator, but VSHN can take over management and maintenance.
+
+=== Machine network
+
+Each APPUiO Managed OpenShift 4 cluster is deployed into a /24 "cluster machine network" (sometimes also "cluster network" or "machine network")
+This network must be provided by the vSphere infrastructure operator.
+DHCP is mandatory for this network, but a number of IPs must be reserved to be used as Virtual IPs for the cluster.
+
+Traffic inside this network shouldn't be restricted.
+
+VMs in this network must be able to reach various services in the internet.
+See below for a detailed list of external systems that must be reachable.
+
+=== Virtual IPs
+
+To expose applications and the Kubernetes API outside the cluster, APPUiO Managed OpenShift 4 manages two floating IPs:
+
+1. The "API VIP" for the Kubernetes and OpenShift API.
+APPUiO Managed OpenShift 4 uses `.10` in the machine network as the API VIP.
+2. The "Ingress VIP" for the OpenShift Ingress Router
+APPUiO Managed OpenShift 4 uses `.11` in the machine network as the Ingress VIP.
+
+APPUiO Managed OpenShift 4 runs two `keepalived` instances to manage the API and ingress VIPs through VRRP.
+
+If applications should be oexposes for non-HTTP(S) traffic (via `LoadBalancer` services), additional IPs in the machine network must be reserved to be used as VIPs.
+These additional VIPs will be managed by `keepalived` instances on the cluster.
+
+=== Pod and service networks
+
+APPUiO Managed Openshift 4 uses [Cilium] to provide in-cluster networking.
+Cilium allocates two cluster-internal networks:
+
+1. The pod network: every pod on the cluster will get an IP address from this network.
+This network enables basic in-cluster connectivity.
+APPUiO Managed OpenShift 4 uses `10.128.0.0/14` as the pod network.
+Each node in the cluster is assigned a `/23` from this range.
+Pods on a node are always assigned an IP from the range allocated for the node.
+2. Service network: used for service discovery.
+Traffic to IPs in this network is forwarded to the appropriate pods by Cilium.
+APPUiO Managed OpenShift 4 uses `172.30.0.0/16` as the service network.
+
+Both of these networks are interanl to the OpenShift 4 cluster.
+Therefore, the IP CIDRs for these networks must not be routable from the outside.
+Additionally, the same IP CIDRs can be reused for multiple OpenShift 4 clusters.
+
+However, the chosen CIDRs shouldn't overlap with existing networks allocated by the customer.
+If there are overlaps, external systems in the overlapping ranges won't be accessible from within the OpenShift 4 cluster.
+The pod and service network CIDRs can be customized if and only if there are conflicts.
+
+=== Exposing the cluster
+
+The vSphere infrastructure operator must provide some form of ingress and egress gateway for the cluster.
+The ingress gateway must expose two public IPs:
+
+1. A public IP for the API.
+Traffic to port `6443/tcp` on this IP must be forwarded to the "API VIP" in the machine network.
+The forwarding of this traffic must happen transparently.
+In particular, no TLS interception can be performed as the Kubernetes API depends on mutual TLS authentication.
+VSHN will manage a DNS record pointing to this IP.
+2. A public IP for HTTP(s) ingress.
+Traffic to ports `80/tcp` and `443/tcp` on this IP must be forwarded to the "Ingress VIP" in the machine network.
+The PROXY protocol should be enabled to preserve source IPs.
+Forwarding should happen transparently in TCP mode.
+VSHN will manage a wildcard DNS record pointing to this IP.
+Additional DNS records can be pointed to this IP by the customer.
+
+=== External services
+
+APPUiO Managed OpenShift 4 requires various external services.
+
+==== VSHN services
+
+APPUiO Managed OpenShift 4 requires access to VSHN's https://syn.tools[Project Syn] infrastructure.
+The Project Syn infrastructure components that must be reachable are
+
+* the Project Syn API at `\https://api.syn.vshn.net`
+* the Project Syn Vault at `\https://vault-prod.syn.vshn.net`
+* VSHN's GitLab instance at `ssh://git@git.vshn.net`
+* VSHN's acme-dns instance at `\https://acme-dns-api.vshn.net`
+
+Additionally, APPUiO Managed OpenShift 4 requires access to VSHN's identity management:
+
+* VSHN LDAP at `ldaps://ldap.vshn.net:636`
+* VSHN SSO at `\https://id.vshn.net`
+
+Finally, APPUiO Managed OpenShift 4 requires access to VSHN's central metrics storage at `\https://metrics-receive.appuio.net`
+
+==== Red Hat services
+
+See the https://docs.openshift.com/container-platform/4.14/installing/install_config/configuring-firewall.html#configuring-firewall_configuring-firewall[upstream documentation] for the full list of services.
+
+The most important services for APPUiO Managed OpenShift 4 are
+
+* the Red Hat container registries at `registry.redhat.io` and `registry.access.redhat.com`.
+* the OpenShift Update Service (OSUS) at `\https://api.openshift.com`.
+
+==== 3rd party services
+
+Finally, APPUiO Managed OpenShift 4 requires access to a number of third party services:
+
+* OpsGenie at `\https://api.opsgenie.com`
+* Passbolt at `\https://cloud.passbolt.com/vshn`
+* Let's Encrypt at `\https://acme-v02.api.letsencrypt.com` and `\https://acme-staging-v02.api.letsencrypt.com`
+* Various container registries
+** GitHub at `ghcr.io`
+** Quay at `quay.io`
+** DockerHub at `docker.io`
+** Google container registry at `gcr.io`
+** Kubernetes container registry at `registry.k8s.io`
+
+== Storage
+
+APPUiO managed OpenShift 4 requires 3 different types of storage:
+
+1. Root disks
+2. Persistent volumes
+3. S3 compatible object storage
+
+=== Root disks
+
+Root disks are virtual block devices (100 GiB) which are attached to the VMs which make up the APPUiO Managed OpenShift 4 cluster.
+The root disks are allocated and attached to the VM when the VM is created.
+They hold the operating system and temporary data.
+They're ephemeral (no application data is stored on them), and don't need to be backed up.
+Finally, root disks are deleted when the VM to which they're attached is deleted.
+
+=== Persistent volumes
+
+Persistent volumes are virtual block devices with arbitrary sizes.
+They're allocated dynamically based on requests from workloads (applications or infrastructure components) within the cluster.
+These block devices are automatically attached to the VM hosting the application container.
+They're deleted when the corresponding Kubernetes `PersistentVolume` resource is deleted.
+
+The VMWare vSphere CSI driver is the in-cluster component which is responsible for allocating, attaching and deleting the persistent volume block devices.
+
+These devices hold application data, but backups are usually done from within the cluster.
+
+=== S3 compatible object storage
+
+Various OpenShift components, such as the integrated image registry, the logging stack and backups, require S3 compatible object storage.
+The customer or vSphere infrastructure operator must provide S3 compatible object storage.
+Most modern storage solutions offer some object storage functionality.
+
+If https://products.vshn.ch/appcat/index.html[VSHN's Application Catalog (AppCat)] offering is required on the cluster, the object storage must support automatic bucket creation via an AppCat-supported provisioner.
+
+NOTE: If no object storage is available, we can use external object storage as a fallback.
+
+== Glossary
+
+=== Components
+
+[cols="1,3,1"]
+|===
+|Name|Description|provided by
+
+|Bastion host
+a|A simple Ubuntu VM which is used by VSHN to bootstrap the cluster(s) and for emergency administrative access.
+*Requirements*
+
+* CPU: 2
+* Memory: 4GiB
+* Disk space: 20 GiB
+* Connectivity:
+** accessible for VSHNeers via SSH
+** outgoing access to the internet
+** access to the cluster machine network
+** access to the vSphere API
+** access to at least one ESXi host to allow the initial VM template upload
+
+|vSphere infrastructure operator
+
+|Installer
+|A CLI tool that bootstraps an OpenShift 4 cluster based on a configuration file.
+|VSHN / Red Hat
+
+|Bootstrap Node
+|A temporary VM in the cluster machine network which is provisioned by the installer to facilitate the initial setup of the cluster.
+This VM is decommissioned by the installer once the cluster installation is completed.
+| VSHN / Installer
+
+|vSphere & vCenter
+a|VMWare virtualization platform.
+
+See the upstream documentation for https://docs.openshift.com/container-platform/latest/installing/installing_vsphere/installing-vsphere-installer-provisioned.html#installation-vsphere-infrastructure_installing-vsphere-installer-provisioned[supported versions], https://docs.openshift.com/container-platform/latest/installing/installing_vsphere/installing-vsphere-installer-provisioned.html#installation-vsphere-installer-network-requirements_installing-vsphere-installer-provisioned[network connectivity] and https://docs.openshift.com/container-platform/latest/installing/installing_vsphere/installing-vsphere-installer-provisioned.html#installation-vsphere-installer-infra-requirements_installing-vsphere-installer-provisioned[required permissions].
+
+Entries for "VMWare vSphere CSI Driver Operator" are required.
+|vSphere infrastructure operator
+
+|Cluster machine network (sometimes "cluster network" or  "machine network")
+a|An internal subnet, usually a `/24`, in which the OpenShift 4 cluster will be placed.
+
+The terms "cluster machine network", "cluster network" and "machine network" are used interchangeably.
+Only one network is required.
+
+VMs in this network must be assigned an IP address via DHCP.
+DHCP replies must include a DNS server which is reachable from the network.
+
+Some IPs must be reserved and will be used as Virtual / Floating IPs.
+OpenShift manages the floating IPs with VRRP.
+
+At minimum two IPs must be allocated as floating IPs.
+These two IPs are used for the Kubernetes API and the ingress router.
+
+|vSphere infrastructure operator
+
+|Pod network
+a|A subnet that's internal to the Openshift 4 cluster.
+This subnet shouldn't be routable from outside the cluster.
+
+This subnet is managed by Cilium and is implemented with VXLAN traffic between the cluster VMs
+
+APPUiO Managed OpenShift 4 uses `10.128.0.0/14` as the pod network.
+If the pod network IP range conflicts with existing subnets, the pod network IP range can be adjusted.
+| VSHN / Cilium
+
+|Service network
+a|A subnet that's internal to the OpenShift 4 cluster.
+This subnet shouldn't be routable from outside the cluster.
+
+This subnet is managed by Cilium and is implemented with eBPF rules on the cluster VMs.
+
+APPUiO Managed OpenShift 4 uses `172.30.0.0/16` as the service network.
+If the service network IP range conflicts with existing subnets, the service network IP range can be adjusted.
+| VSHN / Cilium
+
+|S3 compatible storage
+a|Various OpenShift components require S3 compatible storage.
+This storage must be provided by the customer.
+
+The main APPUiO Managed OpenShift 4 components that use object storage are
+
+* OpenShift integrated image registry
+* OpenShift logging stack
+* APPUiO Managed cluster backups
+|Customer / vSphere infrastructure provider
+
+|Access gateway
+|To access the OpenShift API and applications deployed on the cluster, two public IPs are required.
+The following forwarding is required:
+
+* For the ingress public IP, ports `80/tcp` and `443/tcp` must be forwarded to the "Ingress VIP" in the machine network.
+* For the API public IP, port `6443/tcp` must be forwarded to the "API VIP" in the machine network.
+
+|Customer / vSphere infrastructure provider
+
+|DNS
+|The APPUiO Managed OpenShift 4 cluster's base DNS records are defined and managed by VSHN.
+All records must be publicly resolvable.
+To expose applications under a customer domain, a CNAME target is provided.
+| VSHN
+
+|===
+
+=== Other terms
+
+[cols="1,4"]
+|===
+|Name|Description
+
+|Node
+|A virtual machine that's part of an OpenShift 4 cluster
+
+|Control plane
+a|A collection of components that
+
+* facilitate the management of the container platform
+* manage the virtual hardware making up the cluster
+* manage the applications running on the cluster
+
+|===

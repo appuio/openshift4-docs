@@ -19,6 +19,8 @@
 ** Google Cloud Platform
 *** xref:oc4:ROOT:explanations/gcp/name_lengths.adoc[Name Lengths]
 
+** xref:oc4:ROOT:references/vsphere/architecture.adoc[VMWare vSphere]
+
 * Supported Infrastructures
 
 ** cloudscale.ch
@@ -53,6 +55,7 @@
 *** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
 
 ** VMware vSphere
+*** xref:oc4:ROOT:references/vsphere/architecture.adoc[Architecture]
 *** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
 *** xref:oc4:ROOT:how-tos/vsphere/install.adoc[Install]
 *** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-creds.adoc[vSphere Credentials]

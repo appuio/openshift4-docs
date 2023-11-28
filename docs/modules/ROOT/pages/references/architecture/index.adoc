@@ -1,9 +1,31 @@
 = APPUiO Managed OpenShift 4 Architecture
 
-Every APPUiO Managed OpenShift 4 has 3 control plane nodes.
-Additionally, APPUiO Managed OpenShift 4 clusters have https://docs.openshift.com/container-platform/4.13/nodes/nodes/nodes-nodes-creating-infrastructure-nodes.html[4 infrastructure nodes].
-Finally, APPUiO Managed OpenShift 4 clusters have 3 worker nodes by default.
-The minimum size for each node is 4 vCPUs, 16 GiB of RAM and 100 GiB root disk.
+APPUiO Managed OpenShift 4 is based on https://docs.openshift.com/container-platform/latest/welcome/index.html[Red Hat OpenShift 4 Container Platform], which is a https://kubernetes.io[Kubernetes] distribution maintained and developed by Red Hat.
+This documentation assumes that readers are familiar with Kubernetes concepts.
+
+For details on the architecture of a Kubernetes cluster, we recommend reading the https://kubernetes.io/docs/concepts/architecture/[cluster architecture section] of the official Kubernetes documentation.
+
+For details on the architecture of a Red Hat OpenShift 4 cluster, please see the https://access.redhat.com/documentation/en-us/openshift_container_platform/4.14/html/architecture/index[architecture section] of the OpenShift 4 product documentation or https://docs.openshift.com/container-platform/latest/architecture/index.html[architecture page] in the OpenShift Container Platform technical documentation.
+
+This page focuses on the default customizations and configurations for a Red Hat OpenShift 4 cluster which make up the APPUiO Managed OpenShift 4 product.
+
+== Generic APPUiO Managed OpenShift 4 architecture
+
+.APPUiO Managed OpenShift 4 base architecture
+image::ocp4-architecture.svg[alt=OCP4 Architecture, width=640]
+
+=== Nodes
+
+At minimum, a Red Hat OpenShift 4 cluster requires https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html#installation-minimum-resource-requirements_installing-bare-metal[3 control plane nodes with 4 vCPU and 16 GiB RAM and 2 worker nodes with 2 vCPU and 8 GiB RAM].
+
+In contrast to the minimum requirements for a Red Hat OpenShift 4 cluster, the base configuration of an APPUiO Managed OpenShift 4 cluster has https://docs.openshift.com/container-platform/latest/nodes/nodes/nodes-nodes-creating-infrastructure-nodes.html[4 infrastructure nodes with 4 vCPU and 16 GiB RAM] and 3 worker nodes with 4 vCPU and 16 GiB RAM in addition to the required 3 control plane nodes with 4 vCPU and 16 GiB RAM.
+
+APPUiO Managed OpenShift 4 deploys infrastructure nodes by default because an OpenShift 4 cluster with infrastructure nodes supports better separation of non-control plane infrastructure components (monitoring stack, logging stack, integrated image registry, etc.) from customer applications.
+Additionally, infrastructure nodes https://access.redhat.com/solutions/5034771[don't incur Red Hat OpenShift 4 license fees] as long as only approved infrastructure components are scheduled on those nodes.
+
+All nodes are installed with https://docs.openshift.com/container-platform/latest/architecture/architecture-rhcos.html[Red Hat CoreOS].
+
+=== Networking
 
 All APPUiO Managed OpenShift 4 clusters use https://cilium.io[Cilium] as the network plugin.
 APPUiO Managed OpenShift 4 uses the default OpenShift IP CIDRs for the pod and service networks: 10.128.0.0/14 for the pod network and 172.30.0.0/24 for the service network.
@@ -13,11 +35,10 @@ However, a default IP CIDR for the machine network is defined for some infrastru
 Each cluster is configured with two floating IPs, one for the Kubernetes API (the "API VIP") and one for the ingress router (the "Ingress VIP").
 On most providers, a third floating IP (the "Egress VIP") is configured and all outgoing traffic from the machine network is SNATed to this IP.
 
-.APPUiO Managed OpenShift 4 base architecture
-image::ocp4-architecture.svg[alt=OCP4 Architecture, width=640]
-
 https://syn.tools[Project Syn] is used to configure APPUiO Managed OpenShift 4 clusters.
 Apart from deploying custom configurations for OpenShift components, Project Syn is also used to deploy multiple third party components, such as https://cilium.io[Cilium] and https://cert-manager.io[cert-manager] on each APPUiO Managed OpenShift 4 cluster.
+
+== External connectivity
 
 Each APPUiO Managed OpenShift 4 cluster depends on multiple external systems.
 Some of those systems are owned and operated by VSHN while others are operated by Red Hat.
@@ -27,8 +48,19 @@ The mandatory external systems are shown in the diagram below.
 .APPUiO Managed OpenShift 4 external dependencies
 image::ocp4-external-dependencies.svg[alt=OCP4 external dependencies, width=800]
 
+IMPORTANT: If either Passbolt or OpsGenie aren't reachable from the environment in which the cluster is deployed, VSHN can't provide ongoing operational support.
+
+== APPUiO Managed OpenShift 4 architecture for supported infrastructure providers
+
 The architecture documentation for the supported infrastructure providers provides details on how the architecture is adapted to work within the constraints imposed by the provider.
 
 * cloudscale.ch (coming soon)
 * Exoscale (coming soon)
 * VMWare vSphere (coming soon)
+
+Additionally, the https://products.vshn.ch/appuio/managed/ocp4.html[APPUiO Managed OpenShift 4 product documentation] provides more details on the minimum required resources, supported Red Hat OpenShift 4 features and components as well as optionally supported features and add-ons for each supported infrastructure provider.
+
+== References
+
+* https://access.redhat.com/documentation/en-us/openshift_container_platform/4.14/html/architecture/index[Red Hat OpenShift 4 architecture]
+* https://products.vshn.ch/appuio/managed/ocp4.html[APPUiO Managed OpenShift 4 product documentation]

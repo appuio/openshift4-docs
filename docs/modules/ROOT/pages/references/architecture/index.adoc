@@ -50,6 +50,18 @@ image::ocp4-external-dependencies.svg[alt=OCP4 external dependencies, width=800]
 
 IMPORTANT: If either Passbolt or OpsGenie aren't reachable from the environment in which the cluster is deployed, VSHN can't provide ongoing operational support.
 
+== User access
+
+There's three different personas accessing an APPUiO Managed OpenShift 4 cluster:
+
+1. VSHNeers access the cluster in order to operate and maintain it.
+VSHNeers access the cluster's API and the OpenShift web console to perform adminstrative tasks.
+2. Customer developers access the cluster in order to develop, operate and maintain the customer's applications.
+The customer's developers access the cluster's API and the OpenShift web console to operate and maintain the customer's applications.
+Additionally, the customer's developers access the customer's applications.
+3. Application users access the applications on the cluster.
+Application users don't need to know or care about the fact that the applications are running on an APPUiO Managed OpenShift 4 cluster.
+
 == APPUiO Managed OpenShift 4 architecture for supported infrastructure providers
 
 The architecture documentation for the supported infrastructure providers provides details on how the architecture is adapted to work within the constraints imposed by the provider.

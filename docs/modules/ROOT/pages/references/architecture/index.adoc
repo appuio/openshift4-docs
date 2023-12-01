@@ -52,7 +52,7 @@ IMPORTANT: If either Passbolt or OpsGenie aren't reachable from the environment 
 
 == User access
 
-There's three different personas accessing an APPUiO Managed OpenShift 4 cluster:
+There are three different personas accessing an APPUiO Managed OpenShift 4 cluster:
 
 1. VSHNeers access the cluster in order to operate and maintain it.
 VSHNeers access the cluster's API and the OpenShift web console to perform adminstrative tasks.
@@ -64,7 +64,7 @@ Application users don't need to know or care about the fact that the application
 
 == APPUiO Managed OpenShift 4 architecture for supported infrastructure providers
 
-The architecture documentation for the supported infrastructure providers provides details on how the architecture is adapted to work within the constraints imposed by the provider.
+The architecture documentation for the supported infrastructure providers can give more details on how the architecture is adapted to work within the constraints imposed by the respective provider.
 
 * cloudscale.ch (coming soon)
 * Exoscale (coming soon)

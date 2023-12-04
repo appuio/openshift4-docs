@@ -4,7 +4,7 @@
 
 // TODO Consider to add a "Getting Started" section
 
-* xxref:oc4:ROOT:references/architecture/index.adoc[Architecture]
+* xref:oc4:ROOT:references/architecture/index.adoc[Architecture]
 ** xref:oc4:ROOT:explanations/dns_scheme.adoc[]
 ** xref:oc4:ROOT:explanations/node_groups.adoc[]
 ** xref:oc4:ROOT:explanations/etcd_encryption.adoc[]

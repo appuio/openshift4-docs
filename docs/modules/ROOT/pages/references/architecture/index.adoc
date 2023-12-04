@@ -68,7 +68,7 @@ The architecture documentation for the supported infrastructure providers can gi
 
 * cloudscale.ch (coming soon)
 * Exoscale (coming soon)
-* VMWare vSphere (coming soon)
+* xref:references/vsphere/architecture.adoc[VMWare vSphere]
 
 Additionally, the https://products.vshn.ch/appuio/managed/ocp4.html[APPUiO Managed OpenShift 4 product documentation] provides more details on the minimum required resources, supported Red Hat OpenShift 4 features and components as well as optionally supported features and add-ons for each supported infrastructure provider.
 

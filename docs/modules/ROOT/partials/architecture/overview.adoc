@@ -1,0 +1,10 @@
+The APPUiO Managed OpenShift 4 architecture on {infra-type} is based on the xref:references/architecture/index.adoc[generic APPUiO Managed OpenShift 4 architecture].
+We expect that readers of this document are familiar with the xref:references/architecture/index.adoc[generic APPUiO Managed OpenShift 4 architecture] and the overall Kubernetes and OpenShift 4 architecture.
+
+This architecture document extends upon the generic architecture by defining how the APPUiO Managed OpenShift 4 cluster is embedded into the {infra-type} environment.
+The diagram below shows a detailed view of how an APPUiO Managed OpenShift 4 cluster is embedded into the {infra-type} environment.
+
+.APPUiO Managed OpenShift4 on {infra-type} architecture
+image::{infra-svg}[alt=OCP4 {infra-type} architecture, width=900]
+
+The following sections of this document provide detailed descriptions for the elements shown in the architecture diagram.

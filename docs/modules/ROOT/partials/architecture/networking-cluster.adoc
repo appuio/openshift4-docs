@@ -1,0 +1,8 @@
+Each APPUiO Managed OpenShift 4 cluster is deployed into a /24 "cluster machine network" (sometimes also "cluster network" or "machine network")
+This network must be provided by the {infra-type} infrastructure operator.
+DHCP is mandatory for this network, but a number of IPs must be reserved to be used as Virtual IPs for the cluster.
+
+Traffic inside this network shouldn't be restricted.
+
+VMs in this network must be able to reach various services on the internet.
+See below for a detailed list of external systems that must be reachable.

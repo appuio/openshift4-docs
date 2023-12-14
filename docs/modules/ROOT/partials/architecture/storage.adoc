@@ -1,0 +1,34 @@
+APPUiO managed OpenShift 4 requires 3 different types of storage:
+
+1. Root disks
+2. Persistent volumes
+3. S3 compatible object storage
+
+=== Root disks
+
+Root disks are virtual block devices (100 GiB) which are attached to the VMs which make up the APPUiO Managed OpenShift 4 cluster.
+The root disks are allocated and attached to the VM when the VM is created.
+They hold the operating system and temporary data.
+They're ephemeral (no application data is stored on them), and don't need to be backed up.
+Finally, root disks are deleted when the VM to which they're attached is deleted.
+
+=== Persistent volumes
+
+Persistent volumes are virtual block devices with arbitrary sizes.
+They're allocated dynamically based on requests from workloads (applications or infrastructure components) within the cluster.
+These block devices are automatically attached to the VM hosting the application container.
+They're deleted when the corresponding Kubernetes `PersistentVolume` resource is deleted.
+
+The {infra-type} CSI driver is the in-cluster component which is responsible for allocating, attaching and deleting the persistent volume block devices.
+
+These devices hold application data, but backups are usually done from within the cluster.
+
+=== S3 compatible object storage
+
+Various OpenShift components, such as the integrated image registry, the logging stack and backups, require S3 compatible object storage.
+The customer or vSphere infrastructure operator must provide S3 compatible object storage.
+Most modern storage solutions offer some object storage functionality.
+
+If https://products.vshn.ch/appcat/index.html[VSHN's Application Catalog (AppCat)] offering is required on the cluster, the object storage must support automatic bucket creation via an AppCat-supported provisioner.
+
+NOTE: If no object storage is available, we can use external object storage as a fallback.

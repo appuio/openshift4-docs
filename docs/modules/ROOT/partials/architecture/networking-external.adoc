@@ -1,0 +1,41 @@
+APPUiO Managed OpenShift 4 requires various external services.
+
+==== VSHN services
+
+APPUiO Managed OpenShift 4 requires access to VSHN's https://syn.tools[Project Syn] infrastructure.
+The Project Syn infrastructure components that must be reachable are
+
+* the Project Syn API at `\https://api.syn.vshn.net`
+* the Project Syn Vault at `\https://vault-prod.syn.vshn.net`
+* VSHN's GitLab instance at `ssh://git@git.vshn.net`
+* VSHN's acme-dns instance at `\https://acme-dns-api.vshn.net`
+
+Additionally, APPUiO Managed OpenShift 4 requires access to VSHN's identity management:
+
+* VSHN LDAP at `ldaps://ldap.vshn.net:636`
+* VSHN SSO at `\https://id.vshn.net`
+
+Finally, APPUiO Managed OpenShift 4 requires access to VSHN's central metrics storage at `\https://metrics-receive.appuio.net`
+
+==== Red Hat services
+
+See the https://docs.openshift.com/container-platform/4.14/installing/install_config/configuring-firewall.html#configuring-firewall_configuring-firewall[upstream documentation] for the full list of services.
+
+The most important services for APPUiO Managed OpenShift 4 are
+
+* the Red Hat container registries at `registry.redhat.io` and `registry.access.redhat.com`.
+* the OpenShift Update Service (OSUS) at `\https://api.openshift.com`.
+
+==== 3rd party services
+
+Finally, APPUiO Managed OpenShift 4 requires access to a number of third party services:
+
+* OpsGenie at `\https://api.opsgenie.com`
+* Passbolt at `\https://cloud.passbolt.com/vshn`
+* Let's Encrypt at `\https://acme-v02.api.letsencrypt.com` and `\https://acme-staging-v02.api.letsencrypt.com`
+* Various container registries
+** GitHub at `ghcr.io`
+** Quay at `quay.io`
+** DockerHub at `docker.io`
+** Google container registry at `gcr.io`
+** Kubernetes container registry at `registry.k8s.io`

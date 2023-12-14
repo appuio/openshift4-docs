@@ -1,0 +1,40 @@
+[cols="1,3,1"]
+|===
+|Name|Description|provided by
+
+|Installer
+|A CLI tool that bootstraps an OpenShift 4 cluster based on a configuration file.
+|VSHN / Red Hat
+
+|Bootstrap Node
+|A temporary VM in the cluster machine network which is provisioned by the installer to facilitate the initial setup of the cluster.
+This VM is decommissioned by the installer once the cluster installation is completed.
+| VSHN / Installer
+
+|Pod network
+a|A subnet that's internal to the Openshift 4 cluster.
+This subnet shouldn't be routable from outside the cluster.
+
+This subnet is managed by Cilium and is implemented with VXLAN traffic between the cluster VMs
+
+APPUiO Managed OpenShift 4 uses `10.128.0.0/14` as the pod network.
+If the pod network IP range conflicts with existing subnets, the pod network IP range can be adjusted.
+| VSHN / Cilium
+
+|Service network
+a|A subnet that's internal to the OpenShift 4 cluster.
+This subnet shouldn't be routable from outside the cluster.
+
+This subnet is managed by Cilium and is implemented with eBPF rules on the cluster VMs.
+
+APPUiO Managed OpenShift 4 uses `172.30.0.0/16` as the service network.
+If the service network IP range conflicts with existing subnets, the service network IP range can be adjusted.
+| VSHN / Cilium
+
+|DNS
+|The APPUiO Managed OpenShift 4 cluster's base DNS records are defined and managed by VSHN.
+All records must be publicly resolvable.
+To expose applications under a customer domain, a CNAME target is provided.
+| VSHN
+
+|===

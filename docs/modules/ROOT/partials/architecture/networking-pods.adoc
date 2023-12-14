@@ -1,0 +1,19 @@
+APPUiO Managed Openshift 4 uses https://cilium.io/[Cilium] to provide in-cluster networking.
+Cilium allocates two cluster-internal networks:
+
+1. The pod network: every pod on the cluster will get an IP address from this network.
+This network enables basic in-cluster connectivity.
+APPUiO Managed OpenShift 4 uses `10.128.0.0/14` as the pod network.
+Each node in the cluster is assigned a `/23` from this range.
+Pods on a node are always assigned an IP from the range allocated to that node.
+2. Service network: used for service discovery.
+Traffic to IPs in this network is forwarded to the appropriate pods by Cilium.
+APPUiO Managed OpenShift 4 uses `172.30.0.0/16` as the service network.
+
+Both of these networks are interanl to the OpenShift 4 cluster.
+Therefore, the IP CIDRs for these networks must not be routable from the outside.
+Additionally, the same IP CIDRs can be reused for multiple OpenShift 4 clusters.
+
+However, the chosen CIDRs shouldn't overlap with existing networks allocated by the customer.
+If there are overlaps, external systems in the overlapping ranges won't be accessible from within the OpenShift 4 cluster.
+The pod and service network CIDRs can be customized if and only if there are conflicts.

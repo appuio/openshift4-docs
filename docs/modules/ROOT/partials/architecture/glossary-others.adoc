@@ -1,0 +1,15 @@
+[cols="1,4"]
+|===
+|Name|Description
+
+|Node
+|A virtual machine that's part of an OpenShift 4 cluster
+
+|Control plane
+a|A collection of components that
+
+* facilitate the management of the container platform
+* manage the virtual hardware making up the cluster
+* manage the applications running on the cluster
+
+|===

@@ -1,0 +1,107 @@
+:infra-type: Exoscale
+:infra-svg: ocp4-architecture-exoscale.svg
+= APPUiO Managed OpenShift 4 on {infra-type}
+
+== Architecture overview
+
+include::partial$architecture/overview.adoc[]
+
+== {infra-type} requirements
+
+APPUiO Managed OpenShift 4 on {infra-type} needs a https://docs.openshift.com/container-platform/4.14/installing/installing_bare_metal/installing-bare-metal.html#installation-load-balancing-user-infra_installing-bare-metal[Load Balancer setup] that must meet the following requirements:
+
+1. API load balancer: Provides a common endpoint to interact with the OpenShift and Kubernetes.
+
+2. Ingress load balancer: Provides an ingress point for application traffic flowing in from outside the cluster.
+
+See the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html#installation-requirements-user-infra_installing-bare-metal[upstream documentation] for details on {infra-type} requirements.
+
+
+== Networking
+
+=== Security Groups
+
+On {infra-type} APPUiO Managed OpenShift 4 uses public ips for each node in the cluster.
+See https://kb.vshn.ch/oc4/explanations/exoscale/limitations.html#_private_networks[Limitations] of the {infra-type} environment.
+
+The individual VMs are placed in https://community.exoscale.com/documentation/compute/security-groups[Security Groups] to restrict access and isolate the nodes from the public internet.
+
+=== Virtual IPs
+
+To expose applications and the Kubernetes API outside the cluster, APPUiO Managed OpenShift 4 manages two floating IPs:
+
+1. The "API VIP" for the Kubernetes and OpenShift API.
+APPUiO Managed OpenShift 4 uses a public floating IP as the API VIP.
+2. The "Ingress VIP" for the OpenShift Ingress Router
+APPUiO Managed OpenShift 4 uses a public floating IP as the Ingress VIP.
+
+APPUiO Managed OpenShift 4 uses two Load Balancer instances to manage the API and ingress VIPs and distributes traffic to the master / infrastructure nodes.
+
+=== Pod and service networks
+
+include::partial$architecture/networking-pods.adoc[]
+
+=== Exposing the cluster
+
+On {infra-type} infrastructure two Load Balancer instances provide ingress to the cluster.
+The Load Balancer setup exposes two public IPs:
+
+1. A public IP for the API.
+Traffic to port `6443/tcp` on this IP must be forwarded to the control plane nodes in the machine network.
+The forwarding of this traffic must happen transparently.
+In particular, no TLS interception can be performed as the Kubernetes API depends on mutual TLS authentication.
+VSHN will manage a DNS record pointing to this IP.
+2. A public IP for HTTP(s) ingress.
+Traffic to ports `80/tcp` and `443/tcp` on this IP must be forwarded to the infrastructure nodes in the machine network.
+The PROXY protocol should be enabled to preserve source IPs.
+Forwarding should happen transparently in TCP mode.
+VSHN will manage a wildcard DNS record pointing to this IP.
+Additional DNS records can be pointed to this IP by the customer.
+
+=== External services
+
+include::partial$architecture/networking-external.adoc[]
+
+== Storage
+
+include::partial$architecture/storage.adoc[]
+
+== Glossary
+
+=== Components {infra-type}
+
+[cols="1,3,1"]
+|===
+|Name|Description|provided by
+
+|Security Group
+a|Exoscale Security Groups provide a modular way to define and compose firewall rules.
+
+Security Groups hold two different types of information:
+* A list of rules to apply to traffic
+* A list of member instances in the security group which allows using groups as traffic sources or destinations in rules
+
+See https://community.exoscale.com/documentation/compute/security-groups[Upstream Documentation].
+
+|{infra-type}
+
+|S3 compatible storage
+a|Various OpenShift components require S3 compatible storage.
+This storage is provided by {infra-type}.
+
+The main APPUiO Managed OpenShift 4 components that use object storage are
+
+* OpenShift integrated image registry
+* OpenShift logging stack
+* APPUiO Managed cluster backups
+|{infra-type}
+
+|===
+
+=== Components General
+
+include::partial$architecture/glossary-general.adoc[]
+
+=== Other terms
+
+include::partial$architecture/glossary-others.adoc[]

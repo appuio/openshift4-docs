@@ -19,16 +19,27 @@ They're allocated dynamically based on requests from workloads (applications or 
 These block devices are automatically attached to the VM hosting the application container.
 They're deleted when the corresponding Kubernetes `PersistentVolume` resource is deleted.
 
+ifeval::["{infra-type}" != "Exoscale"]
 The {infra-type} CSI driver is the in-cluster component which is responsible for allocating, attaching and deleting the persistent volume block devices.
+endif::[]
+
+ifeval::["{infra-type}" == "Exoscale"]
+NOTE: On the {infra-type} environment there is no Kubernetes integration available for such block devices.
+https://products.vshn.ch/appuio/managed/storage_cluster.html[APPUiO Managed Storage Cluster] is available as and addon to the cluster offering if such functionality is required.
+endif::[]
 
 These devices hold application data, but backups are usually done from within the cluster.
 
 === S3 compatible object storage
 
 Various OpenShift components, such as the integrated image registry, the logging stack and backups, require S3 compatible object storage.
-The customer or vSphere infrastructure operator must provide S3 compatible object storage.
+ifeval::["{infra-type}" != "Exoscale"]
+ifeval::["{infra-type}" != "cloudscale.ch"]
+The customer or {infra-type} infrastructure operator must provide S3 compatible object storage.
 Most modern storage solutions offer some object storage functionality.
 
 If https://products.vshn.ch/appcat/index.html[VSHN's Application Catalog (AppCat)] offering is required on the cluster, the object storage must support automatic bucket creation via an AppCat-supported provisioner.
 
 NOTE: If no object storage is available, we can use external object storage as a fallback.
+endif::[]
+endif::[]

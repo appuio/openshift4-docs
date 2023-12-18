@@ -10,6 +10,7 @@
 ** xref:oc4:ROOT:explanations/etcd_encryption.adoc[]
 ** xref:oc4:ROOT:explanations/pod_security.adoc[]
 ** xref:oc4:ROOT:references/architecture/upgrade_controller.adoc[Upgrade Controller]
+** xref:oc4:ROOT:references/architecture/emergency_credentials.adoc[]
 ** xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[Resource Usage Reporting]
 ** xref:oc4:ROOT:references/architecture/single_sign_on.adoc[]
 
@@ -97,6 +98,7 @@
 ** xref:oc4:ROOT:how-tos/update_maintenance/v_4_12.adoc[Upgrade to OCP4.12]
 ** xref:oc4:ROOT:how-tos/update_maintenance/v_4_13.adoc[Upgrade to OCP4.13]
 ** xref:oc4:ROOT:references/architecture/upgrade_controller.adoc[Upgrade Controller]
+** xref:oc4:ROOT:references/architecture/emergency_credentials.adoc[]
 ** xref:oc4:ROOT:how-tos/maintenance_troubleshooting.adoc[Maintenance troubleshooting]
 
 // Support

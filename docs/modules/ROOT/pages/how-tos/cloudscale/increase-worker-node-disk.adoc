@@ -1,0 +1,41 @@
+= Increase disk of worker nodes
+
+
+
+[abstract]
+--
+Steps to increase the disk of worker nodes on an OpenShift 4 cluster on https://www.cloudscale.ch/[cloudscale.ch].
+--
+
+== Starting situtation
+
+* You already have an OpenShift 4 cluster on cloudscale.ch
+* You have admin-level access to the cluster
+* You want to increase the disk space on worker nodes.
+
+== Prerequisites
+
+The following CLI utilities need to be available locally:
+
+* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `oc`
+
+== Increase node disk via terraform
+
+. In the tenant repo, set the parameter `openshift4_terraform.terraform_variables.worker_volume_size_gb` to the desired value.
+. Run Commodore to compile the Terraform manifests (should be done automatically via CI pipeline)
+. Run Terraform on the updated Terraform manifests (should be done automatically via CI pipeline, the apply stage may be triggered manually)
+
+
+== Increase the partition and filesystem on the worker nodes
+
+Once the Terraform pipeline ran through, the worker nodes should have the new disk size.
+However the partition and filesystem on the worker nodes need to be resized manually:
+
+For each worker node run the following commands:
+
+. `oc --as=cluster-admin -n syn-debug-nodes debug "node/<worker_node_name>"`
+. `chroot /host`
+. `lsblk` # Check which partition contains the `/sysroot` mountpoint. Usually this is `/dev/sda4`
+. `growpart /dev/sda 4` 
+. `xfs_growfs /dev/sda4`

@@ -24,8 +24,8 @@ The {infra-type} CSI driver is the in-cluster component which is responsible for
 endif::[]
 
 ifeval::["{infra-type}" == "Exoscale"]
-NOTE: On the {infra-type} environment there is no Kubernetes integration available for such block devices.
-https://products.vshn.ch/appuio/managed/storage_cluster.html[APPUiO Managed Storage Cluster] is available as and addon to the cluster offering if such functionality is required.
+IMPORTANT: {infra-type} does not provide storage usable by Kubernetes as persistent volumes.
+To fill this gap, {product} in {intra-type} uses https://products.vshn.ch/appuio/managed/storage_cluster.html[APPUiO Managed Storage Cluster] to provide storage to be used as read write once and read write many persistent volumes.
 endif::[]
 
 These devices hold application data, but backups are usually done from within the cluster.

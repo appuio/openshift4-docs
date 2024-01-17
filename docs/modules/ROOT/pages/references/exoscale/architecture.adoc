@@ -26,7 +26,7 @@ See https://kb.vshn.ch/oc4/explanations/exoscale/limitations.html#_private_netwo
 
 The individual VMs are placed in https://community.exoscale.com/documentation/compute/security-groups[Security Groups] to restrict access and isolate the nodes from the public internet.
 
-NOTE: On the {infra-type} environment there is no single stable egress IP. Every node uses a dynamic public IP for egress traffic, which it is not suited for any forms of whitelisting.
+NOTE: On the {infra-type} environment there is no single stable egress IP. Every node uses a dynamic public IP for egress traffic, which it's not suited for any forms of whitelisting.
 
 === Virtual IPs
 

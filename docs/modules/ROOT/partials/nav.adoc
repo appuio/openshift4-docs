@@ -14,7 +14,7 @@
 ** xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[Resource Usage Reporting]
 ** xref:oc4:ROOT:references/architecture/single_sign_on.adoc[]
 
-** Exoscale
+** xref:oc4:ROOT:references/exoscale/architecture.adoc[Exoscale]
 *** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
 
 ** Google Cloud Platform
@@ -40,6 +40,7 @@
 *** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Decommissioning]
 
 ** Exoscale
+*** xref:oc4:ROOT:references/exoscale/architecture.adoc[Architecture]
 *** xref:oc4:ROOT:references/exoscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Install]
 // Node management

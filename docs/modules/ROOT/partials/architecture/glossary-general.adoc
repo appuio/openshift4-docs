@@ -32,9 +32,21 @@ If the service network IP range conflicts with existing subnets, the service net
 | VSHN / Cilium
 
 |DNS
-|The APPUiO Managed OpenShift 4 cluster's base DNS records are defined and managed by VSHN.
+a|The APPUiO Managed OpenShift 4 cluster's base DNS records are defined and managed by VSHN.
 All records must be publicly resolvable.
 To expose applications under a customer domain, a CNAME target is provided.
 | VSHN
+
+
+ifeval::["{infra-type}" == "Exoscale"]
+|Storage Cluster
+a|The APPUiO Managed Storage Cluster offers advanced cloud-native storage capabilities for APPUiO Managed OpenShift 4.
+
+This product is based on https://rook.io/[Rook] and uses https://ceph.io/en/[Ceph] as it’s underlying storage technology.
+
+See https://products.vshn.ch/appuio/managed/storage_cluster.html[APPUiO Managed Storage Cluster] product page for more details.
+
+| VSHN / Rook
+endif::[]
 
 |===

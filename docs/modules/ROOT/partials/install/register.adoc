@@ -10,6 +10,7 @@ VSHN:: https://api.syn.vshn.net
 === Set cluster facts
 For customer clusters, set the following cluster facts in Lieutenant:
 
+* `access_policy`: Access-Policy of the cluster, such as `regular` or `swissonly`
 * `service_level`: Name of the service level agreement for this cluster, such as `guaranteed-availability`
 * `sales_order`: Name of the sales order to which the cluster is billed, such as `S10000`
 * `release_channel`: Name of the syn component release channel to use, such as `stable`

@@ -1,5 +1,5 @@
-:infra-type: Exoscale
-:infra-svg: ocp4-architecture-exoscale.svg
+:infra-type: cloudscale.ch
+:infra-svg: ocp4-architecture-cloudscale.svg
 = APPUiO Managed OpenShift 4 on {infra-type}
 
 == Architecture overview
@@ -19,25 +19,22 @@ See the https://docs.openshift.com/container-platform/latest/installing/installi
 
 == Networking
 
-=== Security Groups
+=== Machine network
 
-On {infra-type}, APPUiO Managed OpenShift 4 uses public IPs for each node in the cluster.
-See https://kb.vshn.ch/oc4/explanations/exoscale/limitations.html#_private_networks[Limitations] of the {infra-type} environment.
-
-The individual VMs are placed in https://community.exoscale.com/documentation/compute/security-groups[Security Groups] to restrict access and isolate the nodes from the public internet.
-
-NOTE: On the {infra-type} environment there is no single stable egress IP. Every node uses a dynamic public IP for egress traffic, which it's not suited for any forms of whitelisting.
+include::partial$architecture/networking-cluster.adoc[]
 
 === Virtual IPs
 
-To expose applications and the Kubernetes API outside the cluster, APPUiO Managed OpenShift 4 manages two floating IPs:
+To expose applications and the Kubernetes API outside the cluster, APPUiO Managed OpenShift 4 manages three floating IPs:
 
 1. The "API VIP" for the Kubernetes and OpenShift API.
 APPUiO Managed OpenShift 4 uses a public floating IP as the API VIP.
 2. The "Ingress VIP" for the OpenShift Ingress Router.
 APPUiO Managed OpenShift 4 uses a public floating IP as the Ingress VIP.
+2. The "Egress VIP" for outgoing traffic of the nodes.
+APPUiO Managed OpenShift 4 uses a public floating IP for outgoing traffic.
 
-APPUiO Managed OpenShift 4 uses two Load Balancer instances to manage the API and ingress VIPs and distributes traffic to the master / infrastructure nodes.
+APPUiO Managed OpenShift 4 uses {infra-type} Load Balancer to manage the API and ingress VIPs and distributes traffic to the master / infrastructure nodes and {infra-type} vRouter for outgoing traffic.
 
 === Pod and service networks
 
@@ -63,14 +60,20 @@ include::partial$architecture/storage.adoc[]
 |===
 |Name|Description|provided by
 
-|Security Group
-a|Exoscale Security Groups provide a modular way to define and compose firewall rules.
+|Load Balancer
+a|cloudscale.ch Load Balancer provide fail-over ingress to your cluster.
+This service is provided by {infra-type}.
 
-Security Groups hold two different types of information:
-* A list of rules to apply to traffic
-* A list of member instances in the security group which allows using groups as traffic sources or destinations in rules
+The main load balancer represents the virtual network device and is assigned VIP addresses (virtual IP addresses) through which incoming traffic is received.
+Traffic is distributed to the the individual endpoints, defined in a pool.
 
-See https://community.exoscale.com/documentation/compute/security-groups[Upstream Documentation].
+See https://www.cloudscale.ch/en/api/v1#load-balancers[Upstream Documentation].
+
+|{infra-type}
+
+|vRouter
+a|A virtual router is a software function that replicates the functionality of a hardware-based router.
+This service is provided by {infra-type}.
 
 |{infra-type}
 

@@ -1,3 +1,10 @@
+ifeval::["{provider}" == "cloudscale"]
+:is-terraform: yes
+endif::[]
+ifeval::["{provider}" == "exoscale"]
+:is-terraform: yes
+endif::[]
+
 . Switch to the tenant repo
 +
 [source,bash]
@@ -58,13 +65,6 @@ yq eval -i ".parameters.openshift4_version.spec.channel = \"fast-{ocp-minor-vers
   ${CLUSTER_ID}.yml
 ----
 ====
-
-ifeval::["{provider}" == "cloudscale"]
-:is-terraform: yes
-endif::[]
-ifeval::["{provider}" == "exoscale"]
-:is-terraform: yes
-endif::[]
 
 ifeval::["{is-terraform}" == "yes"]
 include::partial$install/prepare-syn-config-terraform.adoc[]

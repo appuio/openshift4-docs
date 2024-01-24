@@ -1,4 +1,5 @@
 
+ifeval::["{provider} == "exoscale"]
 . Deploy bootstrap node
 +
 [source,bash,subs="attributes+"]
@@ -37,8 +38,14 @@ while ! curl --connect-timeout 1 "${API_URL}/healthz" -k &>/dev/null; do
   sleep 5
 done && echo -e "\nAPI is up"
 ----
+endif::[]
 
+ifeval::["{provider}" == "cloudscale"]
+. Deploy bootstrap node and control plane nodes
+endif::[]
+ifeval::["{provider}" == "exoscale"]
 . Deploy control plane nodes
+endif::[]
 +
 [source,bash,subs="attributes+"]
 ----
@@ -121,6 +128,7 @@ This step isn't necessary if you've disabled the proxy protocol on the load-bala
 By default, PROXY protocol is enabled through the VSHN Commodore global defaults.
 ====
 
+ifeval::["{provider}" == "exoscale"]
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +
 [source,bash]
@@ -129,6 +137,7 @@ for fqdn in "${LB_FQDNS[@]}"; do
   ssh "${fqdn}" sudo puppetctl run
 done
 ----
+endif::[]
 
 . Wait for installation to complete
 +

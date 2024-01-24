@@ -3,6 +3,7 @@
 :k8s-minor-version: 1.26
 :ocp-patch-version: {ocp-minor-version}.0
 :provider: cloudscale
+:needs_hieradata_edit: no
 
 [abstract]
 --
@@ -55,7 +56,6 @@ include::partial$install/register.adoc[]
 ----
 # https://control.cloudscale.ch/service/<your-project>/api-token
 export CLOUDSCALE_API_TOKEN=<cloudscale-api-token>
-export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 ----
 
 include::partial$install/vshn-input.adoc[]
@@ -187,10 +187,6 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
   s3_access_key=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
   s3_secret_key=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
 
-# Put LB API key in Vault
-vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty \
-  iam_secret=${TF_VAR_lb_cloudscale_api_secret}
-
 # Generate an HTTP secret for the registry
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
   httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
@@ -215,8 +211,6 @@ vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
 vault kv get -format=json "clusters/kv/template/cert-manager" | jq '.data.data' \
   | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cert-manager" -
 ----
-
-include::partial$get-hieradata-token-from-vault.adoc[]
 
 include::partial$install/prepare-commodore.adoc[]
 
@@ -251,7 +245,7 @@ include::partial$cloudscale/configure-terraform-secrets.adoc[]
 
 include::partial$setup_terraform.adoc[]
 
-. Create LB hieradata
+. Create network and LBs
 +
 [source,bash]
 ----
@@ -264,39 +258,11 @@ module "cluster" {
   additional_worker_groups = {}
 }
 EOF
-terraform apply -target "module.cluster.module.lb.module.hiera"
-----
-
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and wait until the deploy pipeline after the merge is completed.
-
-. Create LBs
-+
-[source,bash]
-----
 terraform apply
 ----
 
 . Setup the DNS records shown in output variable `dns_entries` from the previous step in the cluster's parent zone.
 If you use a custom apps domain, make the necessary changes to the DNS record for `*.apps`.
-
-. Make LB FQDNs available for later steps
-+
-.Store LB FQDNs in environment
-[source,bash]
-----
-declare -a LB_FQDNS
-for id in 1 2; do
-  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
-done
-----
-+
-.Verify FQDNs
-[source,bash]
-----
-for lb in "${LB_FQDNS[@]}"; do echo $lb; done
-----
-
-include::partial$install/bootstrap-lb.adoc[]
 
 include::partial$install/bootstrap-nodes.adoc[]
 

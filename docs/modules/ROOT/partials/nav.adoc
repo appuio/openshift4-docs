@@ -14,6 +14,8 @@
 ** xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[Resource Usage Reporting]
 ** xref:oc4:ROOT:references/architecture/single_sign_on.adoc[]
 
+** xref:oc4:ROOT:references/cloudscale/architecture.adoc[cloudscale.ch]
+
 ** xref:oc4:ROOT:references/exoscale/architecture.adoc[Exoscale]
 *** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
 
@@ -25,6 +27,7 @@
 * Supported Infrastructures
 
 ** cloudscale.ch
+*** xref:oc4:ROOT:references/cloudscale/architecture.adoc[Architecture]
 *** xref:oc4:ROOT:references/cloudscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Install]
 // Node management

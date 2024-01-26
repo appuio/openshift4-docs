@@ -7,7 +7,7 @@ This document aims to explain how we use it in our setups.
 
 == Motivation
 
-The documentation about https://docs.openshift.com/container-platform/latest/monitoring/cluster_monitoring/configuring-the-monitoring-stack.html#maintenance-and-support_configuring-monitoring[configuring the monitoring stack] lists quite a lot of unsupported cases:
+The documentation about https://docs.openshift.com/container-platform/4.14/monitoring/configuring-the-monitoring-stack.html#maintenance-and-support_configuring-the-monitoring-stack[configuring the monitoring stack] lists quite a lot of unsupported cases:
 
 * Add additional `ServiceMonitor` objects
 * Create additional `ConfigMap` objects or `PrometheusRule` objects

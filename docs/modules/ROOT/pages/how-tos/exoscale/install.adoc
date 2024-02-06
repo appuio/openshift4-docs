@@ -138,7 +138,7 @@ export TF_VAR_lb_exoscale_api_secret=$(echo "${exoscale_floaty_credentials}" | \
 # Create AppCat Provider Exoscale IAM role, if it doesn't exist yet in the organization
 appcat_role_id=$(exo x list-iam-roles | \
   jq -r '."iam-roles"[] | select(.name=="appcat-provider-exoscale") | .id')
-if [ -z "${sos_iam_role_id}" ]; then
+if [ -z "${appcat_role_id}" ]; then
 appcat_role_id=$(echo '{
   "name": "appcat-provider-exoscale",
   "policy": {

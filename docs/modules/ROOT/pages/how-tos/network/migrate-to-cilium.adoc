@@ -257,6 +257,13 @@ Use `kubectl --as=cluster-admin drain --ignore-daemonsets --delete-emptydir-data
 Start with a master node, and ensure that the machine-config-operator is running on that master node after it's been drained and rebooted.
 ====
 
+. Compile and push catalog
++
+[source,yaml]
+----
+commodore catalog compile "${CLUSTER_ID}" --push
+----
+
 include::partial$enable-argocd-autosync.adoc[]
 
 == Cleanup alert silence

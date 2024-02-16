@@ -3,7 +3,7 @@
 ----
 export EXOSCALE_API_KEY=<exoscale-key> <1>
 export EXOSCALE_API_SECRET=<exoscale-secret>
-export EXOSCALE_ZONE=<exoscale-zone> <1>
+export EXOSCALE_ZONE=<exoscale-zone> <2>
 export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_ZONE}.exo.io"
 ----
 <1> We recommend setting up an IAMv3 role called `unrestricted` with "Default Service Strategy" set to `allow` if it doesn't exist yet.

@@ -1,0 +1,99 @@
+:infra-type: cloudscale.ch
+:infra-svg: ocp4-architecture-cloudscale.svg
+= APPUiO Managed OpenShift 4 on {infra-type}
+
+== Architecture overview
+
+include::partial$architecture/overview.adoc[]
+
+== {infra-type} requirements
+
+APPUiO Managed OpenShift 4 on {infra-type} needs a https://docs.openshift.com/container-platform/4.14/installing/installing_bare_metal/installing-bare-metal.html#installation-load-balancing-user-infra_installing-bare-metal[Load Balancer setup] that must meet the following requirements:
+
+1. API load balancer: Provides a common endpoint to interact with OpenShift and Kubernetes.
+
+2. Ingress load balancer: Provides an endpoint for application traffic flowing in from outside the cluster.
+
+See the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html#installation-requirements-user-infra_installing-bare-metal[upstream documentation] for details on {infra-type} requirements.
+
+
+== Networking
+
+=== Machine network
+
+include::partial$architecture/networking-cluster.adoc[]
+
+=== Virtual IPs
+
+To expose applications and the Kubernetes API outside the cluster, APPUiO Managed OpenShift 4 manages three floating IPs:
+
+1. The "API VIP" for the Kubernetes and OpenShift API.
+APPUiO Managed OpenShift 4 uses a public floating IP as the API VIP.
+2. The "Ingress VIP" for the OpenShift Ingress Router.
+APPUiO Managed OpenShift 4 uses a public floating IP as the Ingress VIP.
+2. The "Egress VIP" for outgoing traffic of the nodes.
+APPUiO Managed OpenShift 4 uses a public floating IP for outgoing traffic.
+
+APPUiO Managed OpenShift 4 uses {infra-type} Load Balancer to manage the API and ingress VIPs and distributes traffic to the master / infrastructure nodes and {infra-type} vRouter for outgoing traffic.
+
+=== Pod and service networks
+
+include::partial$architecture/networking-pods.adoc[]
+
+=== Exposing the cluster
+
+We provide a CNAME target record to point additional DNS records to.
+
+=== External services
+
+include::partial$architecture/networking-external.adoc[]
+
+== Storage
+
+include::partial$architecture/storage.adoc[]
+
+== Glossary
+
+=== Components {infra-type}
+
+[cols="1,3,1"]
+|===
+|Name|Description|provided by
+
+|Load Balancer
+a|cloudscale.ch Load Balancer provide fail-over ingress to your cluster.
+This service is provided by {infra-type}.
+
+The main load balancer represents the virtual network device and is assigned VIP addresses (virtual IP addresses) through which incoming traffic is received.
+Traffic is distributed to the the individual endpoints, defined in a pool.
+
+See https://www.cloudscale.ch/en/api/v1#load-balancers[Upstream Documentation].
+
+|{infra-type}
+
+|vRouter
+a|A virtual router is a software function that replicates the functionality of a hardware-based router.
+This service is provided by {infra-type}.
+
+|{infra-type}
+
+|S3 compatible storage
+a|Various OpenShift components require S3 compatible storage.
+This storage is provided by {infra-type}.
+
+The main APPUiO Managed OpenShift 4 components that use object storage are
+
+* OpenShift integrated image registry
+* OpenShift logging stack
+* APPUiO Managed cluster backups
+|{infra-type}
+
+|===
+
+=== Components General
+
+include::partial$architecture/glossary-general.adoc[]
+
+=== Other terms
+
+include::partial$architecture/glossary-others.adoc[]

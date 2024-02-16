@@ -10,10 +10,13 @@
 ** xref:oc4:ROOT:explanations/etcd_encryption.adoc[]
 ** xref:oc4:ROOT:explanations/pod_security.adoc[]
 ** xref:oc4:ROOT:references/architecture/upgrade_controller.adoc[Upgrade Controller]
+** xref:oc4:ROOT:references/architecture/emergency_credentials.adoc[]
 ** xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[Resource Usage Reporting]
 ** xref:oc4:ROOT:references/architecture/single_sign_on.adoc[]
 
-** Exoscale
+** xref:oc4:ROOT:references/cloudscale/architecture.adoc[cloudscale.ch]
+
+** xref:oc4:ROOT:references/exoscale/architecture.adoc[Exoscale]
 *** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
 
 ** Google Cloud Platform
@@ -24,6 +27,7 @@
 * Supported Infrastructures
 
 ** cloudscale.ch
+*** xref:oc4:ROOT:references/cloudscale/architecture.adoc[Architecture]
 *** xref:oc4:ROOT:references/cloudscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Install]
 // Node management
@@ -39,6 +43,7 @@
 *** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Decommissioning]
 
 ** Exoscale
+*** xref:oc4:ROOT:references/exoscale/architecture.adoc[Architecture]
 *** xref:oc4:ROOT:references/exoscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Install]
 // Node management
@@ -97,6 +102,7 @@
 ** xref:oc4:ROOT:how-tos/update_maintenance/v_4_12.adoc[Upgrade to OCP4.12]
 ** xref:oc4:ROOT:how-tos/update_maintenance/v_4_13.adoc[Upgrade to OCP4.13]
 ** xref:oc4:ROOT:references/architecture/upgrade_controller.adoc[Upgrade Controller]
+** xref:oc4:ROOT:references/architecture/emergency_credentials.adoc[]
 ** xref:oc4:ROOT:how-tos/maintenance_troubleshooting.adoc[Maintenance troubleshooting]
 
 // Support
@@ -153,6 +159,7 @@
 *** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
 *** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[]
+*** xref:oc4:ROOT:how-tos/cloudscale/increase-worker-node-disk.adoc[]
 
 ** Exoscale
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]

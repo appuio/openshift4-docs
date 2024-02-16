@@ -35,7 +35,7 @@ include::partial$install/prerequisites.adoc[]
 * `md5sum`
 * `virt-edit`
 * `cpio`
-* `exo` >= v1.71.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `exo` >= v1.75.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * An Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key] with full permissions
 * https://community.exoscale.com/documentation/dns/quick-start/#subscribing-to-the-service[DNS subscription] activated in the Exoscale organisation
 
@@ -59,7 +59,7 @@ include::partial$install/vshn-input.adoc[]
 
 [NOTE]
 ====
-If creating the API key fails, please retry the commands starting from the command which contains `exo x create-api-key`.
+If creating the API key fails, please retry the commands starting from the command which contains `exo iam api-key`.
 It may take a second or two for the newly created role to be available to reference for an API key.
 ====
 
@@ -68,67 +68,24 @@ It may take a second or two for the newly created role to be available to refere
 [source,bash]
 ----
 # Create SOS IAM role, if it doesn't exist yet in the organization
-sos_iam_role_id=$(exo x list-iam-roles | \
-  jq -r '."iam-roles"[] | select(.name=="sos-full-access") | .id')
+sos_iam_role_id=$(exo iam role list -O json | \
+  jq -r '.[] | select(.name=="sos-full-access") | .key')
 if [ -z "${sos_iam_role_id}" ]; then
-sos_iam_role_id=$(echo '{
-  "name": "sos-full-access",
-  "policy": {
-    "default-service-strategy": "deny",
-    "services": {
-      "sos": {"type": "allow"}
-    }
+echo '{
+  "default-service-strategy": "deny",
+  "services": {
+    "sos": {"type": "allow"}
   }
-}' | exo x  create-iam-role | jq -r '.reference.id')
+}' | \
+exo iam role create sos-full-access \
+  --description "Full access to object storage service" \
+  --policy -
 fi
 # Create access key
-exoscale_s3_credentials=$(echo '{
-  "name": "'"${CLUSTER_ID}"'_object_storage",
-  "role-id": "'"${sos_iam_role_id}"'"
-}' | exo x create-api-key)
+exoscale_s3_credentials=$(exo iam api-key create -O json \
+  "${CLUSTER_ID}_object_storage" sos-full-access)
 export EXOSCALE_S3_ACCESSKEY=$(echo "${exoscale_s3_credentials}" | jq -r '.key')
 export EXOSCALE_S3_SECRETKEY=$(echo "${exoscale_s3_credentials}" | jq -r '.secret')
-----
-
-. Create restricted API key for Floaty
-+
-[source,bash]
-----
-# Create Floaty IAM role if it doesn't exist yet in the organization
-floaty_iam_role_id=$(exo x list-iam-roles | \
-  jq -r '."iam-roles"[] | select(.name=="floaty") | .id')
-if [ -z "${floaty_iam_role_id}" ]; then
-cat >floaty-role.json <<EOF
-{
-  "name": "floaty",
-  "policy": {
-    "default-service-strategy": "deny",
-    "services": {
-      "compute-legacy": {
-        "type": "rules",
-        "rules": [
-          {
-            "action": "allow",
-            "expression": "operation in ['compute-add-ip-to-nic', 'compute-list-nics', 'compute-list-resource-details', 'compute-list-virtual-machines', 'compute-query-async-job-result', 'compute-remove-ip-from-nic']"
-          }
-        ]
-      }
-    }
-  }
-}
-EOF
-floaty_iam_role_id=$(exo x create-iam-role < floaty-role.json | jq -r '.reference.id')
-rm floaty-role.json
-fi
-# Create access key
-exoscale_floaty_credentials=$(echo '{
-  "name": "'"${CLUSTER_ID}"'_floaty",
-  "role-id": "'"${floaty_iam_role_id}"'"
-}' | exo x create-api-key)
-export TF_VAR_lb_exoscale_api_key=$(echo "${exoscale_floaty_credentials}" | \
-  jq -r '.key')
-export TF_VAR_lb_exoscale_api_secret=$(echo "${exoscale_floaty_credentials}" | \
-  jq -r '.secret')
 ----
 
 . Create restricted API key for AppCat Provider Exoscale
@@ -136,26 +93,24 @@ export TF_VAR_lb_exoscale_api_secret=$(echo "${exoscale_floaty_credentials}" | \
 [source,bash]
 ----
 # Create AppCat Provider Exoscale IAM role, if it doesn't exist yet in the organization
-appcat_role_id=$(exo x list-iam-roles | \
-  jq -r '."iam-roles"[] | select(.name=="appcat-provider-exoscale") | .id')
+appcat_role_id=$(exo iam role list -O json | \
+  jq -r '.[] | select(.name=="appcat-provider-exoscale") | .key')
 if [ -z "${appcat_role_id}" ]; then
-appcat_role_id=$(echo '{
-  "name": "appcat-provider-exoscale",
-  "policy": {
-    "default-service-strategy": "deny",
-    "services": {
-      "sos": {"type": "allow"},
-      "dbaas": {"type": "allow"},
-      "iam": {"type": "allow"}
-    }
+echo '{
+  "default-service-strategy": "deny",
+  "services": {
+    "sos": {"type": "allow"},
+    "dbaas": {"type": "allow"},
+    "iam": {"type": "allow"}
   }
-}' | exo x  create-iam-role | jq -r '.reference.id')
+}' | \
+exo iam role create appcat-provider-exoscale \
+  --description "AppCat provider role: Full access to SOS, DBaaS and IAM" \
+  --policy -
 fi
 # Create access key
-appcat_credentials=$(echo '{
-  "name": "appcat-provider-exoscale",
-  "role-id": "'"${appcat_role_id}"'"
-}' | exo x create-api-key)
+appcat_credentials=$(exo iam api-key create -O json \
+  appcat-provider-exoscale appcat-provider-exoscale)
 export APPCAT_ACCESSKEY=$(echo "${appcat_credentials}" | jq -r '.key')
 export APPCAT_SECRETKEY=$(echo "${appcat_credentials}" | jq -r '.secret')
 ----

@@ -59,7 +59,7 @@ These additional VIPs will be managed by `keepalived` instances on the cluster.
 
 === Pod and service networks
 
-include::partial$architecture/networking-pod.adoc[]
+include::partial$architecture/networking-pods.adoc[]
 
 === Exposing the cluster
 

@@ -2,6 +2,29 @@
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 
+== OpenShift 4.14
+
+OpenShift version 4.14 is available since 2023-11-06.
+This version is based on Kubernetes 1.27 and CRI-O 1.27.
+The RHCOS image now uses RHEL 9.2 packages.
+Find the release notes in the upstream documentation as https://docs.openshift.com/container-platform/4.14/release_notes/ocp-4-14-release-notes.html[OpenShift Container Platform 4.14 release notes].
+The https://www.redhat.com/en/blog/red-hat-openshift-4.14-is-now-available[Red Hat OpenShift 4.14 is now available] blog post is also a valuable resource.
+
+API deprecations::
+An API has been removed in Kubernetes 1.27.
+Before updating a cluster to OpenShift 4.14, check for usage of the following API:
+
+* `CSIStorageCapacity` Resource, `storage.k8s.io/v1beta1` migrates to `storage.k8s.io/v1`
+
+See the upstream documentation on https://docs.openshift.com/container-platform/4.14/updating/preparing_for_updates/updating-cluster-prepare.html[preparing to update to OpenShift Container Platform 4.14] for detailed instructions to check for usage of these APIs.
+If any of the APIs are used, inform the affected users and ask them to update their workloads to use the APIs indicated in the upstream documentation.
+
+
+Logging in to the CLI using a web browser::
+With OpenShift Container Platform 4.14, a new oc command-line interface (CLI) flag, `--web` is now available for the oc login command.
+
+With this enhancement, you can log in by using a web browser, so that you do not need to insert your access token into the command line.
+
 == OpenShift 4.13
 
 OpenShift version 4.13 is available since 2023-03-17.
@@ -69,167 +92,3 @@ Users need to explicitly set security contexts in their manifests to avoid these
 +
 Red Hat plans to switch Pod Security Admission to restricted enforcement globally in a future minor release.
 When restricted enforcement will be enabled, pods with pod security violations will be rejected.
-
-== OpenShift 4.12
-
-OpenShift version 4.12 is available since 2023-01-17.
-This version is based on Kubernetes 1.25.
-The RHCOS image now uses RHEL 8.6 packages.
-Find the release notes in the upstream documentation as https://docs.openshift.com/container-platform/4.12/release_notes/ocp-4-12-release-notes.html[OpenShift Container Platform 4.12 release notes].
-The https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.12-blog[What's New in Red Hat OpenShift 4.12] blog post is also a valuable resource.
-
-API deprecations::
-
-Multiple APIs are deprecated in Kubernetes 1.25.
-Before updating a cluster to OpenShift 4.12, check for usage of the following APIs:
-
-* `cronjobs.v1beta1.batch`
-* `endpointslices.v1beta1.discovery.k8s.io`
-* `events.v1beta1.events.k8s.io`
-* `horizontalpodautoscalers.v2beta1.autoscaling`
-* `poddisruptionbudgets.v1beta1.policy`
-* `podsecuritypolicies.v1beta1.policy`
-* `runtimeclass.v1beta1.node.k8s.io`
-
-+
-See the upstream documentation on https://docs.openshift.com/container-platform/4.12/updating/updating-cluster-prepare.html#updating-cluster-prepare[preparing to update to OpenShift Container Platform 4.12] for detailed instructions to check for usage of these APIs.
-If any of the APIs are used, inform the affected users and ask them to update their workloads to use the APIs indicated in the upstream documentation.
-
-New web console features::
-
-The developer view in the OpenShift web console provides multiple new features.
-Notably, the console now allows users to export their applications as ZIP archives.
-Additionally, resource quota alerts are now visible in the web console "Topology" and "Add" pages whenever any resource reaches the quota.
-
-Reminder: Pod Security Admission is enabled::
-
-https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] runs globally with restricted audit logging and API warnings.
-This means while everything should still run as it did before, if users rely on security contexts being set by OpenShift's SCCs they'll encounter warnings like the following:
-+
-[source,console]
-----
-Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "nginx" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "nginx" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "nginx" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "nginx" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
-----
-+
-Users need to explicitly set security contexts in their manifests to avoid these warnings.
-+
-Red Hat plans to switch Pod Security Admission to restricted enforcement globally in a future minor release.
-When restricted enforcement will be enabled, pods with pod security violations will be rejected.
-
-vSphere CSI Topology generally available::
-
-This release of OpenShift provides support for defining regions and zones in vSphere through categories and tags.
-After the categories and tags are created, they can be referenced in MachineSets to create VMs in these failure domains.
-+
-See the https://docs.openshift.com/container-platform/4.12/storage/container_storage_interface/persistent-storage-csi-vsphere.html#persistent-storage-csi-vsphere-top-aware_persistent-storage-csi-vsphere[upstream documentation] for more details.
-+
-NOTE: OpenShift 4.12 still doesn't support installation across multiple vSphere Datacenters.
-
-Support for CoreDNS cache tuning::
-
-You can now configure the time-to-live (TTL) duration of both successful and unsuccessful DNS queries cached by CoreDNS.
-
-'''
-
-Both the release notes and the blog post highlight a number of new operators which are available for OpenShift 4.12:
-
-Security Profiles Operator (https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.12-blog#securityprofiles[What's New blog post])::
-
-The Security Profiles Operator (SPO) exposes the power of SELinux, seccomp, and AppArmor to end users.
-The technologies aren't mutually exclusive, and these are combined in the SPO to make it easier to consume.
-Seccomp reduces the chance that a kernel vulnerability will be successfully exploited, whereas SELinux and AppArmor prevent applications from accessing files they shouldn't.
-+
-See the https://docs.openshift.com/container-platform/4.12/security/security_profiles_operator/spo-overview.html[upstream documentation] for more details.
-
-Ingress Node Firewall Operator (https://cloud.redhat.com/blog/a-guide-to-providing-insight-with-network-observability[What's New blog post])::
-
-OpenShift 4.12 introduces a new stateless Ingress Node Firewall Operator.
-Administrators configure firewall rules at the node level to control the flow of network traffic to/from the node by controlling which interface and remote hosts the Kubernetes API server can be accessed from.
-+
-See the https://docs.openshift.com/container-platform/4.12/networking/ingress-node-firewall-operator.html#ingress-node-firewall-operator[upstream documentation] for more details.
-
-Network Observability Operator (https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.12-blog#observabilityoperator[What's New blog post])::
-
-The OpenShift Network Observability Operator is now generally available in OpenShift 4.12.
-This operator provides a set of tools for monitoring and observability of network traffic for identifying network bottlenecks, troubleshooting connectivity issues, and optimizing network performance in OpenShift clusters.
-+
-See the https://docs.openshift.com/container-platform/4.12/networking/network_observability/network-observability-overview.html#network-observability-overview[upstream documentation] and https://cloud.redhat.com/blog/a-guide-to-providing-insight-with-network-observability[introduction blog post] for more details.
-
-== OpenShift 4.11
-
-OpenShift version 4.11 is available since 2022-08-10.
-This version is based on Kubernetes 1.24.
-Find the release notes at the upstream documentation as https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html[OpenShift Container Platform 4.11 release notes].
-The https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.11[What’s New in Red Hat OpenShift 4.11] blog post is also a valuable resource.
-
-More flexible alert routing for User Workload Monitoring::
-
-You can now https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-monitoring-enable-alert-routing-for-user-workload-momitoring[enable alert routing] as well as spin up a https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-monitoring-enable-dedicated-alertmanager-for-user-defined-alerts[dedicated Alertmanager] for User Workload Monitoring.
-
-Disk usage base metrics retention::
-
-Metrics retention can now be defined based on https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-monitoring-confgure-retention-size-for-metrics-storage[disk usage].
-
-New subcommand to work with tokens::
-
-`oc create token` replaces https://docs.openshift.com/container-platform/4.11/release_notes/ocp-4-11-release-notes.html#ocp-4-11-oc-commands-flags-tokens-deprecated[several existing commands].
-Check your aliases, scripts and other convenience tools you use.
-+
-[IMPORTANT]
-====
-The `oc create token` command generates a token with a limited lifetime.
-Use command line argument `--duration` to adjust the token lifetime to suit your purposes.
-Please be aware that the API server may return a token with a shorter or longer lifetime than you requested.
-
-If you need a token which doesn't expire, we recommend that you manually create a https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#manually-create-a-service-account-api-token[ServiceAccount API token secret].
-After creating a secret as described, you can extract the token with `oc get secret <my-token-secret> -ogo-template='{{.data.token|base64decode}}'`.
-====
-
-Deprecation of `snapshot.storage.k8s.io/v1beta1`::
-
-Before update a cluster, check for usage of `snapshot.storage.k8s.io/v1beta1`.
-If used, inform the affected users and ask them to update to `snapshot.storage.k8s.io/v1`.
-
-Pod Security Admission is now enabled::
-
-https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] now runs globally with restricted audit logging and API warnings.
-This means while everything should still run as it did before, if users rely on security contexts being set by OpenShift's SCCs they'll most likely encounter warnings like the following:
-+
-[source,console]
-----
-Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "nginx" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "nginx" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "nginx" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "nginx" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
-----
-+
-Users will need to explicitly set security contexts in their manifests to avoid these warnings.
-
-Support for configuring maximum number of connections for Ingress Controller::
-
-You can now set the maximum number of simultaneous connections that can be established per HAProxy process in the Ingress Controller to any value between 2000 and 2,000,000.
-
-...
-
-From https://cloud.redhat.com/blog/whats-new-in-red-hat-openshift-4.11[the blog post] we learn:
-
-Automatic fail-forward updates for failed operator installations::
-
-In the context of the Operator Lifecycle Manager (OLM), a failed operator update always required manual clean up.
-With OpenShift 4.11, one can enable an option to automatically recover failed updates.
-If enabled and a newer patch version is available, the update gets started even if a previous update failed.
-
-Partial updates::
-
-OpenShift 4.11 allows updating the control plane and individual node groups individually.
-They, however, must be updated all within a time window of 60 days.
-
-Conditional updates::
-
-OpenShift always only listed newer versions available to the cluster.
-Available means, it's safe to update to that version.
-OpenShift 4.11 on the Web Console now explains the risks of a certain update.
-Cluster administrators can then decide to do the update anyway and accept that risk.
-
-Web Console integrated observability::
-
-Red Hat decided to remove the individual observability UIs.
-In OpenShift 4.11 they have removed the UIs for Prometheus and Grafana.
-The metrics and graphs are still available and can now be found within the OpenShift Web Console.

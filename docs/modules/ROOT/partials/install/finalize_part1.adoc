@@ -1,7 +1,4 @@
-ifeval::["{provider}" == "cloudscale"]
-:acme-dns-update-zone: yes
-endif::[]
-ifeval::["{provider}" == "openstack"]
+ifeval::["{provider}" != "exoscale"]
 :acme-dns-update-zone: yes
 endif::[]
 

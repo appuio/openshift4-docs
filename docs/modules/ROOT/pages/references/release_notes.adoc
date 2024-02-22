@@ -25,6 +25,36 @@ With OpenShift Container Platform 4.14, a new oc command-line interface (CLI) fl
 
 With this enhancement, you can log in by using a web browser, so that you do not need to insert your access token into the command line.
 
+Update to HAProxy 2.6::
+With this release, OpenShift Container Platform is updated to HAProxy 2.6.
+
+New option to deploy monitoring web console plugin resources::
+With this release, the monitoring pages in the Observe section of the OpenShift Container Platform web console are deployed as a dynamic plugin. With this change, the Cluster Monitoring Operator (CMO) is now the component that deploys the OpenShift Container Platform web console monitoring plugin resources.
+
+New option to specify resource limits for all monitoring components::
+With this release, you can now specify resource requests and limits for all monitoring components, including the following:
+* Alertmanager
+* kube-state-metrics
+* monitoring-plugin
+* node-exporter
+* openshift-state-metrics
+* Prometheus
+* Prometheus Adapter
+* Prometheus Operator and its admission webhook service
+* Telemeter Client
+* Thanos Querier
+* Thanos Ruler
+
+In previous versions of OpenShift Container Platform, you could only set options for Prometheus, Alertmanager, Thanos Querier, and Thanos Ruler.
+
+DeploymentConfig resources are now deprecated::
+As of OpenShift Container Platform 4.14, `DeploymentConfig` objects are deprecated. `DeploymentConfi` objects are still supported, but are not recommended for new installations. Only security-related and critical issues will be fixed.
+
+Instead, use `Deploymen` objects or another alternative to provide declarative updates for pods.
+
+Deprecation of the OpenShift SDN network plugin::
+OpenShift SDN CNI is deprecated as of OpenShift Container Platform 4.14. It is currently planned that the network plugin will not be an option for new installations in the next minor release of OpenShift Container Platform. In a subsequent future release, the OpenShift SDN network plugin is planned to be be removed and no longer supported. Red Hat will provide bug fixes and support for this feature until removed, but this feature will no longer receive enhancements. As an alternative to OpenShift SDN CNI, you can use OVN Kubernetes CNI instead.
+
 == OpenShift 4.13
 
 OpenShift version 4.13 is available since 2023-03-17.

@@ -31,7 +31,8 @@ Update to HAProxy 2.6::
 With this release, OpenShift Container Platform is updated to HAProxy 2.6.
 
 New option to deploy monitoring web console plugin resources::
-With this release, the monitoring pages in the Observe section of the OpenShift Container Platform web console are deployed as a dynamic plugin. With this change, the Cluster Monitoring Operator (CMO) is now the component that deploys the OpenShift Container Platform web console monitoring plugin resources.
+With this release, the monitoring pages in the Observe section of the OpenShift Container Platform web console are deployed as a dynamic plugin.
+With this change, the Cluster Monitoring Operator (CMO) is now the component that deploys the OpenShift Container Platform web console monitoring plugin resources.
 
 New option to specify resource limits for all monitoring components::
 With this release, you can now specify resource requests and limits for all monitoring components, including the following:

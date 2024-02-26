@@ -55,7 +55,13 @@ As of OpenShift Container Platform 4.14, `DeploymentConfig` objects are deprecat
 Instead, use `Deployment` objects or another alternative to provide declarative updates for pods.
 
 Deprecation of the OpenShift SDN network plugin::
-OpenShift SDN CNI is deprecated as of OpenShift Container Platform 4.14. It's currently planned that the network plugin won't be an option for new installations in the next minor release of OpenShift Container Platform. In a subsequent future release, the OpenShift SDN network plugin is planned to be be removed and no longer supported. Red Hat will provide bug fixes and support for this feature until removed, but this feature will no longer receive enhancements. As an alternative to OpenShift SDN CNI, you can use OVN Kubernetes CNI instead.
+OpenShift SDN CNI is deprecated as of OpenShift Container Platform 4.14.
+It's currently planned that the network plugin won't be an option for new installations in the next minor release of OpenShift Container Platform.
+In a subsequent future release, the OpenShift SDN network plugin is planned to be be removed and no longer supported.
+Red Hat will provide bug fixes and support for this feature until removed, but this feature will no longer receive enhancements.
+As an alternative to OpenShift SDN CNI, you can use OVN Kubernetes CNI instead.
++
+NOTE: New APPUiO Managed OpenShift 4 clusters are installed with https://access.redhat.com/articles/5436171#isovalent-4[Cilium], a fully certified and supported 3rd party CNI plugin for OpenShift 4.
 
 == OpenShift 4.13
 

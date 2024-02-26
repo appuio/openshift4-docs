@@ -51,8 +51,10 @@ With this release, you can now specify resource requests and limits for all moni
 In previous versions of OpenShift Container Platform, you could only set options for Prometheus, Alertmanager, Thanos Querier, and Thanos Ruler.
 
 DeploymentConfig resources are now deprecated::
-As of OpenShift Container Platform 4.14, `DeploymentConfig` objects are deprecated. `DeploymentConfig` objects are still supported, but aren't recommended for new installations. Only security-related and critical issues will be fixed.
-
+As of OpenShift Container Platform 4.14, `DeploymentConfig` objects are deprecated.
+`DeploymentConfig` objects are still supported, but aren't recommended for new installations.
+Only security-related and critical issues will be fixed.
++
 Instead, use `Deployment` objects or another alternative to provide declarative updates for pods.
 
 Deprecation of the OpenShift SDN network plugin::

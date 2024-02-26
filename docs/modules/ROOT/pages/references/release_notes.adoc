@@ -22,8 +22,10 @@ If any of the APIs are used, inform the affected users and ask them to update th
 
 Logging in to the CLI using a web browser::
 With OpenShift Container Platform 4.14, a new oc command-line interface (CLI) flag, `--web` is now available for the oc login command.
-
++
 With this enhancement, you can log in by using a web browser, so that you don't need to insert your access token into the command line.
++
+TIP: This feature has been backported to OpenShift 4.13 and can already be used on APPUiO Managed OpenShift 4 clusters.
 
 Update to HAProxy 2.6::
 With this release, OpenShift Container Platform is updated to HAProxy 2.6.

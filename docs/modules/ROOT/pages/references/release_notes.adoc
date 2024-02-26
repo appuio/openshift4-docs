@@ -46,7 +46,7 @@ With this release, you can now specify resource requests and limits for all moni
 * Telemeter Client
 * Thanos Querier
 * Thanos Ruler
-
++
 In previous versions of OpenShift Container Platform, you could only set options for Prometheus, Alertmanager, Thanos Querier, and Thanos Ruler.
 
 DeploymentConfig resources are now deprecated::

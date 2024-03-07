@@ -72,27 +72,40 @@ done
 ----
 endif::[]
 
-=== Store the cluster's admin credentials in the password manager
+=== Ensure emergency admin access to the cluster
 
-. Once the cluster's production API certificate has been deployed, edit the cluster's admin kubeconfig file to remove the initial API certificate CA.
-+
-[TIP]
-====
-You may see the error `Unable to connect to the server: x509: certificate signed by unknown authority` when executing `kubectl` or `oc` commands after the cluster's production API certificate has been deployed by Project Syn.
-
-This error can be addressed by removing the initial CA certificate data from the admin kubeconfig as shown in this step.
-====
+. Check that emergency credentials were uploaded and are accessible:
 +
 [source,bash]
 ----
-yq e -i 'del(.clusters[0].cluster.certificate-authority-data)' \
-  "${INSTALLER_DIR}/auth/kubeconfig"
+emergency-credentials-receive "${CLUSTER_ID}"
+# Follow the instructions to use the downloaded kubeconfig file
 ----
++
+[NOTE]
+====
+You need to be in the passbolt group `VSHN On-Call`.
 
-. Save the admin credentials in the https://cloud.passbolt.com/vshn[password manager].
-You can find the password in the file `target/auth/kubeadmin-password` and the kubeconfig in `target/auth/kubeconfig`
+If the command fails, check if the controller is already deployed, running, and if the credentials are uploaded:
+
+[source,bash]
+----
+kubectl -n appuio-emergency-credentials-controller get emergencyaccounts.cluster.appuio.io -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.lastTokenCreationTimestamp}{"\n"}{end}'
+----
+====
+
+. Follow the instructions from `emergency-credentials-receive` to use the downloaded `kubeconfig` file.
 +
 [source,bash]
 ----
-ls -l ${INSTALLER_DIR}/auth/
+export KUBECONFIG="em-${CLUSTER_ID}"
+kubectl get nodes
+oc whoami # should output system:serviceaccount:appuio-emergency-credentials-controller:*
+----
+
+. Invalidate the 10 year admin kubeconfig.
++
+[source,bash]
+----
+kubectl -n openshift-config patch cm admin-kubeconfig-client-ca --type=merge -p '{"data": {"ca-bundle.crt": ""}}'
 ----

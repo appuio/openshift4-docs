@@ -1,10 +1,11 @@
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher - use the go version by mikefarah, not the jq wrapper by kislyuk)
 * `openshift-install` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-install-mac.tar.gz[macOS])
-* `oc` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-client-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-client-mac.tar.gz[macOS]) 
+* `oc` (direct download: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-client-linux.tar.gz[linux], https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-{ocp-minor-version}/openshift-client-mac.tar.gz[macOS])
 * https://kubernetes.io/docs/tasks/tools/#kubectl[`kubectl`]
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
 * `curl`
+* `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
 ifeval::["{provider}" != "vsphere"]
 * `gzip`
 * `docker`

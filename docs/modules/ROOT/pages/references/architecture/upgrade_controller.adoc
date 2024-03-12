@@ -136,15 +136,41 @@ If any of the operators is degraded, the cluster should be considered unhealthy 
 
 It should be possible to exclude operators.
 
+=== The controller can pause machine configuration pools to delay node reboots [[mcp-upgrade-pause]]
+
+This allows to update master nodes and operators during office hours without affecting workload on the worker nodes.
+
+The UpgradeJob is marked as paused if all conditions of <<upgrade-success>> are met but there are paused machine configuration pools.
+
+The overall upgrade timeout (`.spec.timeout`) is unaffected by the pause and continues to count down.
+
+[source,yaml]
+----
+machineConfigPools:
+- matchLabels: <1>
+    name: x-app-night-maintenance
+  delayUpgrade:
+    startAfter: "1h" <2>
+    startBefore: "2h" <3>
+----
+<1> The label selector to match the machine configuration pool.
+<2> How long to delay the upgrade.
+Relative to the `.spec.startAfter` field.
+<3> The maximum delay to wait for the upgrade.
+If the controller can't unpause the upgrade within this time, the upgrade is marked as failed.
+
 === The controller must expose Prometheus metrics indicating current state of upgrade
 
 The controller should expose Prometheus metrics indicating the current state of the upgrade and the controller itself.
 This allows us to monitor the controller and the upgrade process and create alerts.
 
-=== When's an upgrade job considered successful?
+=== When's an upgrade job considered successful? [[upgrade-success]]
 
 The controller monitors the `ClusterVersion/version` for the `Available` condition.
-The `UpgradeJob` is considered successful if the `Available` condition is `True` and the `Version` matches the desired version.
+The `UpgradeJob` is considered successful if
+
+- the `Available` condition is `True` and the `Version` matches the desired version.
+- `.Status.UpdatedMachineCount` is equal to `.Status.MachineCount` for all machine configuration pools.
 
 == Custom resource definition
 
@@ -221,6 +247,12 @@ spec:
           - openshift-monitoring
           customQueries:
           - query: "up{job=~"^argocd-.+$",namespace="syn"} != 1"
+        machineConfigPools: <8>
+        - matchLabels:
+            name: x-app-night-maintenance
+          delayUpgrade:
+            startAfter: "1h"
+            startBefore: "2h"
 ----
 <1> The upgrade schedule as defined in <<upgrade-schedule>>.
 <2> The time window before the maintenance window in which the upgrade version is pinned.
@@ -233,6 +265,9 @@ The upgrade is marked as failed if it takes longer than this.
 <6> The health checks to perform after the upgrade as defined in <<upgrade-health-checks>>.
 <7> Set a label on the `UpgradeJob`.
 Allow selecting the created jobs in the `UpgradeJobHook` manifest.
+<8> Allows managing machine configuration pools.
+Currently supports delaying upgrades to nodes in the pool.
+See <<mcp-upgrade-pause>>.
 
 === UpgradeJob
 
@@ -255,6 +290,7 @@ spec:
     upgradeTimeout: "2h"
     preUpgradeHealthChecks: {} ...
     postUpgradeHealthChecks: {} ...
+    machineConfigPools: [] ...
 ----
 <1> The name of the `UpgradeJob` is the timestamp when the upgrade should start plus a hash of the `UpgradeConfig` object.
 The timestamp is primarily used for sorting the `UpgradeJob` objects should multiple exist.

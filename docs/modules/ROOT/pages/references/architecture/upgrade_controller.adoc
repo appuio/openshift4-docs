@@ -251,8 +251,8 @@ spec:
         - matchLabels:
             name: x-app-night-maintenance
           delayUpgrade:
-            startAfter: "1h"
-            startBefore: "2h"
+            delayMin: "1h"
+            delayMax: "2h"
 ----
 <1> The upgrade schedule as defined in <<upgrade-schedule>>.
 <2> The time window before the maintenance window in which the upgrade version is pinned.

@@ -136,7 +136,7 @@ If any of the operators is degraded, the cluster should be considered unhealthy 
 
 It should be possible to exclude operators.
 
-=== The controller can pause machine configuration pools to delay node reboots [[mcp-upgrade-pause]]
+=== The controller can pause and unpause machine configuration pools to delay node reboots [[mcp-upgrade-pause]]
 
 This allows to update master nodes and operators during office hours without affecting workload on the worker nodes.
 

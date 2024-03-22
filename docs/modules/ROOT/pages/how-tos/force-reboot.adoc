@@ -55,8 +55,8 @@ The exact value doesn't matter, but we want to overwrite the `currentConfig` ann
 ----
 old_mc=$(kubectl get mc -o json | \
   jq --arg mcp rendered-$MCP -r \
-  '[.items[] | select(.metadata.name | contains($mcp))] 
-  | sort_by(.metadata.creationTimestamp) | reverse 
+  '[.items[] | select(.metadata.name | contains($mcp))]
+  | sort_by(.metadata.creationTimestamp) | reverse
   | .[1] | .metadata.name' \
 )
 ----
@@ -73,15 +73,15 @@ Don't do this for multiple nodes at the same time, all the nodes for which this 
 timeout=300s <1>
 for node in $(kubectl get node -o name -l $node_selector); do
   echo "Rebooting $node"
-  kubectl annotate --overwrite $node \
+  kubectl --as=cluster-admin annotate --overwrite $node \
     machineconfiguration.openshift.io/currentConfig=$old_mc
   echo "Waiting for drain... (up to $timeout)"
-  if !oc wait --timeout=$timeout $node --for condition=notready; then
+  if ! oc wait --timeout=$timeout $node --for condition=ready=false; then
     echo "$node didn't drain and reboot, please check status, aborting loop"
     break
   fi
   echo "Waiting for reboot completed... (up to $timeout)"
-  if !oc wait --timeout=$timeout $node --for condition=ready; then
+  if ! oc wait --timeout=$timeout $node --for condition=ready; then
     echo "$node didn't become ready, please check status, aborting loop"
     break
   fi

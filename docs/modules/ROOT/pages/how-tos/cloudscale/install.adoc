@@ -207,10 +207,6 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
   password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
 
-# Copy the Dagobert OpenShift Node Collector Credentials
-vault kv get -format=json "clusters/kv/template/dagobert" | jq '.data.data' \
-  | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/dagobert" -
-
 # Copy the VSHN acme-dns registration password
 vault kv get -format=json "clusters/kv/template/cert-manager" | jq '.data.data' \
   | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cert-manager" -

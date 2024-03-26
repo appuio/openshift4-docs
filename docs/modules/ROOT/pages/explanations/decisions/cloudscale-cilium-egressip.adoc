@@ -1,0 +1,67 @@
+= Floating egress IPs with Cilium on cloudscale
+
+== Problem
+
+We've got multiple customers that require a single stable egress IP for all traffic from a particular namespace.
+This is usually necessary when connecting to applications outside the cluster which implement IP-based allow lists.
+Notably, all of those customers use private IPs for traffic going to the external applications.
+
+Currently, all of those customers use openshift-sdn's automatic egress IP feature which assigns a single egress IP to a namespace and ensures that this IP is assigned to a node that's ready to route traffic.
+However, Cilium doesn't provide a highly available option that allows specifying a single "floating" egress IP.
+
+=== Goals
+
+* Replacement for openshift-sdn's automatic egress IP
+* Allow customers to keep the egress IP to namespace assignment when migrating from openshift-sdn to Cilium
+
+=== Non-goals
+
+* Supporting public egress IPs
+
+== Alternatives
+
+[#current_solution]
+=== Current solution for Cilium egress IPs on cloudscale
+
+For customers that don't require a single stable egress IP, we've engineered a solution that assigns a trio of egress IPs to a namespace.
+In that setup, each of the three IPs is attached to an infra node, and Cilium distributes egress traffic over the healthy nodes footnote:[This requires the Cilium HA egress gateway feature which is only availble in Cilium EE].
+However, for customers that require a single egress IP that remains stable when migrating from openshift-sdn to Cilium, this solution isn't suitable since it would require them to update the IP allow lists for many external systems.
+Additionally, this solution requires 3x the amount of IPs for egress compared to openshift-sdn, which would exhaust the available IPs for some customers.
+
+=== Single egress IP with Cilium traffic load balancing
+
+==== Option 1: Assign IP to an infra node with keepalived
+
+We considered a setup where we assign the single egress IP to one of the infra nodes with `keepalived` and let Cilium load balance the traffic to the node hosting the IP at any given point.
+This approach doesn't work in practice, since Cilium will always load balance traffic to all healthy infra nodes without taking into account whether the specified egress IP is assigned to the node.
+
+==== Option 2: Assign IP to all infra nodes
+
+We also considered a setup where we assign the single egress IP to all the infra nodes and let Cilium load balance the traffic to the node hosting the IP at any given point.
+This approach doesn't work in practice, since the return traffic will be routed to the infra node is present for the egress IP in the default gateway's (or router's) ARP cache.
+This node may or may not be the node that Cilium picked when load balancing the initial outgoing request.
+
+==== Option 3: Let Cilium assign the egress IP to a node
+
+Originally, we envisioned that Cilium would automatically assign an egress IP which is in the L2 subnet of the cluster nodes to one of the nodes indicated by the egress gateway's node selector.
+However, this isn't the case and Cilium currently (<= Cilium 1.15) has a hard requirement that the selected egress IP is assigned to an interface on the node(s) that are selected by the egress gateway config.
+
+=== Trio of egress IPs with SNAT on gateway
+
+The final approach we've considered is to implement the <<current_solution,current solution for cloudscale>> and enhance it by implementing source NAT (SNAT) rules on the gateway (or router).
+This approach uses Cilium's HA egress gateway feature to load balance egress traffic across three "shadow copies" of the real egress IP.
+
+The three shadow copies are allocated from three additional unused subnets whose size matches the existing egress CIDR used by openshift-sdn.
+We assign one "shadow CIDR" to each infra node and ensure that we can pick the matching IP for the egress IP from each shadow CIDR.
+
+On the gateway, we install SNAT rules that map each shadow CIDR to the original egress CIDR.
+This ensures that external systems will always see the original egress IP for a namespace even though we use the three shadow copies of the IP internally.
+
+== Decision
+
+We implement single stable egress IPs on cloudscale with a Trio of shadow egress IPs and SNAT rules on the gateway.
+
+== Rationale
+
+This approach has turned out to be the only workable solution that allows us to ensure that egress IPs remain stable when migrating from openshift-sdn to Cilium for customers that use openshift-sdn's automatic egress IP mechanism.
+Additionally, the chosen implementation uses the same basic approach that we've implemented for other customers on cloudscale that have less strict requirements for their egress IPs.

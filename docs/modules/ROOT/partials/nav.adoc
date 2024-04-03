@@ -99,8 +99,8 @@
 * Update
 ** xref:oc4:ROOT:how-tos/update_maintenance/automated-upgrades-at-vshn.adoc[]
 ** xref:oc4:ROOT:how-tos/new_minor.adoc[Get ready for new minor]
-** xref:oc4:ROOT:how-tos/update_maintenance/v_4_12.adoc[Upgrade to OCP4.12]
 ** xref:oc4:ROOT:how-tos/update_maintenance/v_4_13.adoc[Upgrade to OCP4.13]
+** xref:oc4:ROOT:how-tos/update_maintenance/v_4_14.adoc[Upgrade to OCP4.14]
 ** xref:oc4:ROOT:references/architecture/upgrade_controller.adoc[Upgrade Controller]
 ** xref:oc4:ROOT:references/architecture/emergency_credentials.adoc[]
 ** xref:oc4:ROOT:how-tos/maintenance_troubleshooting.adoc[Maintenance troubleshooting]

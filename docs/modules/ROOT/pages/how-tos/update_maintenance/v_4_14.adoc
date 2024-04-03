@@ -1,12 +1,12 @@
-= Upgrade to OpenShift 4.12 / Administrator Acknowledgment
-:page-aliases: how-tos/update_maintenance/v_4_9.adoc
+= Upgrade to OpenShift 4.14 / Administrator Acknowledgment
+:page-aliases: how-tos/update_maintenance/v_4_12.adoc
 
-OpenShift Container Platform 4.12 uses Kubernetes 1.25, which removed a significant number of deprecated `v1beta1` APIs.
-A manual acknowledgment must be provided before the cluster can be upgraded to 4.12.
+OpenShift Container Platform 4.14 uses Kubernetes 1.27, which removed some of the deprecated `v1beta1` APIs.
+A manual acknowledgment must be provided before the cluster can be upgraded to 4.14.
 
-More information can be found in https://access.redhat.com/articles/6955381.
+More information can be found in the https://docs.openshift.com/container-platform/4.14/updating/preparing_for_updates/updating-cluster-prepare.html[OpenShift Documentation].
 
-== Upgrade to 4.12
+== Upgrade to 4.14
 
 . Check requests to removed APIs
 +
@@ -22,16 +22,14 @@ The last column is requests in the last 24 hours.
 +
 [source,bash]
 ----
-1.25    cronjobs.v1beta1.batch  0
-1.25    poddisruptionbudgets.v1beta1.policy     0
-1.25    podsecuritypolicies.v1beta1.policy      462
+1.27    csistoragecapacities.v1beta1.storage.k8s.io     0
 ----
 +
 If you see counts `> 0` you can check from whom the API calls are originating.
 +
 [source,bash]
 ----
-kubectl get apirequestcounts customresourcedefinitions.v1beta1.apiextensions.k8s.io \
+kubectl get apirequestcounts csistoragecapacities.v1beta1.storage.k8s.io \
   --as=cluster-admin \
   -o jsonpath='{range ..username}{$}{"\n"}{end}' \
   | sort | uniq
@@ -50,7 +48,7 @@ More advanced query: Show only resources with create and update requests.
 kubectl --as=cluster-admin get apirequestcount -ojson | jq '
     .items[] |
         select(
-            .status.removedInRelease == "1.25" and .status.requestCount > 0
+            .status.removedInRelease == "1.27" and .status.requestCount > 0
         ) |
         {
             resource: .metadata.name,
@@ -80,7 +78,7 @@ kubectl --as=cluster-admin get apirequestcount -ojson | jq '
 kubectl patch cm admin-acks \
   --as=cluster-admin \
   -n openshift-config \
-  --patch '{"data":{"ack-4.11-kube-1.25-api-removals-in-4.12":"true"}}' \
+  --patch '{"data":{"ack-4.13-kube-1.27-api-removals-in-4.14":"true"}}' \
   --type=merge
 ----
 

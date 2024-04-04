@@ -1,6 +1,6 @@
 = Installation on Exoscale
-:ocp-minor-version: 4.13
-:k8s-minor-version: 1.26
+:ocp-minor-version: 4.14
+:k8s-minor-version: 1.27
 :ocp-patch-version: {ocp-minor-version}.0
 :provider: exoscale
 :kubectl_extra_args:
@@ -19,7 +19,7 @@ This how-to guide is still a work in progress and will change.
 It's currently very specific to VSHN and needs further changes to be more generic.
 --
 
-NOTE: This guide is currently assuming that you're using https://github.com/appuio/terraform-openshift4-exoscale/releases/tag/v4.0.0[`terraform-openshift4-exoscale` v4] (component https://github.com/appuio/component-openshift4-terraform/releases/tag/v6.0.0[openshift4-terraform v6])
+NOTE: This guide is currently assuming that you're using https://github.com/appuio/terraform-openshift4-exoscale/releases/tag/v5.0.0[`terraform-openshift4-exoscale` v5] (component https://github.com/appuio/component-openshift4-terraform/releases/tag/v7.0.1[openshift4-terraform v7])
 
 == Starting situation
 
@@ -35,7 +35,7 @@ include::partial$install/prerequisites.adoc[]
 * `md5sum`
 * `virt-edit`
 * `cpio`
-* `exo` >= v1.75.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `exo` >= v1.76.0 https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * An Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key] with full permissions
 * https://community.exoscale.com/documentation/dns/quick-start/#subscribing-to-the-service[DNS subscription] activated in the Exoscale organisation
 

@@ -104,11 +104,6 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
 # Generate a password for the cluster object backups
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
   password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
-
-# Copy the VSHN acme-dns registration password
-vault kv get -format=json "clusters/kv/template/cert-manager" | jq '.data.data' \
-  | vault kv put -cas=0 "clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cert-manager" -
-
 ----
 
 include::partial$install/prepare-commodore.adoc[]

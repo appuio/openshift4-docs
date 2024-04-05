@@ -96,7 +96,7 @@ ifeval::["{provider}" == "exoscale"]
 +
 [IMPORTANT]
 ====
-Ensure that you're using component `openshift4-terraform` v5.0.0 or newer.
+Ensure that you're using component `openshift4-terraform` v7.0.0 or newer.
 Otherwise the instructions in this how-to might not apply.
 ====
 endif::[]

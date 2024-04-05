@@ -3,7 +3,7 @@
 [source,bash]
 ----
 # use lower case for team name.
-# e.g. TEAM=tarazed
+# e.g. TEAM=aldebaran
 TEAM=<team-name>
 ----
 

@@ -12,8 +12,10 @@
 
 IMPORTANT: Make sure that your `$KUBECONFIG` points to the cluster you want to migrate before starting.
 
-:duration: +120 minutes
-include::partial$create-alertmanager-silence-all-projectsyn.adoc[]
+:alert_statement: alertname!=Watchdog
+:duration: 3h
+:comment: cilium migration
+include::partial$create-amtool-silence.adoc[]
 
 . Select cluster
 +
@@ -268,4 +270,4 @@ include::partial$enable-argocd-autosync.adoc[]
 
 == Cleanup alert silence
 
-include::partial$remove-alertmanager-silence-all-projectsyn.adoc[]
+include::partial$expire-amtool-silence.adoc[]

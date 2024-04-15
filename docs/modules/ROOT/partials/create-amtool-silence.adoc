@@ -1,0 +1,12 @@
+// see https://manpages.debian.org/unstable/prometheus-alertmanager/amtool.1.en.html#silence_add_%5B%3Cflags%3E%5D_%5B%3Cmatcher-groups%3E...%5D
+. Create alertmanager silence
++
+[source,bash,subs="attributes+"]
+----
+silence_id=$(
+    kubectl --as=cluster-admin -n openshift-monitoring exec \
+    sts/alertmanager-main -- amtool --alertmanager.url=http://localhost:9093 \
+    silence add {alert_statement} --duration="{duration}" -c "{comment}"
+)
+echo $silence_id
+----

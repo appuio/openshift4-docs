@@ -12,17 +12,10 @@
 
 IMPORTANT: Make sure that your `$KUBECONFIG` points to the cluster you want to migrate before starting.
 
-. Silence all Project Syn alerts
-+
-[source,bash]
-----
-silence_id=$(
-    kubectl --as=cluster-admin -n openshift-monitoring exec \
-    sts/alertmanager-main -- amtool --alertmanager.url=http://localhost:9093 \
-    silence add alertname!=Watchdog --duration="3h" -c "cilium migration"
-)
-echo $silence_id
-----
+:alert_statement: alertname!=Watchdog
+:duration: 3h
+:comment: cilium migration
+include::partial$create-amtool-silence.adoc[]
 
 . Select cluster
 +
@@ -277,10 +270,4 @@ include::partial$enable-argocd-autosync.adoc[]
 
 == Cleanup alert silence
 
-. Expire the silence
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n openshift-monitoring exec sts/alertmanager-main --\
-    amtool --alertmanager.url=http://localhost:9093 silence expire $silence_id
-----
+include::partial$expire-amtool-silence.adoc[]

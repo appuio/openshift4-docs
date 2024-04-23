@@ -84,18 +84,6 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy -l app=rook-ceph-mon
 ----
 
-. Reset the MON failover timeout
-+
-[source,bash]
-----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
-  -p '[{
-    "op": "replace",
-    "path": "/spec/healthCheck/daemonHealth/mon",
-    "value": {}
-  }]'
-----
-
 ifeval::["{mon-argocd-autosync-already-disabled}" != "yes"]
 include::partial$enable-argocd-autosync.adoc[]
 endif::[]

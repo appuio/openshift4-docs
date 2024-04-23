@@ -41,10 +41,15 @@ include::partial$cloudscale/configure-terraform-secrets.adoc[]
 
 include::partial$setup_terraform.adoc[]
 
-== Set alert silence
+== Set alert silence and pause ArgoCD
 
 :duration: +60 minutes
 include::partial$create-alertmanager-silence.adoc[]
+
+. Disable auto sync for component `rook-ceph`.
+This allows us to temporarily make manual changes to the Rook Ceph cluster.
++
+include::partial$disable-argocd-autosync.adoc[]
 
 == Replace node
 
@@ -70,6 +75,8 @@ include::partial$delete-node.adoc[]
 == Finish up
 
 include::partial$remove-alertmanager-silence.adoc[]
+
+include::partial$enable-argocd-autosync.adoc[]
 
 == Upstream documentation
 

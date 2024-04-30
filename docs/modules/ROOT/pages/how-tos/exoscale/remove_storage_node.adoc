@@ -151,7 +151,9 @@ include::partial$storage-ceph-remove-mon.adoc[]
 
 === Remove VM
 
-include::partial$delete-node.adoc[]
+include::partial$drain-node-immediately.adoc[]
+
+include::partial$delete-node-vm.adoc[]
 
 == Finish up
 

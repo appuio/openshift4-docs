@@ -70,7 +70,9 @@ include::partial$storage-ceph-remove-mon.adoc[]
 
 === Clean up the old node
 
-include::partial$delete-node.adoc[]
+include::partial$drain-node-immediately.adoc[]
+
+include::partial$delete-node-vm.adoc[]
 
 == Finish up
 

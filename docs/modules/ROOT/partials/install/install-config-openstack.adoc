@@ -24,9 +24,9 @@ EOF
 cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
 apiVersion: v1
 metadata:
-  name: ${CLUSTER_ID}
-baseDomain: ${BASE_DOMAIN}
-compute: <1>
+  name: ${CLUSTER_ID} <1>
+baseDomain: ${BASE_DOMAIN} <1>
+compute: <2>
   - architecture: amd64
     hyperthreading: Enabled
     name: worker
@@ -37,7 +37,7 @@ compute: <1>
         rootVolume:
           size: 100
           type: __DEFAULT__ # TODO: is this generally applicable?
-        additionalSecurityGroupIDs: <2>
+        additionalSecurityGroupIDs: <3>
           - ${CILIUM_SECURITY_GROUP_ID}
 controlPlane:
   architecture: amd64
@@ -50,11 +50,11 @@ controlPlane:
       rootVolume:
         size: 100
         type: __DEFAULT__ # TODO: is this generally applicable?
-      additionalSecurityGroupIDs: <2>
+      additionalSecurityGroupIDs: <3>
         - ${CILIUM_SECURITY_GROUP_ID}
 platform:
   openstack:
-    cloud: shiftstack <3>
+    cloud: shiftstack <4>
     externalNetwork: ${EXTERNAL_NETWORK_NAME}
     apiFloatingIP: ${API_VIP}
     ingressFloatingIP: ${INGRESS_VIP}
@@ -67,9 +67,11 @@ pullSecret: |
 sshKey: "$(cat $SSH_PUBLIC_KEY)"
 EOF
 ----
-<1> We only provision a single compute machine set.
+<1> Make sure that the values here match the value of `$CLUSTER_DOMAIN` when combined as `<metadata.name>.<baseDomain>`.
+Otherwise, the installation will most likely fail.
+<2> We only provision a single compute machine set.
 The final machine sets will be configured through Project Syn.
-<2> We attach the Cilium security group to both the control plane and the worker nodes.
+<3> We attach the Cilium security group to both the control plane and the worker nodes.
 This ensures that there's no issues with Cilium traffic during bootstrapping.
-<3> This field must match the entry in `clouds` in the `clouds.yaml` file.
+<4> This field must match the entry in `clouds` in the `clouds.yaml` file.
 If you're following this guide, you shouldn't need to adjust this.

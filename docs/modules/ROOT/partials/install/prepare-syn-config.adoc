@@ -18,9 +18,6 @@ fi
 +
 [source,bash,subs="attributes+"]
 ----
-yq eval -i ".parameters.openshift.baseDomain = \"${CLUSTER_DOMAIN}\"" \
-  ${CLUSTER_ID}.yml
-
 yq eval -i ".parameters.openshift.infraID = \"$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")\"" \
   ${CLUSTER_ID}.yml
 

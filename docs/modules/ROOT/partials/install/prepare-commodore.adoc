@@ -18,12 +18,51 @@ mkdir -p inventory/classes/
 git clone $(curl -sH"Authorization: Bearer $(commodore fetch-token)" "${COMMODORE_API_URL}/tenants/${TENANT_ID}" | jq -r '.gitRepo.url') inventory/classes/${TENANT_ID}
 ----
 
-. Add Cilium to cluster configuration
+. Configure the cluster's domain in Project Syn
++
+[source,bash]
+----
+export CLUSTER_DOMAIN="${CLUSTER_ID}.${BASE_DOMAIN}" <1>
+----
+<1> Adjust this as necessary if you're using a non-standard cluster domain.
++
+[IMPORTANT]
+====
+The cluster domain configured here must be correct.
+The value is used to configure how Cilium connects to the cluster's K8s API.
+====
 +
 [source,bash]
 ----
 pushd "inventory/classes/${TENANT_ID}/"
 
+yq eval -i ".parameters.openshift.baseDomain = \"${CLUSTER_DOMAIN}\"" \
+  ${CLUSTER_ID}.yml
+
+git commit -a -m "Configure cluster domain for ${CLUSTER_ID}"
+----
+
+. Add Cilium to cluster configuration
++
+[NOTE]
+====
+These instructions assume that Cilium is configured to use `api-int.${CLUSTER_DOMAIN}:6443` to connect to the cluster's K8s API.
+To ensure that that's the case, add the configuration shown below somewhere in the Project Syn config hierarchy.
+
+[source,yaml]
+----
+parameters:
+  cilium:
+    cilium_helm_values:
+      k8sServiceHost: api-int.${openshift:baseDomain}
+      k8sServicePort: "6443"
+----
+
+For VSHN, this configuration is set in the https://git.vshn.net/syn/commodore-defaults/-/merge_requests/1789[Commodore global defaults (internal)].
+====
++
+[source,bash]
+----
 yq eval -i '.applications += ["cilium"]' ${CLUSTER_ID}.yml
 
 yq eval -i '.parameters.networkpolicy.networkPlugin = "cilium"' ${CLUSTER_ID}.yml

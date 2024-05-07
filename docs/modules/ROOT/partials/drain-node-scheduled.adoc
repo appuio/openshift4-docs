@@ -1,0 +1,93 @@
+. Create an adhoc-config for the UpgradeJobHook that will drain the node.
++
+[source,bash,subs="attributes+"]
+----
+pushd "../../../inventory/classes/$TENANT_ID"
+cat > manifests/$CLUSTER_ID/drain_node_hook <<EOF
+---
+apiVersion: managedupgrade.appuio.io/v1beta1
+kind: UpgradeJobHook
+metadata:
+  name: drain-node
+  namespace: appuio-openshift-upgrade-controller
+spec:
+  events:
+    - Finish
+  selector:
+    matchLabels:
+      appuio-managed-upgrade: "true"
+  run: Next
+  template:
+    spec:
+      template:
+        spec:
+          containers:
+            - args:
+                - -c
+                - |
+                  #!/bin/sh
+                  set -e
+                  oc adm drain {node-delete-list} --delete-emptydir-data --ignore-daemonsets
+              command:
+                - sh
+              image: quay.io/appuio/oc:v4.13
+              name: remove-nodes
+              env:
+                - name: HOME
+                  value: /export
+              volumeMounts:
+                - mountPath: /export
+                  name: export
+              workingDir: /export
+          restartPolicy: Never
+          volumes:
+            - emptyDir: {}
+              name: export
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: drain-nodes-upgrade-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: appuio-openshift-upgrade-controller
+EOF
+
+git commit -am "Schedule drain of node {node-delete-list} on cluster $CLUSTER_ID"
+git push
+popd
+----
+
+. Wait until after the next maintenance window.
+. Confirm the node has been drained.
++
+[source,bash,subs="attributes+"]
+----
+kubectl get node {node-delete-list}
+----
+
+. Clean up UpgradeJobHook
++
+[source,bash,subs="attributes+"]
+----
+# after redoing the local environment and preparation of terraform:
+pushd "../../../inventory/classes/$TENANT_ID"
+rm manifests/$CLUSTER_ID/drain_node_hook
+git commit -am "Remove UpgradeJobHook to drain node {node-delete-list} on cluster $CLUSTER_ID"
+git push
+popd
+----
+
+. Delete the node(s) from the cluster
++
+[source,bash,subs="attributes+"]
+----
+for node in $(echo -n {node-delete-list}); do
+  kubectl --as=cluster-admin delete node "${node}"
+done
+----

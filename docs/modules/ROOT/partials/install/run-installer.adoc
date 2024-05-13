@@ -25,12 +25,17 @@ yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
 cp catalog/manifests/cilium/olm/* target/manifests/
 ----
 
-. Extract the cluster domain from the generated manifests
+. Verify that the generated cluster domain matches the desired cluster domain
 +
 [source,bash]
 ----
-export CLUSTER_DOMAIN=$(yq e '.spec.baseDomain' \
+GEN_CLUSTER_DOMAIN=$(yq e '.spec.baseDomain' \
   "${INSTALLER_DIR}/manifests/cluster-dns-02-config.yml")
+if [ "$GEN_CLUSTER_DOMAIN" != "$CLUSTER_DOMAIN" ]; then
+  echo -e "\033[0;31mGenerated cluster domain doesn't match expected cluster domain: Got '$GEN_CLUSTER_DOMAIN', want '$CLUSTER_DOMAIN'\033[0;0m"
+else
+  echo -e "\033[0;32mGenerated cluster domain matches expected cluster domain.\033[0;0m"
+fi
 ----
 
 . Prepare install manifests and ignition config

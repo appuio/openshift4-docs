@@ -12,9 +12,9 @@ mkdir -p "${INSTALLER_DIR}"
 cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
 apiVersion: v1
 metadata:
-  name: ${CLUSTER_ID}
-baseDomain: ${BASE_DOMAIN}
-compute: <1>
+  name: ${CLUSTER_ID} <1>
+baseDomain: ${BASE_DOMAIN} <1>
+compute: <2>
   - architecture: amd64
     hyperthreading: Enabled
     name: worker
@@ -60,5 +60,7 @@ pullSecret: |
 sshKey: "$(cat $SSH_PUBLIC_KEY)"
 EOF
 ----
-<1> We only provision a single compute machine set.
+<1> Make sure that the values here match the value of `$CLUSTER_DOMAIN` when combined as `<metadata.name>.<baseDomain>`.
+Otherwise, the installation will most likely fail.
+<2> We only provision a single compute machine set.
 The final machine sets will be configured through Project Syn.

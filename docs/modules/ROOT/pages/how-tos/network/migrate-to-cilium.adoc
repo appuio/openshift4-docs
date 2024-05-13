@@ -143,20 +143,26 @@ yq eval -i '.parameters.networkpolicy.ignoredNamespaces = ["openshift-oauth-apis
   "${CLUSTER_ID}.yml"
 ----
 
-. Configure component `cilium`.
-We explicitly configure the K8s API endpoint to ensure that the Cilium operator doesn't access the API through the cluster network during the migration.
+. Verify that the cluster's `api-int` DNS record exists
 +
-TIP: When running Cilium with `kubeProxyReplacement=partial`, the API endpoint configuration can be removed after the migration is completed.
-+
-.Explicitly configure the K8s API endpoint
 [source,bash]
 ----
-yq -i '.parameters.cilium.cilium_helm_values.k8sServiceHost="api-int.${openshift:baseDomain}"' \
-  "${CLUSTER_ID}.yml" <1>
-yq -i '.parameters.cilium.cilium_helm_values.k8sServicePort="6443"' \
+export CLUSTER_DOMAIN=$(kubectl get dns cluster -ojsonpath='{.spec.baseDomain}')
+kubectl --as=cluster-admin -n openshift-dns exec ds/node-resolver -- nslookup api-int.${CLUSTER_DOMAIN}
+----
++
+[TIP]
+====
+If the command doesn't return a valid record for `api-int`, the Cilium config needs to be adjusted to use the `api` record to ensure that the Kubernetes API can be accessed.
+
+[source,bash]
+----
+yq -i '.parameters.cilium.cilium_helm_values.k8sServiceHost="api.${openshift:baseDomain}"' \
   "${CLUSTER_ID}.yml"
 ----
-<1> On vSphere clusters, you may need to use `api.${openshift:baseDomain}`.
+====
+
+. Configure component `cilium`.
 +
 .Configure the cluster Pod and Service CIDRs
 [source,bash]

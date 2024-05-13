@@ -26,7 +26,7 @@ We link the Jira ticket to the cluster and set the Lieutenant cluster fact or up
 We don't have much experience with Jira automation or workflow, so we don't know how much effort this would be.
 Additionally Jira isn't in our operational control, so we would need to work with other equally busy teams to get this done.
 
-We're also not if Jira is here to stay or if we will switch to another tool in the nearish future.
+We're also not sure if Jira is here to stay or if we will switch to another tool in the nearish future.
 
 === Automation in GitLab with metrics export to Grafana dashboard
 

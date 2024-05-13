@@ -42,6 +42,8 @@ This could be in the form of a base version with overlaid patches for the `Clust
 
 We would need an additional metric for current channel and future versions.
 
+==== Implementation Idea
+
 [source,yaml]
 ----
 apiVersion: managedupgrade.appuio.io/v1beta1

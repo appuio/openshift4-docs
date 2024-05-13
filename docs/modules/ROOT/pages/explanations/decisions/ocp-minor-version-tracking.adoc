@@ -1,0 +1,79 @@
+= OpenShift Minor Version Upgrade Tracking
+
+== Problem
+
+Upgrading OpenShift minor versions requires a lot of coordination between our OpenShift team, customers, and other teams like AppCat and AppFlow teams.
+It's difficult to track the status of each cluster.
+We need to weekly check if and when we can switch which cluster to a new version and not forget the required pull requests.
+
+=== Goals
+
+* Allowing an overview of the status of each cluster
+* Automating the process of changing the release channel
+
+=== Non-Goals
+
+* Automating customer or team approval for the upgrade
+
+== Proposals
+
+=== Automation in Jira to set cluster facts or update the tenant git repository
+
+Jira is the main tool for tracking customer communication and the status of the upgrade.
+
+We link the Jira ticket to the cluster and set the Lieutenant cluster fact or update the tenant git repository with the required information.
+
+We don't have much experience with Jira automation or workflow, so we don't know how much effort this would be.
+Additionally Jira isn't in our operational control, so we would need to work with other equally busy teams to get this done.
+
+We're also not if Jira is here to stay or if we will switch to another tool in the nearish future.
+
+=== Automation in GitLab with metrics export to Grafana dashboard
+
+We create automation to schedule a pull request merge in the tenant git repository to change the release channel.
+
+The pull request automation would ideally also export metrics about the pull request status and expected merge time to a Grafana dashboard.
+
+=== Automation in upgrade controller with Grafana dashboard
+
+Allow the upgrade controller to schedule `ClusterVersion` changes.
+This could be in the form of a base version with overlaid patches for the `ClusterVersion` resource.
+
+We would need an additional metric for current channel and future versions.
+
+[source,yaml]
+----
+apiVersion: managedupgrade.appuio.io/v1beta1
+kind: ClusterVersion
+metadata:
+  name: version
+  namespace: appuio-openshift-upgrade-controller
+spec:
+  template:
+    spec:
+      channel: stable-4.14
+      clusterID: XXX
+  patches:
+    - from: "2024-07-12T00:00:00Z"
+      patch:
+        spec:
+          channel: stable-4.15
+----
+
+== Decision
+
+We add automation to the upgrade controller to schedule `ClusterVersion` changes and implement the required metrics for the Grafana dashboard.
+
+== Rationale
+
+The upgrade controller is already in place and we've got experience with the codebase.
+
+All relevant timestamps are in a single place and thus easier to track.
+
+We don't want to build Jira automation or GitLab automation for a single use case.
+
+== References
+
+- https://github.com/appuio/openshift-upgrade-controller/blob/master/api/v1beta1/clusterversion_types.go
+- xref:oc4:ROOT:explanations/decisions/scheduled-mr-merges.adoc[]
+- https://ticket.vshn.net/browse/SYN-1387[Build automation for merging MRs at specified times (internal)]

@@ -245,6 +245,7 @@
 *** xref:oc4:ROOT:explanations/decisions/multi-team-alert-routing-base-alerts.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/shipping-metrics-to-centralized-instance.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/scheduled-mr-merges.adoc[]
+** xref:oc4:ROOT:explanations/decisions/ocp-minor-version-tracking.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/subscription-tracking.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/admin-kubeconfig.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/cloudscale-cilium-egressip.adoc[]

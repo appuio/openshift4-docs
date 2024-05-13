@@ -4,7 +4,7 @@
 
 Upgrading OpenShift minor versions requires a lot of coordination between our OpenShift team, customers, and other teams like AppCat and AppFlow teams.
 It's difficult to track the status of each cluster.
-We need to weekly check if and when we can switch which cluster to a new version and not forget the required pull requests.
+We need to check weekly if and when we can switch which cluster to a new version and not forget the required pull requests.
 
 === Goals
 
@@ -17,11 +17,11 @@ We need to weekly check if and when we can switch which cluster to a new version
 
 == Proposals
 
-=== Automation in Jira to set cluster facts or update the tenant git repository
+=== Automation in Jira to set cluster facts or update the tenant Git repository
 
 Jira is the main tool for tracking customer communication and the status of the upgrade.
 
-We link the Jira ticket to the cluster and set the Lieutenant cluster fact or update the tenant git repository with the required information.
+We link the Jira ticket to the cluster and set the Lieutenant cluster fact or update the tenant Git repository with the required information.
 
 We don't have much experience with Jira automation or workflow, so we don't know how much effort this would be.
 Additionally Jira isn't in our operational control, so we would need to work with other equally busy teams to get this done.
@@ -30,7 +30,7 @@ We're also not sure if Jira is here to stay or if we will switch to another tool
 
 === Automation in GitLab with metrics export to Grafana dashboard
 
-We create automation to schedule a pull request merge in the tenant git repository to change the release channel.
+We create automation to schedule a pull request merge in the tenant Git repository to change the release channel.
 
 The pull request automation would ideally also export metrics about the pull request status and expected merge time to a Grafana dashboard.
 

@@ -14,6 +14,7 @@ We need to check weekly if and when we can switch which cluster to a new version
 === Non-Goals
 
 * Automating customer or team approval for the upgrade
+* Automating the admin acknowledgment sometimes needed for the upgrade, this will be handled by an upgrade hook https://github.com/appuio/component-openshift-upgrade-controller/issues/51[appuio/component-openshift-upgrade-controller#51].
 
 == Proposals
 

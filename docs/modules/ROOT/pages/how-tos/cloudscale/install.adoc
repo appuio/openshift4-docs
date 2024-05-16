@@ -50,10 +50,11 @@ include::partial$install/register.adoc[]
 
 === Configure input
 
+Create 2 new cloudscale API tokens with read+write permissions and name them *`<cluster_id>`* and *`<cluster_id>_floaty`* on https://control.cloudscale.ch/service/<your-project>/api-token.
+
 .Access to cloud API
 [source,bash]
 ----
-# https://control.cloudscale.ch/service/<your-project>/api-token
 export CLOUDSCALE_API_TOKEN=<cloudscale-api-token>
 export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 ----

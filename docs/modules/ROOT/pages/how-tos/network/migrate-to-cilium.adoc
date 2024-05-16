@@ -174,7 +174,7 @@ HOST_PREFIX=$(kubectl get network.config cluster \
 
 yq -i '.parameters.cilium.cilium_helm_values.ipam.operator.clusterPoolIPv4MaskSize = "'"${HOST_PREFIX}"'"' \
   "${CLUSTER_ID}.yml"
-yq -i '.parameters.cilium.cilium_helm_values.ipam.operator.clusterPoolIPv4PodCIDR = "'"${POD_CIDR}"'"' \
+yq -i '.parameters.cilium.cilium_helm_values.ipam.operator.~clusterPoolIPv4PodCIDRList = "'"${POD_CIDR}"'"' \
   "${CLUSTER_ID}.yml"
 ----
 
@@ -195,6 +195,12 @@ commodore catalog compile "${CLUSTER_ID}"
 ----
 
 . Patch cluster network config
++
+[IMPORTANT]
+====
+Only execute this step after you've paused all machine config pools.
+Otherwise, nodes may reboot into a state where they're stuck in `NotReady`.
+====
 +
 [source,bash]
 ----
@@ -255,6 +261,16 @@ done
 [NOTE]
 ====
 You may need to grab the cluster-admin credentials to complete this step since the OpenShift OAuth components may be unavailable until they're restarted with Cilium-managed IPs.
+====
++
+[TIP]
+====
+You may want to restart the multus daemonset once the old CNI pods are removed.
+
+[source,bash]
+----
+kubectl --as=cluster-admin -n openshift-multus rollout restart ds/multus
+----
 ====
 +
 [TIP]

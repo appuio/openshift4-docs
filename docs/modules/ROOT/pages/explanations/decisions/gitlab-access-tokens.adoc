@@ -1,0 +1,111 @@
+= Automatically rotating GitLab access tokens
+
+== Problem
+
+As of May 2024, GitLab access tokens now have a limited lifetime and it's no longer possible to create unlimited access tokens for user accounts, projects, or groups.
+VSHN uses GitLab access tokens in many places as part of our CI/CD automation, including in particular one project access token for each cluster catalog repository, which is used by the Commodore pipeline.
+Since rotating this amount of tokens at least once per year is considerable manual effort, we should somehow automate the token rotation.
+
+=== Goals
+
+* The majority of GitLab access tokens used by VSHN tooling are managed and rotated automatically.
+
+=== Non-Goals
+
+* Identifying and automatically managing every single GitLab access token at VSHN
+
+== Proposals
+
+=== Add automatic CI/CD configuration to Project Syn
+
+The majority of GitLab Access Tokens used by VSHN tooling are used in the context of the Commodore CI/CD pipeline.
+The Commodore pipeline runs on VSHN's GitLab runners and requires push access to catalog repositories.
+
+Currently, we manually create a Project Access Token for each catalog repository, which is then manually added to the tenant's CI pipeline in GitLab as a GitLab CI/CD Variable.
+This procedure could be automatically handled by the Lieutenant Operator, which already manages certain other resources in GitLab.
+
+In accordance with a new CI/CD configuration in Lieutenant, Lieutenant could be made to automatically create a Project Access Token in catalog repositories it manages, and write the token into the correct CI/CD variable on the corresponding tenant repository.
+This brings the additional advantage of eliminating the manual setup procedure for new clusters to enable CI/CD.
+
+The new CI/CD configuration could be stored as part of the `gitRepoTemplate` struct, which would automatically apply it to all git repos for one tenant.
+
+As an extension, Lieutenant could also be made to rotate its own Access Token (the one which is used to manage repositories in the first place) on a regular basis.
+However, since that's only a single access token, it's not a priority.
+
+==== Advantages
+
+* Eliminates existing manual setup procedure for Commodore CI/CD.
+* Basically no migration effort (existing setup continues to work; existing tokens could simply be overwritten by the automation).
+
+==== Disadvantages
+
+* Requires some engineering effort in the Lieutenant Operator.
+* Some thought has to be put into how this system would generalize, since we don't want to have a VSHN-specific use case built into Project Syn.
+* Only solves Commodore CI/CD access tokens - GitLab Access Tokens used in other places can still expire.
+
+=== Switch away from Personal Access Tokens in the Commodore CI/CD pipeline
+
+The Commodore CI/CD pipeline needs to be able to push to catalog repositories.
+Currently, this is achieved by setting up a Project Access Token for each catalog repository, which has the `write_repository` scope.
+
+It would alternatively possible to set up a Deploy Key in each catalog repository.
+A Deploy Key allows pushing to a repository via SSH.
+It can still be created with an unlimited lifespan, unlike Personal Access Tokens.
+The Deploy Key could be handed to the CI/CD job via GitLab CI/CD Variables, the same as before.
+
+This solution presents a minimal change to the previous procedure.
+The CI pipeline itself would need to be updated so that it can use SSH keys for pushing the catalog repository.
+And during the manual setup of the pipeline for a new cluster, a new SSH key would have to be created manually.
+
+==== Advantages
+
+* Very little engineering effort needed
+
+==== Disadvantages
+
+* Using manually created SSH keys could get messy.
+* Every single catalog repository has to be touched for migration.
+* Only solves Commodore CI/CD access tokens - GitLab Access Tokens used in other places can still expire.
+
+=== Create a GitLab proxy
+
+We could engineer a proxy server for GitLab which accepts requests with tokens that don't expire, keeps a mapping of such long-lived tokens to actual GitLab tokens, and forwards requests to GitLab after substituting the correct token.
+This proxy would then have a mechanism to rotate all GitLab Access Tokens it's aware of.
+It could serve as a drop-in replacement for the GitLab API, and could be used by any tooling that needs to access the GitLab API using a GitLab Access Token.
+
+==== Advantages
+
+* Solution could be used by any tooling, with no need to update said tooling.
+
+==== Disadvantages
+
+* Significant engineering effort.
+* Potential security risk.
+* Currently unclear how repository access using Access Tokens works under the hood, and whether that can simply be proxied like an API request.
+* We would still need to rotate every access token once to migrate to this solution.
+
+== Decision
+
+We've decided to build automatic CI/CD configuration into Project Syn
+
+== Rationale
+
+Automating the management of the Commodore CI/CD configuration brings us additional advantages beyond simply avoiding having to rotate each token each year.
+This automation would also eliminate the manual setup steps, making cluster setup an even smoother experience.
+
+By comparison, switching to SSH Deploy Keys would represent a step backwards in our efforts to scale and automate as much as possible:
+The same amount of manual steps are required as before, and on top of that, SSH keys are slightly more tricky to manage than the GitLab access tokens.
+On top of that, switching to SSH keys requires considerable migration effort; that time is much better spent building an automation instead.
+
+Similarly, creating a GitLab proxy so we can continue using long-lived tokens requires a large engineering effort, which is better invested into building sensible automation.
+A GitLab proxy would provide the advantage of being useful for other tooling beyond Project Syn.
+However, we would still have to rotate every token once, and tokens would still have to be initially created manually.
+And since the Commodore CI/CD setup constitutes the vast majority of our GitLab access tokens, the advantage of this solution isn't as large as it may seem.
+
+In summary, automating the Commodore CI/CD configuration is the cleanest solution, and while it only solves the underlying problem in part, it does handle the majority of our access tokens and improves the setup process as well.
+
+
+== References
+
+* https://about.gitlab.com/blog/2023/10/25/access-token-lifetime-limits/[GitLab announcement about access token lifetime limits]
+* https://git.vshn.net/syn/commodore-compile-pipeline/[Commodore CI/CD pipeline definition]

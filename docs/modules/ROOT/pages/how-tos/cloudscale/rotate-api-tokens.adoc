@@ -1,0 +1,210 @@
+= Rotate cluster API Tokens
+
+[abstract]
+--
+Steps to rotate the API tokens used by a cloudscale.ch OpenShift4 cluster and its surrounding tooling.
+--
+
+== Prerequisites
+
+* https://kubernetes.io/docs/tasks/tools/#kubectl[`kubectl`]
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher - use the go version by mikefarah, not the jq wrapper by kislyuk)
+* `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
+
+== Rotate the main cluster API token
+
+. Select the cluster whose token is being rotated.
++
+[source,bash]
+----
+export CLUSTER_ID=<lieutenant-cluster-id>
+export TENANT_ID=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+----
+
+. Identify the API token that should be replaced.
+.. Go to https://control.cloudscale.ch/service/<project>/api-token.
+.. The token should be named `<CLUSTER_ID>`.
+
+. Create a new API token with read/write permissions and name it again `<CLUSTER_ID>`. The token names don't need to be unique.
++
+[source,bash]
+----
+export CLOUDSCALE_API_TOKEN=<cloudscale-api-token>
+----
+
+. Update the token in vault.
++
+include::partial$connect-to-vault.adoc[]
++
+[source,bash]
+----
+vault kv patch clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
+  token=${CLOUDSCALE_API_TOKEN}
+----
+
+. Connect to ArgoCD and "hard refresh" all apps.
+
+. Verify that the `cloudscale` secret has been updated.
++
+[source,bash]
+----
+kubectl --as cluster-admin -n syn-csi-cloudscale \
+  get secrets cloudscale -oyaml |\
+  yq '.data.access-token' | base64 -d
+----
+
+. Restart the csi-cloudscale-controller.
++
+[source,bash]
+----
+kubectl --as cluster-admin -n syn-csi-cloudscale rollout restart \
+  sts csi-cloudscale-controller
+----
+
+. Verify that the new token is used by the csi-driver.
+.. Create a namspace with a PVC and a pod that mounts the volume.
++
+[source,bash]
+----
+cat <<EOF | kubectl --as cluster-admin apply -f -
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    appuio.io/organization: vshn
+  name: vshn-rotate-tokens
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-vol
+  namespace: vshn-rotate-tokens
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: ssd
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shell
+  namespace: vshn-rotate-tokens
+spec:
+  containers:
+    - name: shell
+      image: registry.redhat.io/rhel9/toolbox:latest
+      command: ['/bin/sh', '-c', 'trap : TERM INT; sleep infinity & wait']
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+   - name: data
+     persistentVolumeClaim:
+       claimName: test-vol
+EOF
+----
+.. Check in the cloudscale UI (`API Tokens` and `Project Log`) that the new token has been used to attach a volume to a VM.
+.. Delete the test namespace again.
++
+[source,bash]
+----
+kubectl --as cluster-admin delete ns vshn-rotate-tokens
+----
+
+. Update the `CLOUDSCALE_TOKEN_RW` CI/CD variable in the the cluster-catalog repository.
+.. Go to the cluster-catalog repo's CI/CD settings.
++
+[source,bash]
+----
+url="https://$(commodore catalog list -oyaml |\
+  yq '.[] | select(.id == strenv(CLUSTER_ID)) | .gitRepo.url' |\
+  sed -E 's/.+@(.+).git/\1/')/-/settings/ci_cd"
+xdg-open $url || open $url || echo $url
+----
+.. Edit and update the value of the `CLOUDSCALE_TOKEN_RW` variable with the new API token.
+.. Trigger a pipeline run (Build -> Pipelines ->  Run pipeline).
+.. Verify in the cloudscale UI that the new token has been used.
+
+. Delete the old API token.
++
+[WARNING]
+====
+There are two tokens with the same name. Make sure to delete the one that hasn't been used since the rotation.
+====
+
+
+== Rotate the floaty API token
+
+. Select the cluster whose token is being rotated.
++
+[source,bash]
+----
+export CLUSTER_ID=<lieutenant-cluster-id>
+export TENANT_ID=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+----
+
+. Identify the API token that should be replaced.
+.. Go to https://control.cloudscale.ch/service/<project>/api-token.
+.. The token should be named `<CLUSTER_ID>_floaty`.
+
+. Create a new API token with read/write permissions and name it again `<CLUSTER_ID>_floaty`. The token names don't need to be unique.
++
+[source,bash]
+----
+export FLOATY_TOKEN=<floaty token>
+----
+
+. Update the token in vault.
++
+include::partial$connect-to-vault.adoc[]
++
+[source,bash]
+----
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty \
+  iam_secret=${FLOATY_TOKEN}
+----
+
+. Update the `CLOUDSCALE_FLOATY_SECRET` CI/CD variable in the the cluster-catalog repository.
+.. Go to the cluster-catalog repo's CI/CD settings.
++
+[source,bash]
+----
+url="https://$(commodore catalog list -oyaml |\
+  yq '.[] | select(.id == strenv(CLUSTER_ID)) | .gitRepo.url' |\
+  sed -E 's/.+@(.+).git/\1/')/-/settings/ci_cd"
+xdg-open $url || open $url || echo $url
+----
+.. Edit and update the value of the `CLOUDSCALE_FLOATY_SECRET` variable with the new API token.
+.. Trigger a pipeline run (Build -> Pipelines ->  Run pipeline).
+.. Check the terraform plan output for any unrelated changes, expected output:
++
+[source]
+----
+Plan: 2 to add, 0 to change, 0 to destroy.
+----
+.. Run the `apply` stage of the pipeline.
+.. Open the linked merge request in the terraform output of the `apply` job.
+
+. Review and merge the MR created by terrafrom in the APPUiO hieradata.
+.. Wait for the `mco_git` deploy pipeline to finish before continuing.
+
+. Run puppet on both LBs.
++
+[source,bash]
+----
+ssh enc.appuio.lbaas.$CLUSTER_ID.lb.0 sudo puppetctl run
+ssh enc.appuio.lbaas.$CLUSTER_ID.lb.1 sudo puppetctl run
+----
+.. Verify that the tokens are updated in the puppet output.
+
+. Verify in the cloudscale UI that the new token is being used and usage of the old token has stopped.
+
+. Delete the old API token.
++
+[WARNING]
+====
+There are two tokens with the same name. Make sure to delete the one that hasn't been used since the rotation.
+====

@@ -79,6 +79,24 @@ git push
 popd
 ----
 
+ifeval::["{provider}" == "cloudscale"]
+. Add Cloud Controller Manager to cluster configuration
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i '.classes += ["global.distribution.openshift4.cloud.cloudscale.machineconfig-ccm"]' ${CLUSTER_ID}.yml
+
+yq eval -i '.applications += ["cloudscale-cloud-controller-manager"]' ${CLUSTER_ID}.yml
+
+git commit -a -m "Add Cloud Controller Manager addon to ${CLUSTER_ID}"
+
+git push
+popd
+----
+endif::[]
+
 . Compile catalog
 +
 include::partial$install/commodore-dynfacts.adoc[]

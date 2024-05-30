@@ -18,11 +18,40 @@ yq w -i "${INSTALLER_DIR}/manifests/cluster-ingress-02-config.yml" \
   spec.domain apps.example.com
 ----
 
+. Copy pre-rendered extra machine configs
++
+[source,bash]
+----
+machineconfigs=catalog/manifests/openshift4-nodes/10_machineconfigs.yaml
+if [ -f $machineconfigs ];  then
+  yq --no-doc -s \
+    "\"${INSTALLER_DIR}/openshift/99x_openshift-machineconfig_\" + .metadata.name" \
+    $machineconfigs
+fi
+----
+
+ifeval::["{provider}" == "cloudscale"]
+. Copy cloud-controller-manager manifests
++
+[source,bash]
+----
+for f in catalog/manifests/cloudscale-cloud-controller-manager/*; do
+  file=$(basename $f)
+  # Split resources into individual files
+  yq --no-doc -s \
+    "\"${INSTALLER_DIR}/manifests/cloudscale-cloud-controller-manager_${file/.yaml}_\" + \$index + \"_\" + (.kind|downcase)" \
+    $f
+done
+yq -i e ".stringData.access-token=\"${CLOUDSCALE_API_TOKEN}\"" \
+  ${INSTALLER_DIR}/manifests/cloudscale-cloud-controller-manager_01_secret_0_secret.yaml
+----
+endif::[]
+
 . Copy pre-rendered Cilium manifests
 +
 [source,bash]
 ----
-cp catalog/manifests/cilium/olm/* target/manifests/
+cp catalog/manifests/cilium/olm/* ${INSTALLER_DIR}/manifests/
 ----
 
 . Verify that the generated cluster domain matches the desired cluster domain

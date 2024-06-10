@@ -1,0 +1,102 @@
+= Configure KubeProxy Replacement with Cilium
+
+== Prerequisites
+
+* `cluster-admin` privileges
+* Cluster is running Cilium.
+See the xref:how-tos/network/migrate-to-cilium.adoc[migrating to Cilium] how-to for a guide to migrate a cluster to Cilium.
+* `kubectl`
+* `jq`
+* Working `commodore` command
+
+== Prepare for configuration
+
+IMPORTANT: Make sure that your `$KUBECONFIG` points to the cluster you want to migrate before starting.
+
+. Select cluster
++
+[source,bash]
+----
+export CLUSTER_ID=c-cluster-id-1234 <1>
+export COMMODORE_API_URL=https://api.syn.vshn.net <2>
+export TENANT_ID=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" \
+  "${COMMODORE_API_URL}/clusters/${CLUSTER_ID}" | jq -r '.tenant')
+----
+<1> Replace with the Project Syn cluster ID of the cluster to migrate
+<2> Replace with the Lieutenant API on which the cluster is registered
+
+. Check `KUBERNETES_SERVICE_HOST` is configured
++
+[source,bash]
+----
+kubectl -n cilium get cm cilium-ee-olm-overrides -ocustom-columns='HOST:.data.KUBERNETES_SERVICE_HOST,PORT:.data.KUBERNETES_SERVICE_PORT'
+----
++
+Yields the following output:
++
+[source,bash]
+----
+HOST                                    PORT
+api-int.<CLUSTER_DOMAIN>                6443 <1>
+----
+<1> If either of these fields returns `<none>`, make sure cilium is deployed and has no special customisation requirements.
+
+. Check `k8sServiceHost` is configured
++
+[source,bash]
+----
+kubectl -n cilium get ciliumconfig cilium-enterprise -ocustom-columns='HOST:.spec.cilium.k8sServiceHost,PORT:.spec.cilium.k8sServicePort'
+----
++
+Yields the following output:
++
+[source,bash]
+----
+HOST                                    PORT
+api-int.<CLUSTER_DOMAIN>                6443 <1>
+----
+<1> If either of these fields returns `<none>`, make sure cilium is deployed and has no special customisation requirements.
+
+== Configure KubeProxy Replacement
+
+. Get local cluster working directory
++
+[source,bash]
+----
+commodore catalog compile "$CLUSTER_ID" <1>
+----
+<1> We recommend switching to an empty directory to run this command.
+Alternatively, switch to your existing directory for the cluster.
+
+. Update `kubeProxyReplacement` for cilium
++
+[source,bash]
+----
+pushd inventory/classes/"${TENANT_ID}"
+yq -i '.parameters.cilium.cilium_helm_values.kubeProxyReplacement = "true"' "${CLUSTER_ID}.yml"
+yq -i '.parameters.cilium.cilium_helm_values.nodePort.enableHealthCheck = true' "${CLUSTER_ID}.yml"
+----
+
+. Commit changes
++
+[source,bash]
+----
+git commit -am "Replace KubeProxy on ${CLUSTER_ID} with cilium"
+git push origin master
+popd
+----
+
+. Compile catalog
++
+[source,yaml]
+----
+commodore catalog compile "${CLUSTER_ID}" --push -i
+----
+
+. Update `deployKubeProxy` for network operator
++
+[source,bash]
+----
+kubectl --as=cluster-admin patch networks.operator.openshift.io cluster \
+ --type=merge -p '{"spec":{"deployKubeProxy":false}}'
+----

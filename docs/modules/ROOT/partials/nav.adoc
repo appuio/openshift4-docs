@@ -121,6 +121,7 @@
 * Networking
 ** xref:oc4:ROOT:how-tos/network/migrate-to-cilium.adoc[]
 ** xref:oc4:ROOT:how-tos/network/cilium-egress-ip.adoc[]
+** xref:oc4:ROOT:how-tos/network/cilium-kubeproxy-disabled.adoc[]
 
 * Ingress
 ** xref:oc4:ROOT:how-tos/ingress/self-signed-ingress-cert.adoc[]

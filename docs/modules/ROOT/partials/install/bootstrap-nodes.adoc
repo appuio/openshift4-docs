@@ -68,23 +68,26 @@ openshift-install --dir "${INSTALLER_DIR}" \
   wait-for bootstrap-complete --log-level debug
 ----
 
-. Remove bootstrap node and provision infra nodes
+. Remove bootstrap node and provision remaining nodes
 +
 [source,bash,subs="attributes+"]
 ----
-cat > override.tf <<EOF
-module "cluster" {
-ifeval::["{provider}" == "exoscale"]
-  storage_count            = 0
-endif::[]
-  worker_count             = 0
-  additional_worker_groups = {}
-}
-EOF
+rm override.tf
 terraform apply
+
+popd
 ----
 
-. Approve infra certs
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
++
+[source,bash]
+----
+for fqdn in "${LB_FQDNS[@]}"; do
+  ssh "${fqdn}" sudo puppetctl run
+done
+----
+
+. Approve node certs
 +
 [source,bash]
 ----
@@ -97,10 +100,28 @@ include::partial$install/approve-node-csrs.adoc[]
 +
 [source,bash]
 ----
-kubectl get nodes -lnode-role.kubernetes.io/worker
-kubectl label node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/infra=""
+kubectl get node -ojson | \
+  jq -r '.items[] | select(.metadata.name | test("infra-")).metadata.name' | \
+  xargs -I {} kubectl label node {} node-role.kubernetes.io/infra=
 ----
+
+ifeval::["{provider}" == "exoscale"]
+. Label and taint storage nodes
++
+include::partial$label-taint-storage-nodes.adoc[]
+endif::[]
+
+. Label worker nodes
++
+[source,bash]
+----
+kubectl get node -ojson | \
+  jq -r '.items[] | select(.metadata.name | test("infra|master|storage-")|not).metadata.name' | \
+  xargs -I {} kubectl label node {} node-role.kubernetes.io/app=
+----
++
+[NOTE]
+At this point you may want to add extra labels to the additional worker groups, if there are any.
 
 . Enable proxy protocol on ingress controller
 +
@@ -121,15 +142,6 @@ This step isn't necessary if you've disabled the proxy protocol on the load-bala
 By default, PROXY protocol is enabled through the VSHN Commodore global defaults.
 ====
 
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
-+
-[source,bash]
-----
-for fqdn in "${LB_FQDNS[@]}"; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
 . Wait for installation to complete
 +
 [source,bash]
@@ -137,60 +149,3 @@ done
 openshift-install --dir ${INSTALLER_DIR} \
   wait-for install-complete --log-level debug
 ----
-
-ifeval::["{provider}" == "exoscale"]
-. Provision storage nodes
-+
-[source,bash]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  worker_count             = 0
-  additional_worker_groups = {}
-}
-EOF
-terraform apply
-----
-
-. Approve storage certs
-+
-include::partial$install/approve-node-csrs.adoc[]
-
-. Label and taint storage nodes
-+
-include::partial$label-taint-storage-nodes.adoc[]
-endif::[]
-
-. Provision worker nodes
-+
-[source,bash]
-----
-rm override.tf
-terraform apply
-
-popd
-----
-
-. Approve worker certs
-+
-include::partial$install/approve-node-csrs.adoc[]
-
-. Label worker nodes
-+
-[source,bash,subs="attributes"]
-----
-kubectl label --overwrite node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/app=""
-kubectl label node -lnode-role.kubernetes.io/infra \
-  node-role.kubernetes.io/app-
-ifeval::["{provider}" == "exoscale"]
-kubectl label node -lnode-role.kubernetes.io/storage \
-  node-role.kubernetes.io/app-
-endif::[]
-
-# This should show the worker nodes only
-kubectl get nodes -l node-role.kubernetes.io/app
-----
-+
-[NOTE]
-At this point you may want to add extra labels to the additional worker groups, if there are any.

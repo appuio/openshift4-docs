@@ -1,13 +1,8 @@
 [source,bash,subs="attributes"]
 ----
-kubectl {kubectl_extra_args} label --overwrite node -lnode-role.kubernetes.io/worker \
-  node-role.kubernetes.io/storage=""
-kubectl {kubectl_extra_args} label node -lnode-role.kubernetes.io/infra \
-  node-role.kubernetes.io/storage-
-ifdef::delabel_app_nodes[]
-kubectl {kubectl_extra_args} label node -lnode-role.kubernetes.io/app \
-  node-role.kubernetes.io/storage-
-endif::delabel_app_nodes[]
+kubectl get node -ojson | \
+  jq -r '.items[] | select(.metadata.name | test("storage-")).metadata.name' | \
+  xargs -I {} kubectl {kubectl_extra_args} label node {} node-role.kubernetes.io/storage=
 
 kubectl {kubectl_extra_args} taint node -lnode-role.kubernetes.io/storage \
   storagenode=True:NoSchedule

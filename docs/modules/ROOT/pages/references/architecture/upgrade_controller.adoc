@@ -164,6 +164,64 @@ If the controller can't unpause the upgrade within this time, the upgrade is mar
 The controller should expose Prometheus metrics indicating the current state of the upgrade and the controller itself.
 This allows us to monitor the controller and the upgrade process and create alerts.
 
+=== The controller should allow scheduling `ClusterVersion` changes [[scheduled-cluster-version-change]]
+
+To facilitate minor upgrades, the controller should allow scheduling `ClusterVersion` changes.
+This allows the release channel to be changed at a specific time before selecting a new version.
+
+[source,yaml]
+----
+apiVersion: managedupgrade.appuio.io/v1beta1 <1>
+kind: ClusterVersion
+metadata:
+  name: version
+spec:
+  template: <2>
+    spec:
+      clusterID: XXX
+      channel: stable-4.14
+  overlays: <3>
+    - from: "2022-12-04T14:00:00Z"
+      overlay:
+        spec:
+          channel: stable-4.15 <4>
+status:
+  current: <5>
+    spec:
+      clusterID: XXX
+      channel: stable-4.14
+  overlays: <6>
+    - from: "2022-12-04T14:00:00Z"
+      preview:
+        spec:
+          clusterID: XXX
+          channel: stable-4.15
+----
+<1> The extended CRD based on the `config.openshift.io/v1.ClusterVersion` object.
+<2> The base `ClusterVersion` object.
+<3> The overlays to apply at a specific time to the base `ClusterVersion` object.
+Overlays are sorted by the `from` field.
+The controller applies the newest overlay where `from` is in the past.
+Overlays don't accumulate.
+<4> The new channel to switch to.
+<5> The currently rendered and applied `ClusterVersion` object.
+<6> The rendered overlays that will be applied to the `ClusterVersion` object at the time specified in `from`.
+
+==== The controller should export metrics for the `ClusterVersion` object
+
+The controller should export metrics for the `ClusterVersion` object.
+This allows us to monitor the state of the `ClusterVersion` object and check when and if a change is applied.
+
+[source]
+----
+# HELP openshift_upgrade_controller_cluster_version_info Managed ClusterVersion info metric. Shows the currently applied cluster version.
+# TYPE openshift_upgrade_controller_cluster_version_info gauge
+openshift_upgrade_controller_cluster_version_info{channel="stable-4.14",cluster_id="XXX"} 1
+# HELP openshift_upgrade_controller_cluster_version_overlay_timestamp_seconds Managed ClusterVersion info metric. Shows the fully merged cluster versions applied at their respective timestamps. The value is the timestamp in seconds since epoch.
+# TYPE openshift_upgrade_controller_cluster_version_overlay_timestamp_seconds gauge
+openshift_upgrade_controller_cluster_version_overlay_timestamp_seconds{channel="stable-4.15",cluster_id="XXX",from="2022-12-04T14:00:00Z"} 1.6701624e+09
+----
+
 === When's an upgrade job considered successful? [[upgrade-success]]
 
 The controller monitors the `ClusterVersion/version` for the `Available` condition.
@@ -193,9 +251,15 @@ spec:
       clusterID: bc75be34-e92d-4745-bb9d-8ec39e877854
       desiredUpdate: {} <2>
       upstream: https://api.openshift.com/api/upgrades_info/v1/graph
+  overlays: <3>
+    - from: "2024-07-12T00:00:00Z"
+      overlay:
+        spec:
+          channel: stable-4.15 <4>
 ----
-<1> Template for the `ClusterVersion/version` object.
+<1> Template for the `config.openshift.io/v1.ClusterVersion` object.
 <2> The `desiredUpdate` is ignored and set by the `UpgradeJob` controller.
+<3> Overlays to apply at a specific time. See <<scheduled-cluster-version-change>>.
 
 === UpgradeConfig [[upgrade-config]]
 

@@ -1,7 +1,7 @@
 [NOTE]
 ====
 You can add more options to the `install-config.yaml` file.
-Have a look at the https://docs.openshift.com/container-platform/4.13/installing/installing_vsphere/installing-vsphere-installer-provisioned-customizations.html#installation-configuration-parameters_installing-vsphere-installer-provisioned-customizations[installation configuration parameters] for more information.
+Have a look at the https://docs.openshift.com/container-platform/latest/installing/installing_vsphere/installing-vsphere-installer-provisioned-customizations.html#installation-configuration-parameters_installing-vsphere-installer-provisioned-customizations[installation configuration parameters] for more information.
 ====
 +
 [source,bash]
@@ -42,15 +42,26 @@ platform:
   vsphere:
     apiVIPs:
       - ${API_VIP}
-    cluster: ${VSPHERE_CLUSTER}
-    datacenter: ${VSPHERE_DATACENTER}
-    defaultDatastore: ${VSPHERE_DATASTORE}
+    failureDomains:
+      - name: datacenter
+        server: ${VCENTER_HOSTNAME}
+        topology:
+          computeCluster: "/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
+          datacenter: ${VSPHERE_DATACENTER}
+          datastore: "/${VSPHERE_DATACENTER}/datastore/${VSPHERE_DATASTORE}"
+          networks:
+            - ${VSPHERE_NETWORK}
+          resourcePool: "/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}//Resources"
+          folder: "/${VSPHERE_DATACENTER}/vm/${VSPHERE_FOLDER}"
     ingressVIPs:
       - ${INGRESS_VIP}
-    network: ${VSPHERE_NETWORK}
-    username: ${VSPHERE_USERNAME}
-    password: ${VSPHERE_PASSWORD}
-    vCenter: ${VCENTER_HOSTNAME}
+    vcenters:
+      - datacenters:
+          - ${VSPHERE_DATACENTER}
+        user: ${VSPHERE_USERNAME}
+        password: ${VSPHERE_PASSWORD}
+        server: ${VCENTER_HOSTNAME}
+        port: 443
 networking:
   networkType: Cilium
   machineNetwork:

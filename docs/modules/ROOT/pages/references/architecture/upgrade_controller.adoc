@@ -235,7 +235,7 @@ Matching `UpgradeConfig` objects won't create `UpgradeJob` objects during the ti
 Matching `UpgradeJob` objects won't start the upgrade during the time window.
 Skipped jobs will be marked as successful with reason skipped.
 Success and finish hooks will be executed as normal.
-If the job was from a config object, the object creates a new job with the current (possibly same) version in the next normal time window.
+If the job was owned by a upgradeconfig object, the object creates a new job with the current (possibly same) version in the next non-suspended time window.
 
 === When's an upgrade job considered successful? [[upgrade-success]]
 

@@ -222,6 +222,21 @@ openshift_upgrade_controller_cluster_version_info{channel="stable-4.14",cluster_
 openshift_upgrade_controller_cluster_version_overlay_timestamp_seconds{channel="stable-4.15",cluster_id="XXX",from="2022-12-04T14:00:00Z"} 1.6701624e+09
 ----
 
+=== The controller should be able to block certain time windows for upgrades (for example public holidays) [[block-upgrade-time-windows]]
+
+The controller should be able to block certain time windows for upgrades.
+This allows us to prevent upgrades during public holidays or other special events.
+
+A `UpgradeSuspensionWindow` object blocks upgrades for a specific time window.
+The objects it's matched against can be defined through a selector.
+
+Matching `UpgradeConfig` objects won't create `UpgradeJob` objects during the time window.
+
+Matching `UpgradeJob` objects won't start the upgrade during the time window.
+Skipped jobs will be marked as successful with reason skipped.
+Success and finish hooks will be executed as normal.
+If the job was owned by a upgradeconfig object, the object creates a new job with the current (possibly same) version in the next non-suspended time window.
+
 === When's an upgrade job considered successful? [[upgrade-success]]
 
 The controller monitors the `ClusterVersion/version` for the `Available` condition.
@@ -454,6 +469,30 @@ For example:
 Use `ttlSecondsAfterFinished` to delete the job after a certain time.
 <8> There is no automatic timeout for jobs.
 Use `activeDeadlineSeconds` to set a timeout.
+
+=== UpgradeSuspensionWindow
+
+The `UpgradeSuspensionWindow` CRD allows to block certain time windows for upgrades.
+
+[source,yaml]
+----
+apiVersion: managedupgrade.appuio.io/v1beta1
+kind: UpgradeSuspensionWindow
+metadata:
+  name: end-of-year-holidays-2023
+spec:
+  start: "2023-12-25T00:00:00Z"
+  end: "2024-01-08T00:00:00Z"
+  reason: "End of year holidays"
+  configSelector: <1>
+    matchLabels:
+      upgrade-config: cluster-upgrade
+  jobSelector: <2>
+    matchLabels:
+      upgrade-config: cluster-upgrade
+----
+<1> The selector to match the `UpgradeConfig` objects to block.
+<2> The selector to match the `UpgradeJob` objects to block.
 
 == Resources
 

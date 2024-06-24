@@ -94,10 +94,6 @@ vault kv put  clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vsphere/credentials \
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
   httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
 
-# Set the LDAP password
-vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap \
-  bindPassword=${LDAP_PASSWORD}
-
 # Generate a master password for K8up backups
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
   password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)

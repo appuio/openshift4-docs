@@ -15,24 +15,10 @@ For customer clusters, set the following cluster facts in Lieutenant:
 * `sales_order`: Name of the sales order to which the cluster is billed, such as `S10000`
 * `release_channel`: Name of the syn component release channel to use, such as `stable`
 
-=== Set up LDAP service
+=== Set up Keycloak service
 
 . Create an LDAP service
 +
 Use https://control.vshn.net/vshn/services/_create to create a service.
-The name must contain the customer and the cluster name.
-And then put the LDAP service ID in the following variable:
-+
-[source,bash]
-----
-export LDAP_ID="Your_LDAP_ID_here"
-export LDAP_PASSWORD="Your_LDAP_pw_here"
-----
-
-[IMPORTANT]
-====
-Use the same casing as the underlying LDAP service.
-Can be accessed by the hover text in the VSHN Control Panel.
-
-image::ldap-service-id.png[alt=LDAP Service hover text, width=800]
-====
+The name and ID must be clusters name.
+For the optional URL use the OpenShift console URL.

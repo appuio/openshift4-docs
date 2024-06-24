@@ -12,7 +12,6 @@ The Project Syn infrastructure components that must be reachable are
 
 Additionally, APPUiO Managed OpenShift 4 requires access to VSHN's identity management:
 
-* VSHN LDAP at `ldaps://ldap.vshn.net:636`
 * VSHN SSO at `\https://id.vshn.net`
 
 Finally, APPUiO Managed OpenShift 4 requires access to VSHN's central metrics storage at `\https://metrics-receive.appuio.net`

@@ -108,9 +108,6 @@ vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale
 
 # delete registry secret
 vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry
-
-# delete ldap secret
-vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/vshn-ldap
 ----
 
 . Decommission Puppet-managed LBs according to the https://wiki.vshn.net/display/VT/How+To%3A+Decommission+a+VM[VSHN documentation] (Internal link).
@@ -143,21 +140,13 @@ At this point in the decommissioning process, you'll have to extract the Restic 
 
 . Delete all other Vault entries
 
-. Delete LDAP service (via portal)
+. Delete Keycloak service (via portal)
 +
 Go to https://control.vshn.net/vshn/services
 +
 - Search cluster name
 +
 - Delete cluster entry service using the delete button
-
-. Remove IPs from LDAP allowlist
-+
-Edit https://git.vshn.net/vshn-puppet/vshn_hieradata/-/blob/master/corp/prod/ldap.yaml
-+
-- Search cluster IPs and remove those lines and any comments related.
-+
-- Create a Merge Request and invite a colleague for a review/approve/merge
 
 . Delete all DNS records related with cluster (zonefiles)
 

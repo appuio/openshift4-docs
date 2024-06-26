@@ -215,12 +215,12 @@ We need to execute the `apply` twice, since the first apply will fail to create 
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin apply -Rf catalog/manifests/cilium/
+kubectl --as=cluster-admin apply -n cilium -Rf catalog/manifests/cilium/
 ----
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin apply -Rf catalog/manifests/cilium/
+kubectl --as=cluster-admin apply -n cilium -Rf catalog/manifests/cilium/
 ----
 
 . Wait until Cilium CNI is up and running

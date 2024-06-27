@@ -6,7 +6,7 @@ Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-vers
 For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
 ====
 +
-[source,bash]
+[source,bash,subs="attributes+"]
 ----
 export INSTALLER_DIR="$(pwd)/target"
 mkdir -p "${INSTALLER_DIR}"
@@ -16,8 +16,16 @@ apiVersion: v1
 metadata:
   name: ${CLUSTER_ID} <1>
 baseDomain: ${BASE_DOMAIN} <1>
+ifeval::["{provider}" == "cloudscale"]
+platform:
+  external:
+    platformName: cloudscale
+    cloudControllerManager: External
+endif::[]
+ifeval::["{provider}" == "exoscale"]
 platform:
   none: {}
+endif::[]
 networking:
   networkType: Cilium
 pullSecret: |

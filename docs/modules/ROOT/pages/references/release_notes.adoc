@@ -2,6 +2,46 @@
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 
+== OpenShift 4.15
+
+OpenShift version 4.15 is available since 2024-03-19.
+This version is based on Kubernetes 1.28 and CRI-O 1.28.
+The RHCOS image still uses RHEL 9.2 packages.
+Find the release notes in the upstream documentation at https://docs.openshift.com/container-platform/4.15/release_notes/ocp-4-15-release-notes.html[OpenShift Container Platform 4.15 release notes].
+The https://www.redhat.com/en/blog/unveiling-red-hat-openshift-415[Unveiling Red Hat OpenShift 4.15] blog post is also a valuable resource.
+
+Networking dashborads in the OpenShift console::
+This release brings new dashboards to the OpenShift console, which display networking metrics.
+They can be found under *Observe --> Dashboards*.
++
+The new dashboards contain metrics from Linux networking, from OVN-Kubernetes, and from the Ingress Operator.
+You can view low-level networking metrics as well as high-level indicators, such as HTTP error rates and latency.
++
+[NOTE]
+====
+By default, APPUiO Managed OpenShift 4 clusters are installed with https://access.redhat.com/articles/5436171#isovalent-4[Cilium], a fully certified and supported 3rd party CNI plugin for OpenShift 4.
+Therefore, the panels related to OVN-Kubernetes on the new dashboards may be empty on APPUiO Managed OpenShift 4 clusters.
+====
+
+New life cycle classification for OLM operators::
+With this release, three new life cycle classifications for cluster operators are introduced:
+*Platform Aligned*, for operators whose maintenance streams align with the OpenShift version;
+*Platform Agnostic*, for operators who make use of maintenance streams but they don't need to align with the OpenShift version;
+and *Rolling Stream*, for operators which use a single stream of rolling updates.
++
+These classifications are meant to provide transparency and ease-of-understanding when preparing for cluster maintenance.
+
+Update to CoreDNS 1.11.1::
+With this release, OpenShift Container Platform is updated to CoreDNS 1.11.1.
+
+Deprecation of the OpenShift SDN network plugin::
+OpenShift SDN CNI is deprecated as of OCP 4.14.
+Starting with this release, Openshift SDN is no longer an option for new installations.
+In a subsequent future release, the OpenShift SDN network plugin is planned to be be removed and no longer supported.
+Red Hat will provide bug fixes and support for this feature until removed, but this feature will no longer receive enhancements.
++
+NOTE: New APPUiO Managed OpenShift 4 clusters are installed with https://access.redhat.com/articles/5436171#isovalent-4[Cilium], a fully certified and supported 3rd party CNI plugin for OpenShift 4.
+
 == OpenShift 4.14
 
 OpenShift version 4.14 is available since 2023-11-06.
@@ -65,71 +105,3 @@ Red Hat will provide bug fixes and support for this feature until removed, but t
 As an alternative to OpenShift SDN CNI, you can use OVN Kubernetes CNI instead.
 +
 NOTE: New APPUiO Managed OpenShift 4 clusters are installed with https://access.redhat.com/articles/5436171#isovalent-4[Cilium], a fully certified and supported 3rd party CNI plugin for OpenShift 4.
-
-== OpenShift 4.13
-
-OpenShift version 4.13 is available since 2023-03-17.
-This version is based on Kubernetes 1.26.
-The RHCOS image now uses RHEL 9.2 packages.
-Find the release notes in the upstream documentation as https://docs.openshift.com/container-platform/4.13/release_notes/ocp-4-13-release-notes.html[OpenShift Container Platform 4.13 release notes].
-The https://www.redhat.com/en/blog/red-hat-openshift-413-now-available[Red Hat OpenShift 4.13 is now available] blog post is also a valuable resource.
-
-API deprecations::
-
-Multiple APIs are deprecated in Kubernetes 1.26.
-Before updating a cluster to OpenShift 4.13, check for usage of the following APIs:
-
-* `flowschemas.flowcontrol.apiserver.k8s.io/v1beta1`
-* `horizontalpodautoscalers.autoscaling/v2beta2`
-* `prioritylevelconfigurations.flowcontrol.apiserver.k8s.io/v1beta1`
-
-+
-See the upstream documentation on https://docs.openshift.com/container-platform/4.13/updating/updating-cluster-prepare.html#updating-cluster-prepare[preparing to update to OpenShift Container Platform 4.13] for detailed instructions to check for usage of these APIs.
-If any of the APIs are used, inform the affected users and ask them to update their workloads to use the APIs indicated in the upstream documentation.
-
-Zone aware OpenShift in VMware vSphere::
-
-OpenShift 4.13 supports installation across multiple vSphere datacenters and clusters.
-Defining logic failure domains allows reducing the risk of data loss and downtime.
-
-Additionally vSphere persistent disks encryption is now generally available.
-
-Cgroup v2 GA improves node stability::
-
-Cgroup v2 is now generally available in OpenShift 4.13.
-It provides a more robust and flexible mechanism for allocating resources to containers.
-
-RedHat reports better node stability when there is I/O pressure due to throttling.
-On cgroup v1 such nodes will go not ready but the node stays stable on v2.
-
-New web console features::
-
-The developer view in the OpenShift web console provides multiple new features.
-Serverless functions can now be added to the cluster by either importing them from a Git repository or by creating them from a template.
-The topology view, the pod details and the pod list now shows which pods receive traffic.
-
-If using Loki for logging, the web console now allows to visualize log based alerts.
-
-OpenShift managed cert-manager::
-
-OpenShift 4.13 includes an operated version of cert-manager.
-
-RHCOS image layering is generally available::
-
-The RHCOS image layering feature is now generally available.
-This feature should make it easier to add additional packages and configuration to the RHCOS image.
-
-Reminder: Pod Security Admission is enabled::
-
-https://kubernetes.io/docs/concepts/security/pod-security-admission/[Pod Security Admission] runs globally with restricted audit logging and API warnings.
-This means while everything should still run as it did before, if users rely on security contexts being set by OpenShift's SCCs they'll encounter warnings like the following:
-+
-[source,console]
-----
-Warning: would violate PodSecurity "restricted:latest": allowPrivilegeEscalation != false (container "nginx" must set securityContext.allowPrivilegeEscalation=false), unrestricted capabilities (container "nginx" must set securityContext.capabilities.drop=["ALL"]), runAsNonRoot != true (pod or container "nginx" must set securityContext.runAsNonRoot=true), seccompProfile (pod or container "nginx" must set securityContext.seccompProfile.type to "RuntimeDefault" or "Localhost")
-----
-+
-Users need to explicitly set security contexts in their manifests to avoid these warnings.
-+
-Red Hat plans to switch Pod Security Admission to restricted enforcement globally in a future minor release.
-When restricted enforcement will be enabled, pods with pod security violations will be rejected.

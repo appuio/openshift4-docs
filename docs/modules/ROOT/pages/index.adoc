@@ -10,10 +10,3 @@ Use the search field at the top of this page, navigate through topics with the t
 The product documentation can be found under https://products.docs.vshn.ch/products/appuio/managed/ocp4.html[products.docs.vshn.ch].
 
 TIP: Contributions to the documentation are welcome. Just click on btn:[Edit this Page] top-right or head over to https://github.com/appuio/openshift4-docs[GitHub] where the content source is stored.
-
-== Joint Effort
-
-This documentation is a joint effort of the APPUiO team at https://www.vshn.ch[VSHN] and https://www.puzzle.ch[Puzzle].
-
-image::vshn.svg[alt="VSHN AG",width=400,link=https://www.vshn.ch]
-image::puzzle.svg[alt="Puzzle ITC GmbH",width=400,link=https://www.puzzle.ch]

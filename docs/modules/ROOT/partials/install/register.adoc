@@ -17,7 +17,7 @@ For customer clusters, set the following cluster facts in Lieutenant:
 
 === Set up Keycloak service
 
-. Create an LDAP service
+. Create a Keycloak service
 +
 Use https://control.vshn.net/vshn/services/_create to create a service.
 The name and ID must be clusters name.

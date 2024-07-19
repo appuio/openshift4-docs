@@ -43,7 +43,7 @@ for f in catalog/manifests/cloudscale-cloud-controller-manager/*; do
     $f
 done
 yq -i e ".stringData.access-token=\"${CLOUDSCALE_API_TOKEN}\"" \
-  ${INSTALLER_DIR}/manifests/cloudscale-cloud-controller-manager_01_secret_0_secret.yaml
+  ${INSTALLER_DIR}/manifests/cloudscale-cloud-controller-manager_01_secret_0_secret.yml
 ----
 endif::[]
 

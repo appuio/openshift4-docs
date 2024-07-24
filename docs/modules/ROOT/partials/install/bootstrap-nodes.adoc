@@ -67,6 +67,20 @@ endif::[]
 openshift-install --dir "${INSTALLER_DIR}" \
   wait-for bootstrap-complete --log-level debug
 ----
++
+[NOTE]
+--
+If you're using a CNI other than Cilium you may need to remove the following taint from the nodes to allow the network to come up:
+[source,bash]
+----
+kubectl taint no --all node.cloudprovider.kubernetes.io/uninitialized:NoSchedule-
+----
+Once the bootstrap is complete, taint the master nodes again to ensure that they're properly initialized by the cloud-controller-manager.
+[source,bash]
+----
+kubectl taint no -l node-role.kubernetes.io/master node.cloudprovider.kubernetes.io/uninitialized=:NoSchedule
+----
+--
 
 . Remove bootstrap node and provision remaining nodes
 +

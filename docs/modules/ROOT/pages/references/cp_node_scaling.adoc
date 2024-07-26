@@ -1,0 +1,54 @@
+= Control Plane Node Scaling
+
+The control plane node resource requirements depent on a number of different metrics.
+CPU requirements generally depend on the ammount on API write requests, while memory requirements generally depend on the amount of resource objects (most importantly Pod count) in the cluster.
+
+To avoid cascading failures during a scheduled node reboot or an unexpected node failure, it's recommended to keep the overall CPU and memory usage not significantly higher than 60%.
+
+== Guidelines
+
+The following guidelines are an estimate, based on metrics collected from our managed clusters.
+Individual clusters may vary depending on worker node size and individual workload running on the cluster.
+
+[NOTE]
+====
+Many cloud providers don't support arbitrary VM sizes, so we'll usually recommend the closest available VM size that's at least as large as the recommended size below.
+====
+
+[cols="1,1"]
+|===
+| Control Plane Spec  | Cluster Parameters
+
+| 4 CPU
+
+16Gi Memory
+
+| Small Cluster
+
+max. 3 Worker Nodes
+
+
+| 4 CPU
+
+24Gi Memory
+
+| Small Cluster
+
+more than 3 Worker Nodes
+
+more than 500 Pods
+
+
+| 4 CPU
+
+32Gi Memory
+
+| Medium Cluster
+
+more than 1000 Pods
+|===
+
+
+== References
+
+See the https://insights.appuio.net/dashboards/f/J99QZvSVk/aldebaran?tag=capacity[capacity dashboards (VSHN internal link)] for more details about the current cluster sizes.

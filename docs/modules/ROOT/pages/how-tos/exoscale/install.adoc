@@ -115,6 +115,40 @@ export APPCAT_ACCESSKEY=$(echo "${appcat_credentials}" | jq -r '.key')
 export APPCAT_SECRETKEY=$(echo "${appcat_credentials}" | jq -r '.secret')
 ----
 
+. Create restricted API key for Exoscale CSI driver
++
+[source,bash]
+----
+# Create AppCat Provider Exoscale IAM role, if it doesn't exist yet in the organization
+csidriver_role_id=$(exo iam role list -O json | \
+  jq -r '.[] | select(.name=="csi-driver-exoscale") | .key')
+if [ -z "${csidriver_role_id}" ]; then
+echo '{
+  "default-service-strategy": "deny",
+  "services": {
+    "compute": {
+      "type": "rules",
+      "rules": [
+        {
+          "expression": "operation in ['list-zones', 'get-block-storage-volume', 'list-block-storage-volumes', 'create-block-storage-volume', 'delete-block-storage-volume', 'attach-block-storage-volume-to-instance', 'detach-block-storage-volume', 'update-block-storage-volume-labels', 'resize-block-storage-volume', 'get-block-storage-snapshot', 'list-block-storage-snapshots', 'create-block-storage-snapshot', 'delete-block-storage-snapshot']",
+          "action": "allow"
+        }
+      ]
+    }
+  }
+}' | \
+exo iam role create csi-driver-exoscale \
+  --description "Exoscale CSI Driver: Access to storage operations and zone list" \
+  --policy -
+fi
+# Create access key
+csi_credentials=$(exo iam api-key create -O json \
+  csi-driver-exoscale csi-driver-exoscale)
+export CSI_ACCESSKEY=$(echo "${csi_credentials}" | jq -r '.key')
+export CSI_SECRETKEY=$(echo "${csi_credentials}" | jq -r '.secret')
+----
+
+
 [#_bootstrap_bucket]
 === Set up S3 bucket for cluster bootstrap
 
@@ -186,6 +220,11 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/appcat/provider-exoscale \
   access-key=${APPCAT_ACCESSKEY} \
   secret-key=${APPCAT_SECRETKEY}
+
+# Set the CSI Driver Exoscale Credentials
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/csi_driver \
+  s3_access_key=${CSI_ACCESSKEY} \
+  s3_secret_key=${CSI_SECRETKEY}
 ----
 
 include::partial$get-hieradata-token-from-vault.adoc[]

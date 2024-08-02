@@ -1,6 +1,6 @@
 = Install OpenShift 4 on OpenStack
-:ocp-minor-version: 4.14
-:k8s-minor-version: 1.27
+:ocp-minor-version: 4.15
+:k8s-minor-version: 1.28
 :ocp-patch-version: {ocp-minor-version}.0
 :provider: openstack
 

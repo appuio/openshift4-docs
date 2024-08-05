@@ -119,7 +119,7 @@ export APPCAT_SECRETKEY=$(echo "${appcat_credentials}" | jq -r '.secret')
 +
 [source,bash]
 ----
-# Create AppCat Provider Exoscale IAM role, if it doesn't exist yet in the organization
+# Create Exoscale CSi driver Exoscale IAM role, if it doesn't exist yet in the organization
 csidriver_role_id=$(exo iam role list -O json | \
   jq -r '.[] | select(.name=="csi-driver-exoscale") | .key')
 if [ -z "${csidriver_role_id}" ]; then

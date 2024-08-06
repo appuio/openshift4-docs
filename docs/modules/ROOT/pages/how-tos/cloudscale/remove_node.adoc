@@ -4,7 +4,7 @@
 :kubectl_extra_args: --as=cluster-admin
 :delabel_app_nodes: yes
 
-:node-delete-list: ${NODE_TO_REPLACE}
+:node-delete-list: ${NODE_TO_REMOVE}
 :delete-nodes-manually: no
 
 [abstract]
@@ -48,10 +48,10 @@ It has to be the one with the highest terraform index.
 # Grab JSON copy of current Terraform state
 terraform state pull > .tfstate.json
 
-export NODE_TO_REMOVE=$(jq --arg index "$node_count" -r \
+export NODE_TO_REMOVE=$(jq -r \
   '.resources[] |
    select(.module=="module.cluster.module.worker" and .type=="cloudscale_server") |
-   .instances[$index|tonumber-1] |
+   .instances[.instances|length-1] |
    .attributes.name | split(".") | first' \
    .tfstate.json)
 echo $NODE_TO_REMOVE

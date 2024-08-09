@@ -1,0 +1,24 @@
+= Configure an ArgoCD instance to be cluster-scoped
+
+== Prerequisites
+
+* Access to tenant repository
+* Knowledge of the namespace in which the cluster-scoped ArgoCD shall be deployed
+
+== Configure ArgoCD component
+
+. Add the following configuration to the cluster's config file in the tenant repository:
++
+[source,yaml]
+--
+  argocd:
+    operator:
+      cluster_scope_namespaces:
+        - [NAMESPACE NAME]
+--
+
+. Commit your change and create a pull request.
+
+. After merge, wait for the catalog to be compiled.
+
+. Inform the customer that they may now deploy their ArgoCD instance as per https://docs.appuio.ch/managed-openshift/gitops/howto-argocd.html[our documentation].

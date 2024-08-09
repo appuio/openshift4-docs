@@ -23,4 +23,4 @@ classes:
 
 . Commit and push the changes.
 
-. Mark the cluster as auto-upgrading in the maintenance log: https://wiki.vshn.net/display/VT/How+to+Edit+Maintenance+Log+Template.
+. Mark the cluster as auto upgrading in the maintenance log: https://wiki.vshn.net/display/VT/How+to+Edit+Maintenance+Log+Template.

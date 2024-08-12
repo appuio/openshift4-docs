@@ -182,6 +182,9 @@
 ** xref:oc4:ROOT:how-tos/monitoring/handle_alerts.adoc[]
 ** xref:oc4:ROOT:how-tos/monitoring/remove_rules.adoc[]
 
+* GitOps
+** xref:oc4:ROOT:how-tos/gitops/cluster-scope-argocd.adoc[Configure Cluster Scope ArgoCD Instances]
+
 // Scalability and performance
 // Specialized hardware and driver enablement
 

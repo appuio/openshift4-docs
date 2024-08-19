@@ -36,6 +36,7 @@ fulldomain=$(kubectl -n syn-cert-manager \
 echo "$fulldomain"
 ----
 
+ifeval::["{provider" != "exoscale"]
 ifeval::["{acme-dns-update-zone}" == "yes"]
 . Add the following CNAME records to the cluster's DNS zone
 +
@@ -55,21 +56,6 @@ _acme-challenge.apps IN CNAME <fulldomain>. <1>
 <2> The `_acme-challenge.api` record must be created in the same origin as the `api` record.
 <3> The `_acme-challenge.apps` record must be created in the same origin as the `apps` record.
 endif::[]
-ifeval::["{provider}" == "exoscale"]
-. Setup the `_acme-challenge` CNAME records in the cluster's DNS zone
-+
-[IMPORTANT]
-====
-The `_acme-challenge` records must be created in the same zone as the cluster's `api` and `apps` records respectively.
-The snippet below assumes that the cluster is configured to use the default "apps" domain in the cluster's zone.
-====
-+
-[source,bash]
-----
-for cname in "api" "apps"; do
-  exo dns add CNAME "${CLUSTER_DOMAIN}" -n "_acme-challenge.${cname}" -a "${fulldomain}." -t 600
-done
-----
 endif::[]
 
 === Ensure emergency admin access to the cluster

@@ -148,6 +148,39 @@ export CSI_ACCESSKEY=$(echo "${csi_credentials}" | jq -r '.key')
 export CSI_SECRETKEY=$(echo "${csi_credentials}" | jq -r '.secret')
 ----
 
+. Create restricted API key for Exoscale cert-manager webhook
++
+[source,bash]
+----
+# Create Exoscale cert-manager webhook IAM role, if it doesn't exist yet in the organization
+certwebhook_role_id=$(exo iam role list -O json | \
+  jq -r '.[] | select(.name=="cert-webhook-exoscale") | .key')
+if [ -z "${certwebhook_role_id}" ]; then
+echo '{
+  "default-service-strategy": "deny",
+  "services": {
+    "dns": {
+      "type": "rules",
+      "rules": [
+        {
+          "action": "allow",
+          "expression": "operation in ['list-dns-domain-records', 'get-dns-domain-record', 'get-operation', 'list-dns-domains', 'create-dns-domain-record', 'delete-dns-domain-record']"
+        }
+      ]
+    }
+  }
+}' | \
+exo iam role create cert-webhook-exoscale \
+  --description "Exoscale Cert Webhook: Access to dns operations" \
+  --policy -
+fi
+# Create access key
+cert_credentials=$(exo iam api-key create -O json \
+  "${CLUSTER_ID}_cert_webhook" cert-webhook-exoscale)
+export CERT_ACCESSKEY=$(echo "${cert_credentials}" | jq -r '.key')
+export CERT_SECRETKEY=$(echo "${cert_credentials}" | jq -r '.secret')
+----
+
 
 [#_bootstrap_bucket]
 === Set up S3 bucket for cluster bootstrap
@@ -225,6 +258,11 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/appcat/provider-exoscale \
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/csi_driver \
   s3_access_key=${CSI_ACCESSKEY} \
   s3_secret_key=${CSI_SECRETKEY}
+
+# Set the Cert Manager Webhook Credentials
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/cert_webhook \
+  s3_access_key=${CERT_ACCESSKEY} \
+  s3_secret_key=${CERT_SECRETKEY}
 ----
 
 include::partial$get-hieradata-token-from-vault.adoc[]

@@ -7,4 +7,4 @@
 
 ==== Generic
 
-. Do a https://docs.openshift.com/container-platform/latest/updating/updating-cluster-cli.html#updating-cluster-cli[first maintenance]
+. Do a https://docs.openshift.com/container-platform/latest/updating/updating_a_cluster/updating-cluster-cli.html#update-upgrading-cli_updating-cluster-cli[first maintenance]

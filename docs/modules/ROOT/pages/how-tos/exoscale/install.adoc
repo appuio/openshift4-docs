@@ -171,7 +171,7 @@ RHCOS_VERSION="{ocp-patch-version}"
 curl -L "https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/${RHCOS_VERSION}/rhcos-${RHCOS_VERSION}-x86_64-openstack.x86_64.qcow2.gz" | gunzip > rhcos-${RHCOS_VERSION}.qcow2
 
 sudo virt-edit -a rhcos-${RHCOS_VERSION}.qcow2 \
-  -m /dev/sda3:/ /loader/entries/ostree-1-rhcos.conf \
+  -m /dev/sda3:/ /loader/entries/ostree-1.conf \
   -e 's/openstack/exoscale/'
 
 exo storage upload rhcos-${RHCOS_VERSION}.qcow2 "sos://${CLUSTER_ID}-bootstrap" --acl public-read
@@ -253,6 +253,16 @@ exo storage upload "${INSTALLER_DIR}/bootstrap.ign" "sos://${CLUSTER_ID}-bootstr
 include::partial$install/prepare-syn-config.adoc[]
 
 === Provision Infrastructure
+
+[NOTE]
+====
+If Terraform is unable to create a new DNS domain because the DNS subscription limit has been reached, you need to manually upgrade the DNS subscription in the Exoscale console (DNS tab).
+
+Similarly, if Terraform is unable to create new instances because the usage of resource 'instance' has been exceeded, you can request a quota increase via the Exoscale console (Organization -> Quotas).
+This usually gets processed within 5-10 minutes.
+
+You can retry the failed `terraform apply` step afterwards.
+====
 
 include::partial$exoscale/configure-terraform-secrets.adoc[]
 

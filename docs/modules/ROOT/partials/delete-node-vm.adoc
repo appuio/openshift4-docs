@@ -7,14 +7,14 @@ ifeval::["{cloud_provider}" == "exoscale"]
 [source,bash,subs="attributes+"]
 ----
 for node in $(echo -n {node-delete-list}); do
-  node_id=$(exo vm list -O json | \
+  node_id=$(exo compute instance list -O json | \
     jq --arg storage_node "$node" -r \
-    '.[] | select(.name==$storage_node) | .id')
+    '.[] | select(.name? | match($storage_node)) | .id')
 
   echo "Removing node:"
-  exo vm list | grep "${node_id}"
+  exo compute instance list | grep "${node_id}"
 
-  exo vm delete "${node_id}"
+  exo compute instance delete "${node_id}" -z "$EXOSCALE_ZONE"
 done
 ----
 endif::[]

@@ -38,7 +38,7 @@ Make sure you have sufficient cluster capacity before continuing.
 [source,bash]
 ----
 INFRA_ID=$(jq -r .infraID "${INSTALLER_DIR}/metadata.json")
-kubectl -n openshift-machine-api patch machineset ${INFRA_ID}-worker \
+kubectl -n openshift-machine-api patch machineset ${INFRA_ID}-worker-0 \
   -p '{"spec": {"replicas": 0}}' --type merge
 ----
 
@@ -54,7 +54,7 @@ kubectl get pods -A | grep -vw -e Running -e Completed
 +
 [source,bash]
 ----
-kubectl -n openshift-machine-api delete machineset ${INFRA_ID}-worker
+kubectl -n openshift-machine-api delete machineset ${INFRA_ID}-worker-0
 ----
 
 ifeval::["{provider}" == "vsphere"]

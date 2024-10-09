@@ -14,6 +14,6 @@ yq eval -i ".parameters.openshift.vsphere.datastore = \"${VSPHERE_DATASTORE}\"" 
 yq eval -i ".parameters.openshift.vsphere.server = \"${VCENTER_HOSTNAME}\"" \
   ${CLUSTER_ID}.yml
 
-yq eval -i ".parameters.openshift.vsphere.folder = \"${VSPHERE_FOLDER}\"" \
+yq eval -i ".parameters.openshift.vsphere.folder = .parameters.openshift.infraID" \
   ${CLUSTER_ID}.yml
 ----

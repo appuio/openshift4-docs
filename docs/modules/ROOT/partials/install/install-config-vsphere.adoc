@@ -52,7 +52,6 @@ platform:
           networks:
             - ${VSPHERE_NETWORK}
           resourcePool: "/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}//Resources"
-          folder: "/${VSPHERE_DATACENTER}/vm/${VSPHERE_FOLDER}"
     ingressVIPs:
       - ${INGRESS_VIP}
     vcenters:

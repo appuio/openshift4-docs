@@ -64,7 +64,6 @@ export VSPHERE_CLUSTER=<cluster name>
 export VSPHERE_DATACENTER=<datacenter name>
 export VSPHERE_DATASTORE=<datastore name>
 export VSPHERE_NETWORK=<network name>
-export VSPHERE_FOLDER=<folder name>
 ----
 
 .Cluster machine network

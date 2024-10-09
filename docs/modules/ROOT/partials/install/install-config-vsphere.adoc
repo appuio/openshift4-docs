@@ -52,7 +52,7 @@ platform:
           networks:
             - ${VSPHERE_NETWORK}
           resourcePool: "/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}//Resources"
-          folder: "/${VSPHERE_DATACENTER}/vm/${VSPHERE_FOLDER}"
+          folder: "" <3>
     ingressVIPs:
       - ${INGRESS_VIP}
     vcenters:
@@ -75,3 +75,4 @@ EOF
 Otherwise, the installation will most likely fail.
 <2> We only provision a single compute machine set.
 The final machine sets will be configured through Project Syn.
+<3> The installer will by default create a top-level folder with the vsphere infraID, but you can optionally choose an existing folder (https://docs.openshift.com/container-platform/4.15/installing/installing_vsphere/installation-config-parameters-vsphere.html#installation-configuration-parameters-additional-vsphere_installation-config-parameters-vsphere[docs]).

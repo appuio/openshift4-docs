@@ -109,3 +109,33 @@ oc whoami # should output system:serviceaccount:appuio-emergency-credentials-con
 ----
 kubectl -n openshift-config patch cm admin-kubeconfig-client-ca --type=merge -p '{"data": {"ca-bundle.crt": ""}}'
 ----
+
+=== Enable Opsgenie alerting
+
+. Create the standard silence for alerts that don't have the `syn` label
++
+[source,bash]
+----
+oc --as cluster-admin -n openshift-monitoring create job --from=cronjob/silence silence-manual
+oc wait -n openshift-monitoring --for=condition=complete job/silence-manual
+oc --as cluster-admin -n openshift-monitoring delete job/silence-manual
+----
+
+. Check the remaining active alerts and address them where neccessary
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n openshift-monitoring exec sts/alertmanager-main -- \
+    amtool --alertmanager.url=http://localhost:9093 alert --active
+----
+
+. Remove the "no-opsgenie" class from the cluster's configuration
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+yq eval -i 'del(.classes[] | select(. == "*.no-opsgenie"))' ${CLUSTER_ID}.yml
+git commit -a -m "Enable opsgenie alerting on cluster ${CLUSTER_ID}"
+git push
+popd
+----

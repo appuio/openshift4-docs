@@ -14,6 +14,13 @@ if ls openshift4.y*ml 1>/dev/null 2>&1; then
 fi
 ----
 
+. Include no-opsgenie class to prevent monitoring noise during cluster setup
++
+[source,bash]
+----
+yq eval -i '.classes += "global.distribution.openshift4.no-opsgenie"' ${CLUSTER_ID}.yml;
+----
+
 . Update cluster config
 +
 [source,bash,subs="attributes+"]

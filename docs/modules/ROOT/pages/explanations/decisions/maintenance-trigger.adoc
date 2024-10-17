@@ -85,7 +85,7 @@ Instead of adjusting openshift-managed-upgrade-operator to support our requireme
 
 By running an active component in the cluster we can easily monitor the cluster's state and upgrade progress from the same tool which triggers the upgrade.
 If we implement the active component from scratch, we've got full control over the tool's development.
-This allows quick turnaround for adding features and fixing bugs, and avoids the potentially high maintenance burden of pulling in upstream updates if we were to for openshift-managed-upgrade operator.
+This allows quick turnaround for adding features and fixing bugs, and avoids the potentially high maintenance burden of pulling in upstream updates if we were to fork the openshift-managed-upgrade operator.
 
 Additionally, it's unlikely that we could upstream our changes to openshift-managed-upgrade-operator, as we probably have different requirements than the OpenShift Dedicated product.
 Since we already have sufficient experience in implementing Kubernetes controllers/operators, the additional effort for the initial implementation should be acceptable.

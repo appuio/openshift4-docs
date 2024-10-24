@@ -14,6 +14,7 @@ For customer clusters, set the following cluster facts in Lieutenant:
 * `service_level`: Name of the service level agreement for this cluster, such as `guaranteed-availability`
 * `sales_order`: Name of the sales order to which the cluster is billed, such as `S10000`
 * `release_channel`: Name of the syn component release channel to use, such as `stable`
+* `cilium_addons`: Comma-separated list of cilium addons the customer gets billed for, such as `advanced_networking` or `tetragon`. Set to `NONE` if no addons should be billed.
 
 === Set up Keycloak service
 

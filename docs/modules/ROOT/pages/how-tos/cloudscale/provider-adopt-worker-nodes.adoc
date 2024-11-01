@@ -172,7 +172,7 @@ EOF
 
 . Check the terraform plan output and apply the changes.
 There should be no server recreation.
-Hieradata entries can be ignored.
+Hieradata changes must be ignored, otherwise the cluster ingress controller will become unavailable.
 +
 [source,bash]
 ----

@@ -38,6 +38,8 @@ yq -i '.applications += "machine-api-provider-cloudscale"' \
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.make_worker_adoptable_by_provider = true" \
   ${CLUSTER_ID}.yml
+yq eval -i '.parameters.machine_api_provider_cloudscale.secrets["cloudscale-user-data"].stringData.ignitionCA = "${openshift4_terraform:terraform_variables:ignition_ca}"' \
+  ${CLUSTER_ID}.yml
 
 git commit -m "Allow adoption of worker nodes" "${CLUSTER_ID}.yml"
 popd

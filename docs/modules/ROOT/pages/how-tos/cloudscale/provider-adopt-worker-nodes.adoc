@@ -1,0 +1,218 @@
+= Adopt worker nodes with the cloudscale Machine API Provider
+
+[abstract]
+--
+Steps to adopt worker nodes on https://cloudscale.ch[cloudscale] with the https://github.com/appuio/machine-api-provider-cloudscale[cloudscale Machine API Provider].
+--
+
+== Starting situation
+
+* You already have an OpenShift 4 cluster on cloudscale
+* You have admin-level access to the cluster
+* You want the nodes adopted by the https://github.com/appuio/machine-api-provider-cloudscale[cloudscale Machine API Provider]
+
+== Prerequisites
+
+The following CLI utilities need to be available locally:
+
+* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `docker`
+* `kubectl`
+* `vault`
+* `yq`
+
+== Prepare local environment
+
+include::partial$cloudscale/setup-local-env.adoc[]
+
+== Update Cluster Config
+
+. Update cluster config
++
+[source,bash]
+----
+pushd inventory/classes/"${TENANT_ID}"
+
+yq -i '.applications += "machine-api-provider-cloudscale"' \
+  ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.make_worker_adoptable_by_provider = true" \
+  ${CLUSTER_ID}.yml
+
+git commit -m "Allow adoption of worker nodes" "${CLUSTER_ID}.yml"
+popd
+----
+
+. Compile and push the cluster catalog.
++
+[source,bash]
+----
+commodore catalog compile "${CLUSTER_ID}" --push
+----
+
+== Prepare Terraform environment
+
+include::partial$cloudscale/configure-terraform-secrets.adoc[]
+
+include::partial$setup_terraform.adoc[]
+
+== Run terraform
+
+. Verify terraform output and apply the changes if everything looks good.
++
+Terraform will tag the nodes as preparation for the adoption by the cloudscale Machine API Provider.
++
+[source,bash]
+----
+terraform apply
+----
+
+== Apply Machine and MachineSet manifests
+
+[IMPORTANT]
+====
+Please ensure the terraform apply has completed successfully before proceeding with this step.
+Without the tags applied by Terraform, nodes will be duplicated with the same name and weird stuff might happen.
+
+Please be careful to not apply the `MachineSet` before the `Machine` manifests.
+====
+
+. Copy `worker-machines_yml` from the Terraform output and apply it to the cluster.
++
+[source,bash]
+----
+terraform output -raw worker-machines_yml | yq -P > worker-machines.yml
+head worker-machines.yml
+kubectl apply -f worker-machines.yml
+----
+
+. Check that all machines are in the `Running` state.
++
+[source,bash]
+----
+kubectl get -f worker-machines.yml
+----
+
+. Copy `worker-machineset_yml` from the Terraform output and apply it to the cluster.
++
+[source,bash]
+----
+terraform output -raw worker-machineset_yml | yq -P > worker-machineset.yml
+head worker-machineset.yml
+kubectl apply -f worker-machineset.yml
+----
+
+. Copy `infra-machines_yml` from the Terraform output and apply it to the cluster.
++
+[source,bash]
+----
+terraform output -raw infra-machines_yml | yq -P > infra-machines.yml
+head infra-machines.yml
+kubectl apply -f infra-machines.yml
+----
+
+. Check that all machines are in the `Running` state.
++
+[source,bash]
+----
+kubectl get -f infra-machines.yml
+----
+
+. Copy `infra-machineset_yml` from the Terraform output and apply it to the cluster.
++
+[source,bash]
+----
+terraform output -raw infra-machineset_yml | yq -P > infra-machineset.yml
+head infra-machineset.yml
+kubectl apply -f infra-machineset.yml
+----
+
+. Copy `additional-worker-machines_yml` from the Terraform output and apply it to the cluster.
++
+[source,bash]
+----
+terraform output -raw additional-worker-machines_yml | yq -P > additional-worker-machines.yml
+head additional-worker-machines.yml
+kubectl apply -f additional-worker-machines.yml
+----
+
+. Check that all machines are in the `Running` state.
++
+[source,bash]
+----
+kubectl get -f additional-worker-machines.yml
+----
+
+. Copy `additional-worker-machinesets_yml` from the Terraform output and apply it to the cluster.
++
+[source,bash]
+----
+terraform output -raw additional-worker-machinesets_yml | yq -P > additional-worker-machinesets.yml
+head additional-worker-machinesets.yml
+kubectl apply -f additional-worker-machinesets.yml
+----
+
+== Remove nodes from the Terraform state
+
+. Remove the nodes from the Terraform state.
++
+[source,bash]
+----
+terraform state rm module.cluster.module.worker
+terraform state rm module.cluster.module.infra
+terraform state rm module.cluster.module.additional_worker
+cat > override.tf <<EOF
+module "cluster" {
+  infra_count              = 0
+  worker_count             = 0
+  additional_worker_groups = {}
+}
+EOF
+----
+
+. Check the terraform plan output and apply the changes.
+There should be no server recreation.
+Hieradata entries can be ignored.
++
+[source,bash]
+----
+terraform plan
+terraform apply
+----
+
+== Cleanup
+
+. Persist the Terraform changes and start managing the machine sets.
++
+[source,bash]
+----
+popd
+pushd "inventory/classes/${TENANT_ID}"
+
+yq -i e '.parameters.openshift4_terraform.terraform_variables.additional_worker_groups= {}' \
+  "${CLUSTER_ID}.yml"
+yq -i e '.parameters.openshift4_terraform.terraform_variables.infra_count = 0' \
+  "${CLUSTER_ID}.yml"
+yq -i e '.parameters.openshift4_terraform.terraform_variables.worker_count = 0' \
+  "${CLUSTER_ID}.yml"
+
+yq -i ea 'select(fileIndex == 0) as $cluster |
+          $cluster.parameters.openshift4_nodes.machineSets =
+            ([select(fileIndex > 0)][] as $ms ireduce ({};
+              $ms.metadata.name as $msn |
+              del($ms.apiVersion) |
+              del($ms.kind) |
+              del($ms.metadata.name) |
+              del($ms.metadata.labels.name) |
+              del($ms.metadata.namespace) |
+              . * {$msn: $ms}
+            )) |
+          $cluster' \
+  "${CLUSTER_ID}.yml" ../../../catalog/manifests/openshift4-terraform/*machineset*.yml
+
+git commit -am "Persist provider adopted machine and terraform state for ${CLUSTER_ID}"
+git push origin master
+popd
+
+commodore catalog compile "${CLUSTER_ID}" --push
+----

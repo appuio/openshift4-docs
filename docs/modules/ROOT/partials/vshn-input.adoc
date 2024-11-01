@@ -2,7 +2,7 @@ ifeval::["{needs_gitlab}" != "no"]
 .Access to VSHN GitLab
 [source,bash]
 ----
-# From https://git.vshn.net/-/profile/personal_access_tokens, "api" scope is sufficient
+# From https://git.vshn.net/-/user_settings/personal_access_tokens, "api" scope is sufficient
 export GITLAB_TOKEN=<gitlab-api-token>
 export GITLAB_USER=<gitlab-user-name>
 ----

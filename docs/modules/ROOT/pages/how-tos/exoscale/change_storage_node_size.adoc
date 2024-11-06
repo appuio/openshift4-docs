@@ -100,8 +100,17 @@ echo $NODES_TO_REPLACE
 [source,bash]
 ----
 terraform state rm "module.cluster.module.storage.random_id.node_id"
-terraform state rm "module.cluster.module.storage.exoscale_compute.nodes"
+terraform state rm "module.cluster.module.storage.exoscale_compute_instance.nodes"
 ----
++
+[NOTE]
+====
+If the cluster is using a dedicated hypervisor, you may need to also delete the affinity-group.
+[source,bash]
+----
+terraform state rm "module.cluster.module.storage.exoscale_anti_affinity_group.anti_affinity_group[0]"
+----
+====
 
 . Run Terraform to spin up replacement nodes
 +

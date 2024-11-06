@@ -9,9 +9,12 @@ If the storage cluster is mostly idle, you can speed up backfilling by temporari
 [source,bash]
 ----
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph config set osd osd_max_backfills 10 <1>
+  ceph config set osd osd_mclock_override_recovery_settings true <1>
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph config set osd osd_max_backfills 10 <2>
 ----
-<1> The number of PGs which are allowed to backfill in parallel.
+<1> Allow overwriting `osd_max_backfills`.
+<2> The number of PGs which are allowed to backfill in parallel.
 Adjust up or down depending on client load on the storage cluster.
 
 After backfilling is completed, you can remove the configuration with
@@ -20,6 +23,8 @@ After backfilling is completed, you can remove the configuration with
 ----
 kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph config rm osd osd_max_backfills
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  ceph config rm osd osd_mclock_override_recovery_settings
 ----
 ====
 +

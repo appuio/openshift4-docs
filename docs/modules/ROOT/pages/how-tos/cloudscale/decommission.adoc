@@ -13,11 +13,7 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch]
 
 == Prerequisites
 
-* `docker`
-* `mc` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
-* `jq`
-* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor]
-
+include::partial$cloudscale/prerequisites.adoc[]
 
 == Cluster Decommission
 
@@ -25,12 +21,41 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch]
 +
 [source,bash]
 ----
-export CLOUDSCALE_API_TOKEN=<cloudscale-api-token> # From https://control.cloudscale.ch/service/PROJECT_ID/api-token
 export CLUSTER_ID=<lieutenant-cluster-id>
-export TENANT_ID=<lieutenant-tenant-id>
-export REGION=<region> # rma or lpg (without the zone number)
 export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/-/profile/personal_access_tokens
 export GITLAB_USER=<gitlab-user-name>
+----
+
+. Grab more tokens and facts from vault and lieutenant
++
+include::partial$connect-to-vault.adoc[]
++
+[source,bash]
+----
+export TENANT_ID=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .tenant)
+export CLOUDSCALE_API_TOKEN=$(vault kv get -format=json clusters/kv/$TENANT_ID/$CLUSTER_ID/cloudscale | jq -r .data.data.token)
+export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
+export BACKUP_REGION=$(curl -H "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" https://api.cloudscale.ch/v1/regions | jq -r '.[].slug' | grep -v $REGION)
+export HIERADATA_REPO_SECRET=$(vault kv get \
+  -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq -r '.data.data.token')
+----
+
+. Compile the catalog for the cluster.
+Having the catalog available locally enables us to run Terraform for the cluster to make any required changes.
++
+[source,bash]
+----
+commodore catalog compile "${CLUSTER_ID}"
+----
+
+. Configure Terraform secrets
++
+[source,bash]
+----
+cat <<EOF > ./terraform.env
+CLOUDSCALE_API_TOKEN
+HIERADATA_REPO_TOKEN
+EOF
 ----
 
 include::partial$setup_terraform.adoc[]
@@ -41,7 +66,7 @@ include::partial$setup_terraform.adoc[]
 ----
 declare -a LB_FQDNS
 for id in 1 2; do
-  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | sed -e 's/"//g')
+  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
 done
 for lb in ${LB_FQDNS[*]}; do
   ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf"
@@ -59,7 +84,6 @@ terraform state rm module.cluster.module.lb.module.hiera[0].gitfile_checkout.app
 +
 NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.
 
-
 . Delete resources from clouscale.ch using Terraform
 +
 [source,bash]
@@ -69,8 +93,13 @@ terraform destroy
 # Destroy a second time to delete private networks
 terraform destroy
 ----
++
+[source,bash]
+----
+popd
+----
 
-. After all resources are deleted we need to remove the bucket
+. After all resources are deleted we need to remove the buckets
 +
 [source,bash]
 ----
@@ -85,11 +114,32 @@ mc config host add \
   $(echo $response | jq -r '.keys[0].access_key') \
   $(echo $response | jq -r '.keys[0].secret_key')
 
-# delete bootstrap-ignition object
+# delete bootstrap-ignition object (should already be deleted after setup)
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition" --force
 
 # delete image-registry object
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry" --force
+----
+
+. Delete the cluster-backup bucket in the cloudscale.ch project
++
+[NOTE]
+====
+Verify that the cluster backups aren't needed anymore before cleaning up the backup bucket.
+Consider extracting the most recent cluster objects and etcd backups before deleting the bucket.
+See the xref:how-tos/recover-from-backup.adoc[Recover objects from backup] how-to for instructions.
+At this point in the decommissioning process, you'll have to extract the Restic configuration from Vault instead of the cluster itself.
+====
++
+[source,bash]
+----
+# configure minio client to use the bucket
+mc config host add \
+  "${CLUSTER_ID}_backup" "https://objects.${BACKUP_REGION}.cloudscale.ch" \
+  $(echo $response | jq -r '.keys[0].access_key') \
+  $(echo $response | jq -r '.keys[0].secret_key')
+
+mc rb "${CLUSTER_ID}_backup/${CLUSTER_ID}-cluster-backup" --force
 
 # delete cloudscale.ch user object
 curl -i -H "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" -X DELETE $(echo $response | jq -r '.href')
@@ -99,15 +149,12 @@ curl -i -H "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" -X DELETE $(echo $res
 +
 [source,bash]
 ----
-# Vault login
-export VAULT_ADDR=https://vault-prod.syn.vshn.net
-vault login -method=oidc
-
-# delete token secret
-vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale
-
-# delete registry secret
-vault kv delete clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry
+for secret in $(find catalog/refs/ -type f -printf "clusters/kv/%P\n" \
+    | sed -r 's#(.*)/.*#\1#' | grep -v '__shared__/__shared__' \
+    | sort -u);
+do
+  vault kv delete "$secret"
+done
 ----
 
 . Decommission Puppet-managed LBs according to the https://wiki.vshn.net/display/VT/How+To%3A+Decommission+a+VM[VSHN documentation] (Internal link).
@@ -138,7 +185,7 @@ See the xref:how-tos/recover-from-backup.adoc[Recover objects from backup] how-t
 At this point in the decommissioning process, you'll have to extract the Restic configuration from Vault instead of the cluster itself.
 ====
 
-. Delete all other Vault entries
+. Delete the cluster's API tokens in the cloudscale UI
 
 . Delete Keycloak service (via portal)
 +

@@ -114,7 +114,7 @@ mc config host add \
   $(echo $response | jq -r '.keys[0].access_key') \
   $(echo $response | jq -r '.keys[0].secret_key')
 
-# delete bootstrap-ignition object (should already be deleted after setup)
+# delete bootstrap-ignition bucket (should already be deleted after setup)
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition" --force
 
 # delete image-registry object

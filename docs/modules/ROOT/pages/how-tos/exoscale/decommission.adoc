@@ -26,6 +26,8 @@ Always follow the https://wiki.vshn.net/display/VINT/4-eye+data+deletion[4-eye d
 
 == Cluster Decommission
 
+. Create a new API key with role `unrestricted` for the decommissioning
+
 . Export the following vars
 +
 [source,console]
@@ -33,7 +35,7 @@ Always follow the https://wiki.vshn.net/display/VINT/4-eye+data+deletion[4-eye d
 export EXOSCALE_ACCOUNT=<exoscale-account>
 export EXOSCALE_API_KEY=<exoscale-key>
 export EXOSCALE_API_SECRET=<exoscale-secret>
-export EXOSCALE_REGION=<cluster-region>
+export EXOSCALE_ZONE=<cluster-region>  # e.g. ch-gva-2
 
 export CLUSTER_ID=<cluster-name>
 
@@ -57,7 +59,7 @@ commodore catalog compile ${CLUSTER_ID}
 +
 [source,console]
 ----
-cat <<EOF > catalog/manifests/openshift4-terraform/.env
+cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
 EXOSCALE_API_KEY
 EXOSCALE_API_SECRET
 EOF
@@ -105,7 +107,7 @@ cat <<EOF >> ~/.config/exoscale/exoscale.toml
 
 [[accounts]]
   account = "${EXOSCALE_ACCOUNT}"
-  defaultZone = "${EXOSCALE_REGION}"
+  defaultZone = "${EXOSCALE_ZONE}"
   endpoint = "https://api.exoscale.ch/v1"
   name = "${CLUSTER_ID}"
 EOF
@@ -117,6 +119,24 @@ exo storage rb -f "${CLUSTER_ID}-bootstrap"
 exo storage delete -r -f "sos://${CLUSTER_ID}-image-registry/"
 exo storage rb -f "${CLUSTER_ID}-image-registry"
 ----
+
+. Delete the cluster-backup bucket
++
+[NOTE]
+====
+Verify that the cluster backups aren't needed anymore before cleaning up the backup bucket.
+Consider extracting the most recent cluster objects and etcd backups before deleting the bucket.
+See the xref:how-tos/recover-from-backup.adoc[Recover objects from backup] how-to for instructions.
+At this point in the decommissioning process, you'll have to extract the Restic configuration from Vault instead of the cluster itself.
+====
++
+[source,bash]
+----
+exo storage delete -r -f "sos://${CLUSTER_ID}-cluster-backup/"
+exo storage rb -f "${CLUSTER_ID}-cluster-backup"
+----
+
+. Delete the cluster's API keys and the API key created for decommissioning
 
 . Decommission Puppet-managed LBs according to the https://wiki.vshn.net/display/VT/How+To%3A+Decommission+a+VM[VSHN documentation] (Internal link).
 +

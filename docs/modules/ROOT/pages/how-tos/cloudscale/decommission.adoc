@@ -26,7 +26,7 @@ export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/-/profile/per
 export GITLAB_USER=<gitlab-user-name>
 ----
 
-. Grab more tokens and facts from vault and lieutenant
+. Grab cluster tokens and facts from Vault and Lieutenant
 +
 include::partial$connect-to-vault.adoc[]
 +

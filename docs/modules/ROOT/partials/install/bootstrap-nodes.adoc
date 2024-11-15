@@ -103,7 +103,7 @@ ifeval::["{provider}" == "cloudscale"]
 +
 [source,bash,subs="attributes+"]
 ----
-cat ../machine-api-provider-cloudscale/00_secrets.yaml  | yq '(select(document_index==0) | .stringData.token) = "'$(vault kv get -format=json clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale/ | jq -r .data.data.token)'" ' | kubectl apply -f -
+kapitan refs --reveal --refs-path ../../refs ../machine-api-provider-cloudscale/00_secrets.yaml | kubectl apply -f -
 
 kubectl apply  -f ../machine-api-provider-cloudscale/10_clusterRoleBinding.yaml
 

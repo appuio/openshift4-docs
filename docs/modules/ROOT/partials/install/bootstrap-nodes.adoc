@@ -98,6 +98,32 @@ terraform apply
 
 ifeval::["{provider}" == "cloudscale"]
 . Add the DNS records for etcd shown in output variable `dns_entries` from the previous step to the cluster's parent zone
+
+. Apply the manifests for the cloudscale machine-api provider
++
+[source,bash,subs="attributes+"]
+----
+cat ../machine-api-provider-cloudscale/00_secrets.yaml  | yq '(select(document_index==0) | .stringData.token) = "'$(vault kv get -format=json clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale/ | jq -r .data.data.token)'" ' | kubectl apply -f -
+
+kubectl apply  -f ../machine-api-provider-cloudscale/10_clusterRoleBinding.yaml
+
+kubectl apply -f ../machine-api-provider-cloudscale/10_serviceAccount.yaml
+
+kubectl apply -f ../machine-api-provider-cloudscale/11_deployment.yaml
+----
+
+. Apply the machinesets from terraform
++
+[source,bash,subs="attributes+"]
+----
+terraform output -raw worker-machineset_yml | grep -vP '^(│|╵|╷|There are some problems with the CLI configuration)' | yq -P > worker-machineset.yml
+head worker-machineset.yml
+kubectl apply -f worker-machineset.yml
+
+terraform output -raw infra-machineset_yml | grep -vP '^(│|╵|╷|There are some problems with the CLI configuration)' | yq -P > infra-machineset.yml
+head infra-machineset.yml
+kubectl apply -f infra-machineset.yml
+----
 endif::[]
 
 . Wait for bootstrap to complete
@@ -122,7 +148,12 @@ kubectl taint no -l node-role.kubernetes.io/master node.cloudprovider.kubernetes
 ----
 --
 
+ifeval::["{provider}" != "cloudscale"]
 . Remove bootstrap node and provision remaining nodes
+endif::[]
+ifeval::["{provider}" == "cloudscale"]
+. Remove bootstrap node
+endif::[]
 +
 [source,bash,subs="attributes+"]
 ----
@@ -131,6 +162,30 @@ terraform apply
 
 popd
 ----
+
+. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
++
+[source,bash]
+----
+for fqdn in "${LB_FQDNS[@]}"; do
+  ssh "${fqdn}" sudo puppetctl run
+done
+----
+
+. Scale up the infra and worker machinesets
++
+[source,bash]
+----
+INFRA_NODES=3 # adjust to desired number of infra nodes
+WORKER_NODES=3 # adjust to desired number of worker nodes
+----
++
+[source,bash]
+----
+kubectl scale machineset -nopenshift-machine-api infra --replicas="${INFRA_NODES}"
+kubectl scale machineset -nopenshift-machine-api worker --replicas="${WORKER_NODES}"
+----
+endif::[]
 
 . Disable OpenShift kube-proxy deployment and revert Cilium patch
 +
@@ -146,15 +201,7 @@ done && echo -e "\nCilium config updated"
 kubectl -n cilium rollout restart ds/cilium
 ----
 
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
-+
-[source,bash]
-----
-for fqdn in "${LB_FQDNS[@]}"; do
-  ssh "${fqdn}" sudo puppetctl run
-done
-----
-
+ifeval::["{provider}" != "cloudscale"]
 . Approve node certs
 +
 include::partial$install/approve-node-csrs.adoc[]
@@ -185,6 +232,7 @@ kubectl get node -ojson | \
 +
 [NOTE]
 At this point you may want to add extra labels to the additional worker groups, if there are any.
+endif::[]
 
 . Enable proxy protocol on ingress controller
 +

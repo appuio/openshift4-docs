@@ -176,7 +176,7 @@ done
 +
 [source,bash]
 ----
-INFRA_NODES=3 # adjust to desired number of infra nodes
+INFRA_NODES=4 # adjust to desired number of infra nodes
 WORKER_NODES=3 # adjust to desired number of worker nodes
 ----
 +

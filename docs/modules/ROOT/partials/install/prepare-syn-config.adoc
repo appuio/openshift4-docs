@@ -62,6 +62,7 @@ yq eval -i ".parameters.openshift4_version.spec.channel = \"fast-{ocp-minor-vers
 
 ifeval::["{provider}" == "cloudscale"]
 :is-terraform: yes
+:use-machine-api: yes
 endif::[]
 ifeval::["{provider}" == "exoscale"]
 :is-terraform: yes
@@ -69,6 +70,9 @@ endif::[]
 
 ifeval::["{is-terraform}" == "yes"]
 include::partial$install/prepare-syn-config-terraform.adoc[]
+endif::[]
+ifeval::["{use-machine-api}" == "yes"]
+include::partial$install/prepare-syn-config-machine-api.adoc[]
 endif::[]
 ifeval::["{provider}" == "vsphere"]
 include::partial$install/prepare-syn-config-vsphere.adoc[]

@@ -201,6 +201,26 @@ done && echo -e "\nCilium config updated"
 kubectl -n cilium rollout restart ds/cilium
 ----
 
+ifeval::["{provider}" == "cloudscale"]
+. Add Infra Node IPs to LB Hieradata
++
+[source,bash]
+----
+git clone git@git.vshn.net:appuio/appuio_hieradata.git
+
+pushd appuio_hieradata/lbaas
+
+kubectl get node -l "node-role.kubernetes.io/infra" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
+
+yq -i '."profile_openshift4_gateway::backends".router = load("ips.yml")' "${CLUSTER_ID}.yaml"
+
+rm ips.yml
+
+git commit -am "Add infra nodes as backends for ${CLUSTER_ID}."
+git push
+popd
+----
+endif::[]
 ifeval::["{provider}" != "cloudscale"]
 . Approve node certs
 +

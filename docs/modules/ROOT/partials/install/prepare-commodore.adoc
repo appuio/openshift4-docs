@@ -42,6 +42,18 @@ yq eval -i ".parameters.openshift.baseDomain = \"${CLUSTER_DOMAIN}\"" \
 git commit -a -m "Configure cluster domain for ${CLUSTER_ID}"
 ----
 
+. Include `openshift4.yml` in the cluster's config if it exists
++
+NOTE: For some tenants, this may already configure some of the settings shown in this how-to.
++
+[source,bash]
+----
+if ls openshift4.y*ml 1>/dev/null 2>&1; then
+    yq eval -i '.classes += ".openshift4"' ${CLUSTER_ID}.yml;
+    git commit -a -m "Include openshift4 class for ${CLUSTER_ID}"
+fi
+----
+
 . Add Cilium to cluster configuration
 +
 [NOTE]

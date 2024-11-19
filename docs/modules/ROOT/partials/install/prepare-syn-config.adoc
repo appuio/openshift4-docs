@@ -5,15 +5,6 @@
 pushd "inventory/classes/${TENANT_ID}/"
 ----
 
-. Include openshift4.yml if it exists
-+
-[source,bash]
-----
-if ls openshift4.y*ml 1>/dev/null 2>&1; then
-    yq eval -i '.classes += ".openshift4"' ${CLUSTER_ID}.yml;
-fi
-----
-
 . Include no-opsgenie class to prevent monitoring noise during cluster setup
 +
 [source,bash]

@@ -13,8 +13,9 @@ tf_tag=$(\
 
 # Generate the terraform alias
 base_dir=$(pwd)
-alias terraform='docker run -it --rm \
+alias terraform='touch .terraformrc; docker run -it --rm \
   -e REAL_UID=$(id -u) \
+  -e TF_CLI_CONFIG_FILE=/tf/.terraformrc \
   --env-file ${base_dir}/terraform.env \
   -w /tf \
   -v $(pwd):/tf \

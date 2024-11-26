@@ -22,7 +22,7 @@ include::partial$cloudscale/prerequisites.adoc[]
 [source,bash]
 ----
 export CLUSTER_ID=<lieutenant-cluster-id>
-export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/-/profile/personal_access_tokens
+export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/-/user_settings/personal_access_tokens
 export GITLAB_USER=<gitlab-user-name>
 ----
 

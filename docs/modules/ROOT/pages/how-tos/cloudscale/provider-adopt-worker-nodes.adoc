@@ -129,6 +129,15 @@ head infra-machineset.yml
 kubectl apply -f infra-machineset.yml
 ----
 
+. Check for additional worker groups and apply them if necessary.
++
+[source,bash]
+----
+terraform output -raw additional-worker-machines_yml > /dev/null 2>&1 || echo "No additional worker groups"
+----
+
+. If the output shows "No additional worker groups", jump to <<remove_nodes_tf_state>>.
+
 . Copy `additional-worker-machines_yml` from the Terraform output and apply it to the cluster.
 +
 [source,bash]
@@ -154,7 +163,7 @@ head additional-worker-machinesets.yml
 kubectl apply -f additional-worker-machinesets.yml
 ----
 
-== Remove nodes from the Terraform state
+== Remove nodes from the Terraform state [[remove_nodes_tf_state]]
 
 . Remove the nodes from the Terraform state.
 +

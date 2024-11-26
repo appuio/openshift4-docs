@@ -42,6 +42,7 @@ yq eval -i '.parameters.machine_api_provider_cloudscale.secrets["cloudscale-user
   ${CLUSTER_ID}.yml
 
 git commit -m "Allow adoption of worker nodes" "${CLUSTER_ID}.yml"
+git push
 popd
 ----
 

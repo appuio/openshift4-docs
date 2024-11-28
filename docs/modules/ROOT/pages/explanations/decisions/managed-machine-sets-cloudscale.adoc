@@ -4,7 +4,7 @@
 
 We created a cloudscale Machine-API provider for OpenShift 4 as decided in https://kb.vshn.ch/appuio-cloud/explanation/decisions/machine-api.html[Custom Machine API Provider].
 The provider allows to managed MachineSets for all kind of nodes in an OpenShift 4 cluster.
-The provider runs on the control plane nodes but we have not yet found feasible way to run it on bootstrap nodes.
+The provider runs on the control plane nodes but we've not yet found feasible way to run it on bootstrap nodes.
 Some configuration is still Puppet or Terraform based.
 
 === Goals
@@ -24,7 +24,7 @@ We only manage worker nodes with the Machine-API provider.
 After installing the control-plane nodes, the infra nodes and any additional nodes (for example, storage nodes) create a MachineSet for the worker nodes.
 
 This allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace failing worker nodes.
-It does not help us with replacing other node types, such as infra nodes.
+It doesn't help us with replacing other node types, such as infra nodes.
 
 === Option 2: Manage all nodes except control plane nodes
 
@@ -33,13 +33,13 @@ After installing the control-plane nodes, the infra nodes and any additional nod
 
 This allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace failing nodes.
 
-Control plane nodes are not managed by the Machine-API provider because they are not expected to be replaced often.
+Control plane nodes aren't managed by the Machine-API provider because they aren't expected to be replaced often.
 Control plane nodes need some configuration in the VSHN DNS zone and can't be that easily replaced anyways.
 There is no easy and intuitive way to bootstrap the control plane nodes with the Machine-API provider since the provider itself is running on the control plane nodes.
 
-Some caution has to be taken to follow correct node replacement procedures such as updating the router backend configuration for infra nodes or rebalancing the storage nodes.
+Some caution has to be taken to follow correct node replacement procedures such as updating the router back end configuration for infra nodes or rebalancing the storage nodes.
 
-Router backend configuration will need to be automated, independently of this issue, as soon as we rollout the new cloudscale load balancers.
+Router back end configuration will need to be automated, independently of this issue, as soon as we rollout the new cloudscale load balancers.
 
 === Option 3: Manage all nodes
 
@@ -62,5 +62,5 @@ We decided to go with option 2: Manage all nodes except control plane nodes.
 
 We decided to go with option 2 because it allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace most types of failing nodes.
 Since the provider is farley new we want to start with a smaller scope and expand it later on.
-Setting up control plane nodes with a provider is not straight forward.
+Setting up control plane nodes with a provider isn't straight forward.
 With the introduction of the new cloudscale load balancers we might revisit this decision.

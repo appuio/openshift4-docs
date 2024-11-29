@@ -3,14 +3,14 @@
 == Problem
 
 We created a cloudscale Machine-API provider for OpenShift 4 as decided in https://kb.vshn.ch/appuio-cloud/explanation/decisions/machine-api.html[Custom Machine API Provider].
-The provider allows to managed MachineSets for all kind of nodes in an OpenShift 4 cluster.
-The provider runs on the control plane nodes but we've not yet found feasible way to run it on bootstrap nodes.
-Some configuration is still Puppet or Terraform based.
+The provider allows to managed MachineSets for all node types in an OpenShift 4 cluster.
+The provider runs on the control plane nodes but we've not yet found a feasible way to run it on bootstrap nodes.
+Some configuration is still based on Puppet or Terraform.
 
 === Goals
 
 * Frictionless management of nodes
-* Shorten cluster installation time
+* Reduce cluster installation time
 
 === Non-goals
 
@@ -21,7 +21,7 @@ Some configuration is still Puppet or Terraform based.
 === Option 1: Manage worker nodes
 
 We only manage worker nodes with the Machine-API provider.
-After installing the control-plane nodes, the infra nodes and any additional nodes (for example, storage nodes) create a MachineSet for the worker nodes.
+After installing the control-plane nodes, the infra nodes and any additional nodes (for example storage nodes), we create a MachineSet for the worker nodes.
 
 This allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace failing worker nodes.
 It doesn't help us with replacing other node types, such as infra nodes.
@@ -29,7 +29,7 @@ It doesn't help us with replacing other node types, such as infra nodes.
 === Option 2: Manage all nodes except control plane nodes
 
 We manage all nodes except the control plane nodes with the Machine-API provider.
-After installing the control-plane nodes, the infra nodes and any additional nodes (for example, storage nodes) are scaled up from a MachineSet.
+After installing the control-plane nodes, the worker nodes, infra nodes and any additional nodes (for example, storage nodes) are scaled up from a MachineSet.
 
 This allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace failing nodes.
 
@@ -45,7 +45,7 @@ Router back end configuration will need to be automated, independently of this i
 
 We manage all nodes with the Machine-API provider.
 The control plane nodes are managed by the Machine-API provider as well.
-We find a way to run the provider on the bootstrap nodes or on the engineers device.
+We find a way to run the provider on the bootstrap nodes or on the engineer's device.
 
 This allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace failing nodes.
 
@@ -61,6 +61,6 @@ We decided to go with option 2: Manage all nodes except control plane nodes.
 == Rationale
 
 We decided to go with option 2 because it allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace most types of failing nodes.
-Since the provider is farley new we want to start with a smaller scope and expand it later on.
-Setting up control plane nodes with a provider isn't straight forward.
+Since the provider is fairly new we want to start with a smaller scope and expand it later on.
+Setting up control plane nodes with a provider isn't straightforward.
 With the introduction of the new cloudscale load balancers we might revisit this decision.

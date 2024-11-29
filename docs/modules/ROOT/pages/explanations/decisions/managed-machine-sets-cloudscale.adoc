@@ -1,0 +1,66 @@
+= Managed MachineSets for Cloudscale Provider
+
+== Problem
+
+We created a cloudscale Machine-API provider for OpenShift 4 as decided in https://kb.vshn.ch/appuio-cloud/explanation/decisions/machine-api.html[Custom Machine API Provider].
+The provider allows to managed MachineSets for all node types in an OpenShift 4 cluster.
+The provider runs on the control plane nodes but we've not yet found a feasible way to run it on bootstrap nodes.
+Some configuration is still based on Puppet or Terraform.
+
+=== Goals
+
+* Frictionless management of nodes
+* Reduce cluster installation time
+
+=== Non-goals
+
+* More general centralized management of OpenShift 4 clusters
+
+== Proposals
+
+=== Option 1: Manage worker nodes
+
+We only manage worker nodes with the Machine-API provider.
+After installing the control-plane nodes, the infra nodes and any additional nodes (for example storage nodes), we create a MachineSet for the worker nodes.
+
+This allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace failing worker nodes.
+It doesn't help us with replacing other node types, such as infra nodes.
+
+=== Option 2: Manage all nodes except control plane nodes
+
+We manage all nodes except the control plane nodes with the Machine-API provider.
+After installing the control-plane nodes, the worker nodes, infra nodes and any additional nodes (for example, storage nodes) are scaled up from a MachineSet.
+
+This allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace failing nodes.
+
+Control plane nodes aren't managed by the Machine-API provider because they aren't expected to be replaced often.
+Control plane nodes need some configuration in the VSHN DNS zone and can't be that easily replaced anyways.
+There is no easy and intuitive way to bootstrap the control plane nodes with the Machine-API provider since the provider itself is running on the control plane nodes.
+
+Some caution has to be taken to follow correct node replacement procedures such as updating the router back end configuration for infra nodes or rebalancing the storage nodes.
+
+Router back end configuration will need to be automated, independently of this issue, as soon as we rollout the new cloudscale load balancers.
+
+=== Option 3: Manage all nodes
+
+We manage all nodes with the Machine-API provider.
+The control plane nodes are managed by the Machine-API provider as well.
+We find a way to run the provider on the bootstrap nodes or on the engineer's device.
+
+This allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace failing nodes.
+
+Replacing control plane nodes has been tested and just works, thanks to PodDisruptionBudgets in the OpenShift 4 distribution.
+Some caution has to be taken to update internal VSHN DNS zone configuration to the new control plane nodes.
+
+We most likely can replace the DNS zone configuration after we introduced the new cloudscale load balancers.
+
+== Decision
+
+We decided to go with option 2: Manage all nodes except control plane nodes.
+
+== Rationale
+
+We decided to go with option 2 because it allows us to have the required customer requested AutoScale feature and helps us by being able to easily replace most types of failing nodes.
+Since the provider is fairly new we want to start with a smaller scope and expand it later on.
+Setting up control plane nodes with a provider isn't straightforward.
+With the introduction of the new cloudscale load balancers we might revisit this decision.

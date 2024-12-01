@@ -1,0 +1,81 @@
+= Manage Operator managed PrometheusRules
+
+== Problem
+
+OpenShift4 operators manage their PrometheusRules (and alerts), we can't alter their definition.
+The current solution is to copy those PrometheusRules, label the alerts with `syn=true` and silence alerts without that label.
+This is a manual process, as the source location may change with every change in the upstream repository.
+Rollout of new PrometheusRules must be coordinated with the corresponding change in the operator.
+
+=== Goals
+
+* Automatically copy and label the operator managed PrometheusRules
+
+== Proposals
+
+=== Option 1: Use a policy tool
+
+We could evaluate a policy tool that helps us meet our requirements.
+Such a tool could also help with other tasks we may want to automate.
+
+Our experience with Kyverno, on the other hand, led us to implement our own controller/operator for other cases where we used a policy tool in the begining.
+
+=== Option 2: Create own dedicated controller
+
+We can create our own dedicated operator that watches for changes in OpenShift operator managed PrometheusRules and dynamically copy/update and label these alerts.
+
+Implementing a dedicated operator for managing these PrometheusRules would be straightforward.
+We already implemented other controller/operator in situations where we run into limitations of existing tools.
+
+=== Option 3: Create more generalized copy/patch operator
+
+The <<_problem,problem statement>> could be generalized.
+
+=== Option 4: Use Crossplane Compositions
+
+[quote, 'https://docs.crossplane.io/v1.19/concepts/compositions/[Crossplane documentation]']
+----
+Compositions are a template for creating multiple managed resources as a single object.
+----
+
+We could use Crossplane Compositions to create a template for creating PrometheusRules.
+
+Composition functions allow Go code to be executed to generate resources.
+This would allow us templating in a fully fledged programming language.
+Crossplane was primarily designed to manage external resources.
+It's a CNCF project and moved to `Incubating` status in 2021.
+
+Using Crossplane comes with a huge overhead in both learning and operational costs.
+We would need to learn a complex new framework and tooling.
+Since functions need to be compiled and deployed the iteration cycle is much slower and more complex to debug.
+Composition functions don't seem to always be enough and `provider-kubernetes` is also required.
+We're not sure how well Crossplane handles resources primarily managed by an external party and how well server-side apply works.
+
+While we'd use Go for functions, there's still an amount of YAML that needs to be written.
+This removes the most positive aspect of having the full Go testing and linting toolchain available.
+
+VSHNs flagship project, Servala, also uses Crossplane behind the scenes.
+Servala is installed on almost every cluster and we'd most likely need to solve issues of interdependencies between the two projects.
+
+Crossplane constantly fights with performance issues and the complexity of the project.
+See https://github.com/crossplane-contrib/provider-kubernetes/issues/316[Crossplane issue 316] for an example.
+
+https://vshnwiki.atlassian.net/wiki/spaces/VST/pages/757635/Crossplane+Review[Internal reviews] of Crossplane also note the complexity of compositions, the steep learning curve, and the issues with debugging.
+It's a https://kb.vshn.ch/app-catalog/adr/0021-composition-function-error-handling.html[footgun] that's loaded and with the safety off.
+
+== Decision
+
+We decided to implement our own generalized copy/patch operator.
+
+== Rationale
+
+By implementing our own generalized copy/patch operator can adapt better to changes in the upstream PrometheusRules.
+
+Creating or patching resources based on other resources is an issue we encounter on multiple occasions.
+We already have tools in place to solve those problems, but all of them address a special case which could be unified in a more general approach.
+This would allow us to replace multiple tools and lower our operational overhead tracking and rolling out upstream changes of those tools.
+
+Additionally, we could implement a language that we already use and know very well as a templating engine.
+Using a definition language we know how to use effectively and works well will be most beneficial.
+
+Finally, we already have an operator that could be expanded to support our requirements.

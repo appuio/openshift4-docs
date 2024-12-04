@@ -148,18 +148,15 @@ yq eval -i '.parameters.networkpolicy.ignoredNamespaces = ["openshift-oauth-apis
 [source,bash]
 ----
 export CLUSTER_DOMAIN=$(kubectl get dns cluster -ojsonpath='{.spec.baseDomain}')
-kubectl --as=cluster-admin -n openshift-dns exec ds/node-resolver -- nslookup api-int.${CLUSTER_DOMAIN}
+kubectl --as=cluster-admin -n openshift-dns exec ds/node-resolver -- dig +short api-int.${CLUSTER_DOMAIN}
 ----
 +
-[TIP]
+[NOTE]
 ====
-If the command doesn't return a valid record for `api-int`, the Cilium config needs to be adjusted to use the `api` record to ensure that the Kubernetes API can be accessed.
+The command should always return a valid record for `api-int`.
 
-[source,bash]
-----
-yq -i '.parameters.cilium.cilium_helm_values.k8sServiceHost="api.${openshift:baseDomain}"' \
-  "${CLUSTER_ID}.yml"
-----
+If it doesn't, please check that the OpenShift DNS cluster operator is healthy and double-check that the record is being resolved on the internal DNS for clusters on vSphere.
+You can see more details about the lookup by omitting the `+short` flag for the `dig` command.
 ====
 
 . Configure component `cilium`.

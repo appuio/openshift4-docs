@@ -1,0 +1,49 @@
+= Manage Operator managed PrometheusRules
+
+== Problem
+
+OpenShift4 operators manage their PrometheusRules (and alerts), we can't alter their definition.
+The current solution is to copy those PrometheusRules, label the alerts with `syn=true` and silence alerts without that label.
+This is a manual process, as the source location may change with every change in the upstream repository.
+Rollout of new PrometheusRules must be coordinated with the corresponding change in the operator.
+
+=== Goals
+
+* Automatically copy and label the operator managed PrometheusRules
+
+== Proposals
+
+=== Option 1: Use a policy tool
+
+We could evaluate a policy tool that helps us meet our requirements.
+Such a tool could also help with other tasks we may want to automate.
+
+Our experience with Kyverno, on the other hand, led us to implement our own controller/operator for other cases where we used a policy tool in the begining.
+
+=== Option 2: Create own dedicated controller
+
+We can create our own dedicated operator that watches for changes in OpenShift operator managed PrometheusRules and dynamically copy/update and label these alerts.
+
+Implementing a dedicated operator for managing these PrometheusRules would be straightforward.
+We already implemented other controller/operator in situations where we run into limitations of existing tools.
+
+=== Option 3: Create more generalized copy/patch operator
+
+The <<_problem,problem statement>> could be generalized.
+
+== Decision
+
+We decided to implement our own generalized copy/patch operator.
+
+== Rationale
+
+By implementing our own generalized copy/patch operator can adapt better to changes in the upstream PrometheusRules.
+
+Creating or patching resources based on other resources is an issue we encounter on multiple occasions.
+We already have tools in place to solve those problems, but all of them address a special case which could be unified in a more general approach.
+This would allow us to replace multiple tools and lower our operational overhead tracking and rolling out upstream changes of those tools.
+
+Additionally, we could implement a language that we already use and know very well as a templating engine.
+Using a definition language we know how to use effectively and works well will be most beneficial.
+
+Finally, we already have an operator that could be expanded to support our requirements.

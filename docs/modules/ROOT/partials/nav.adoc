@@ -246,6 +246,7 @@
 * Decisions
 ** xref:oc4:ROOT:explanations/decisions/machine-api.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/managed-machine-sets-cloudscale.adoc[]
+** xref:oc4:ROOT:explanations/decisions/autoscaling-downscaling-windows.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/maintenance-trigger.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/maintenance-alerts.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/syn-argocd-sharing.adoc[]

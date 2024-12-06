@@ -1,0 +1,75 @@
+= Autoscaling with Restricted Downscaling
+
+== Problem
+
+OpenShift 4 provides two custom resources to control the autoscaling behavior of a cluster: `ClusterAutoscaler` and `MachineAutoscaler`.
+To get any autoscaling at all, a `ClusterAutoscaler` resource must be configured.
+The `ClusterAutoscaler` resource provides global limits to autoscaling.
+Additionally, the `ClusterAutoscaler` resource provides some knobs to tune the scaling behavior.
+
+To actually enable autoscaling, one or more `MachineAutoscaler` resources need to be configured as well.
+Each `MachineAutoscaler` resource configures autoscaling for a single `MachineSet`.
+
+By default, the OpenShift cluster autoscaling only allows users to enable or disable downscaling. by setting field `spec.scaleDown.enabled` on the `ClusterAutosclaer` resource.
+
+By default, VSHN Managed OpenShift 4 will scale down unused nodes at any time.
+The node(s) which are scaled down are selected based on their current utilization when the overall cluster utilization falls below a configurable threshold.
+
+However, we expect that some of our customers will require more restricted downscaling to avoid any end-user visible impact to their applications when nodes are drained and scaled down.
+
+== Goals
+
+* Determine a suitable option to dynamically enable downscaling through the default OpenShift `ClusterAutoscaler` and `MachineAutoscaler` custom resource
+
+== Non-Goals
+
+* Introduce a custom cluster autoscaler architecture
+
+== Proposals
+
+=== Downscaling at any time
+
+[#downscaling-clusterautoscaler]
+=== Control downscaling by adjusting the `ClusterAutoscaler` configuration
+
+The first option to restrict the downscaling of the cluster is to dynamically manage the `ClusterAutoscaler`'s field `spec.downScale.enabled`.
+By setting this field to `true` only for certain time windows, we can ensure that nodes are only scaled down during those time windows.
+
+==== Downscaling only in maintenance window
+
+The first variant for this approach restricts scaling down of nodes to the cluster’s regular maintenance window.
+This can be implemented through two xref:oc4:ROOT:references/architecture/upgrade_controller.adoc#_upgradejobhook[upgrade hooks]: one which sets `spec.scaleDown.enabled=true` at the start of the maintenance, and one which sets `spec.scaleDown.enabled=false` at the end of the maintenance.
+Additionally, this variant will require a customized ArgoCD sync for the `ClusterAutoscaler` resource to ensure that ArgoCD doesn't revert the change to `spec.scaleDown.enabled` during the maintenance.
+
+==== Downscaling in custom time windows
+
+The second variant requires a custom controller which manages the `ClusterAutoscaler` resource to set `spec.scaleDown.enabled` based on a set of time windows.
+Having a controller which manages the `ClusterAutoscaler` resource allows more flexible downscaling windows, such as every workday night from 20:00 to 07:00.
+However, this variant requires a significant amount of engineering, since we'll need to design and implement a new controller which manages the `ClusterAutoscaler` resource.
+
+Notably, this variant will introduce a new custom resource (for example `ClusterAutoscalerConfiguration`) which will be used to specify the base configuration of the `ClusterAutoscaler` and a list of time windows in which downscaling should be enabled.
+For this variant, the exact design will need to be documented in a separate page in this documentation.
+
+[#downscaling-machineautoscaler]
+=== Control downscaling by adjusting the `MachineAutoscaler` configuration
+
+
+The second option to restrict downscaling of the cluster is to dynamically update `spec.minReplicas` of each `MachineAutoscaler` resource whenever the cluster autoscaler scales up the referenced `MachineSet` and to revert `spec.minReplicas` to the desired minimum size of the `MachineSet` during the downscaling window.
+For this approach `spec.scaleDown.enabled` would be unconditionally set to `true` in the `ClusterAutoscaler` resource.
+
+This approach requires a controller which manages the `MachineAutoscaler` resources and updates them whenever it sees that a `MachineSet` is scaled up.
+For this approach, the exact design will need to be documented in a separate page in this documentation.
+
+== Decision
+
+We've decided to <<downscaling-clusterautoscaler,control downscaling by adjusting the `ClusterAutoscaler` configuration>>.
+
+To start, we'll only support the variant where nodes are only downscaled during the cluster's maintenance window.
+
+== Rationale
+
+The approach where we manage `spec.scaleDown.enabled` of the `ClusterAutoscaler` resource allows us to offer some control over downscaling without having to design and implement an additional controller.
+This allows us to provide some autoscaling to customers whose workloads are sensitive to disruptions during normal cluster operations.
+Notably, there's a chance that no nodes will ever be scaled down depending on the usage patterns that cause the scale up.
+
+In the future, if a customer has more complex requirements and is willing to cover a part of the implementation effort, we can easily migrate to the variant which offers arbitrary downscaling windows through a custom controller.

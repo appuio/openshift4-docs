@@ -1,0 +1,90 @@
+= Configure autoscaling
+
+[abstract]
+--
+Steps to configure autoscaling for worker nodes on https://cloudscale.ch[cloudscale] with the https://github.com/appuio/machine-api-provider-cloudscale[cloudscale Machine API Provider].
+--
+
+== Starting situation
+
+* You already have an OpenShift 4 cluster on cloudscale
+* You have admin-level access to the cluster
+* You've already deployed the cloudscale Machine API provider and xref:oc4:ROOT:how-tos/cloudscale/provider-adopt-worker-nodes.adoc[adopted the worker nodes].
+
+== Prerequisites
+
+The following CLI utilities need to be available locally:
+
+* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `yq`
+
+== Prepare local environment
+
+. Select the cluster for which you want to enable autoscaling
++
+[source,bash]
+----
+CLUSTER_ID=c-cluster-id-1234 <1>
+----
+<1> Replace with the Project Syn ID of the cluster
+
+. Create local directory to work in
++
+[TIP]
+====
+We strongly recommend creating an empty directory, unless you already have a work directory for the cluster you're about to work on.
+This guide will run Commodore in the directory created in this step.
+====
++
+[source,bash]
+----
+export WORK_DIR=/path/to/work/dir
+mkdir -p "${WORK_DIR}"
+pushd "${WORK_DIR}"
+----
+
+. Compile the cluster catalog
++
+[source,bash]
+----
+commodore catalog compile "$CLUSTER_ID"
+----
+
+== Enable autoscaling
+
+. Switch to tenant repo checkout
++
+[source,bash]
+----
+TENANT_ID=$(yq .parameters.cluster.tenant inventory/classes/params/cluster.yml)
+pushd "inventory/classes/${TENANT_ID}"
+----
+
+. Enable autoscaling with a range from 3 to 6 nodes for the `app` machineset
++
+[source,bash]
+----
+yq -i '.parameters.openshift4_nodes.autoscaling.enabled = true' \
+  ${CLUSTER_ID}.yml
+yq -i '.parameters.openshift4_nodes.autoscaling.machineAutoscalers.app.minReplicas=3' \
+  ${CLUSTER_ID}.yml
+yq -i '.parameters.openshift4_nodes.autoscaling.machineAutoscalers.app.minReplicas=6' \
+  ${CLUSTER_ID}.yml
+----
++
+NOTE: If you have different machinesets, or want to scale in a different range, adjust the commands accordingly.
++
+TIP: See the https://hub.syn.tools/openshift4-nodes/references/parameters.html#_autoscaling[component openshift4-nodes parameters documentation] for details on how to customize the autoscaling behavior.
+
+. Commit and push the changes
++
+[source,bash]
+----
+git commit -m "Enable autoscaling for ${CLUSTER_ID}" "${CLUSTER_ID}.yml"
+git push
+popd
+----
+
+== Upstream documentation
+
+* https://docs.openshift.com/container-platform/4.16/machine_management/applying-autoscaling.html[OpenShift Cluster Autoscaling]

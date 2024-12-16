@@ -68,7 +68,7 @@ yq -i '.parameters.openshift4_nodes.autoscaling.enabled = true' \
   ${CLUSTER_ID}.yml
 yq -i '.parameters.openshift4_nodes.autoscaling.machineAutoscalers.app.minReplicas=3' \
   ${CLUSTER_ID}.yml
-yq -i '.parameters.openshift4_nodes.autoscaling.machineAutoscalers.app.minReplicas=6' \
+yq -i '.parameters.openshift4_nodes.autoscaling.machineAutoscalers.app.maxReplicas=6' \
   ${CLUSTER_ID}.yml
 ----
 +

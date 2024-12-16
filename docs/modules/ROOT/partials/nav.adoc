@@ -163,6 +163,7 @@
 *** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/increase-worker-node-disk.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/provider-adopt-worker-nodes.adoc[]
+*** xref:oc4:ROOT:how-tos/cloudscale/configure-autoscaling.adoc[]
 
 ** Exoscale
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]

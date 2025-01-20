@@ -41,7 +41,7 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.make_worker_ado
 yq eval -i '.parameters.machine_api_provider_cloudscale.secrets["cloudscale-user-data"].stringData.ignitionCA = "${openshift4_terraform:terraform_variables:ignition_ca}"' \
   ${CLUSTER_ID}.yml
 
-git commit -m "Allow adoption of worker nodes" "${CLUSTER_ID}.yml"
+git commit -m "Allow adoption of worker nodes for ${CLUSTER_ID}" "${CLUSTER_ID}.yml"
 git push
 popd
 ----
@@ -86,7 +86,7 @@ Please be careful to not apply the `MachineSet` before the `Machine` manifests.
 ----
 terraform output -raw worker-machines_yml | yq -P > worker-machines.yml
 head worker-machines.yml
-kubectl apply -f worker-machines.yml
+kubectl --as=cluster-admin apply -f worker-machines.yml
 ----
 
 . Check that all machines are in the `Running` state.
@@ -102,7 +102,7 @@ kubectl get -f worker-machines.yml
 ----
 terraform output -raw worker-machineset_yml | yq -P > worker-machineset.yml
 head worker-machineset.yml
-kubectl apply -f worker-machineset.yml
+kubectl --as=cluster-admin apply -f worker-machineset.yml
 ----
 
 . Copy `infra-machines_yml` from the Terraform output and apply it to the cluster.
@@ -111,7 +111,7 @@ kubectl apply -f worker-machineset.yml
 ----
 terraform output -raw infra-machines_yml | yq -P > infra-machines.yml
 head infra-machines.yml
-kubectl apply -f infra-machines.yml
+kubectl --as=cluster-admin apply -f infra-machines.yml
 ----
 
 . Check that all machines are in the `Running` state.
@@ -127,14 +127,19 @@ kubectl get -f infra-machines.yml
 ----
 terraform output -raw infra-machineset_yml | yq -P > infra-machineset.yml
 head infra-machineset.yml
-kubectl apply -f infra-machineset.yml
+kubectl --as=cluster-admin apply -f infra-machineset.yml
 ----
 
 . Check for additional worker groups and apply them if necessary.
 +
 [source,bash]
 ----
-terraform output -raw additional-worker-machines_yml > /dev/null 2>&1 || echo "No additional worker groups"
+additional_count=$(terraform output -raw additional-worker-machines_yml | yq -r '.items|length')
+if [ $additional_count -eq 0 ]; then
+  echo "No additional worker groups"
+else
+  echo "$additional_count additional worker groups"
+fi
 ----
 
 . If the output shows "No additional worker groups," jump to <<remove_nodes_tf_state>>.
@@ -145,7 +150,7 @@ terraform output -raw additional-worker-machines_yml > /dev/null 2>&1 || echo "N
 ----
 terraform output -raw additional-worker-machines_yml | yq -P > additional-worker-machines.yml
 head additional-worker-machines.yml
-kubectl apply -f additional-worker-machines.yml
+kubectl --as=cluster-admin apply -f additional-worker-machines.yml
 ----
 
 . Check that all machines are in the `Running` state.
@@ -161,7 +166,7 @@ kubectl get -f additional-worker-machines.yml
 ----
 terraform output -raw additional-worker-machinesets_yml | yq -P > additional-worker-machinesets.yml
 head additional-worker-machinesets.yml
-kubectl apply -f additional-worker-machinesets.yml
+kubectl --as=cluster-admin apply -f additional-worker-machinesets.yml
 ----
 
 == Remove nodes from the Terraform state [[remove_nodes_tf_state]]

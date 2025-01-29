@@ -1,0 +1,170 @@
+= Security
+
+== Access Management
+
+=== Long Lived Tokens
+
+The default OpenShift 10 year emergency admin token is disabled and replaced by a short lived token.
+
+See xref:oc4:ROOT:references/architecture/emergency_credentials.adoc[].
+
+=== Two Factor Authentication
+
+VSHN Managed OpenShift clusters are configured to use two factor authentication through https://kb.vshn.ch/kb/vshn-login.html[VSHN Login] for the web console by default.
+The OpenID client configuration is centrally managed according to best practices.
+
+See xref:oc4:ROOT:references/architecture/single_sign_on.adoc[].
+
+=== Sudo
+
+VSHN Managed OpenShift clusters are configured to deny dangerous operations by default.
+
+See xref:oc4:ROOT:explanations/sudo.adoc[].
+
+== Privileged Containers and Build Strategies
+
+VSHN Managed OpenShift clusters are configured to deny the use of privileged containers and build strategies by default.
+
+=== OpenShift SecurityContextConstraints
+
+VSHN Managed OpenShift clusters run workloads with OpenShift's `restricted-v2` SCC by default.
+
+pass:[<!-- vale off -->]
+pass:[<!-- direct quotes -->]
+
+[quote,'https://docs.openshift.com/container-platform/4.16/authentication/managing-security-context-constraints.html#default-sccs_configuring-internal-oauth[from the OpenShift default SCC documentation]']
+--
+The `restricted-v2` SCC:
+
+* Ensures that pods cannot run as privileged
+* Ensures that pods cannot mount host directory volumes
+* Requires that a pod is run as a user in a pre-allocated range of UIDs
+* Requires that a pod is run with a pre-allocated MCS label
+* Requires that a pod is run with a preallocated FSGroup
+* Allows pods to use any supplemental group
+* ALL capabilities are dropped from containers.
+* The `NET_BIND_SERVICE` capability can be added explicitly.
+* `seccompProfile` is set to `runtime/default` by default.
+* `allowPrivilegeEscalation` must be unset or set to `false` in security contexts
+--
+
+pass:[<!-- vale on -->]
+
+==== Seccomp
+
+CRI-Os seccomp profile `runtime/default` restricts syscalls that can be used to shorten exploit chains.
+
+=== Kubernetes Pod Security Admission
+
+VSHN Managed OpenShift clusters are configured to validate workloads against the `restricted` Kubernetes Pod Security Standard by default.
+Currently, the Pod Security Admission is configured to only warn users about violating configurations.
+
+See xref:oc4:ROOT:explanations/pod_security.adoc[] for details on how PSA and OpenShift SCCs interact.
+
+== Network
+
+=== Load Balancer
+
+VSHN Managed OpenShift clusters include, depending on the cloud provider, hardened load balancers based on HAProxy.
+
+Additional firewalls and jump hosts can be configured on request.
+
+=== Cilium
+
+VSHN Managed OpenShift clusters uses the hardened enterprise version of Cilium as the default network plugin.
+
+See https://products.vshn.ch/openshift/cilium.html[VSHN Products: Isovalent Enterprise for Cilium] and https://cilium.io/[Cilium].
+
+=== Default Namespace Isolation
+
+VSHN Managed OpenShift clusters are configured to deny traffic between namespaces by default.
+
+=== OpenShift Service Mesh
+
+VSHN Managed OpenShift can use a hardened version of Istio as the default service mesh.
+
+See https://docs.appuio.ch/managed-openshift/openshift-service-mesh/index.html[VSHN Managed OpenShift for End-Users: OpenShift Service Mesh].
+
+== Updates
+
+All VSHN Managed OpenShift clusters and their load balancers are automatically updated to the latest version of OpenShift and the latest security patches.
+If not otherwise agreed, the updates are applied weekly during the communicated maintenance window.
+
+See xref:oc4:ROOT:references/architecture/upgrade_controller.adoc[].
+
+== Backup
+
+VSHN Managed OpenShift clusters include backups of all Kubernetes manifests and the raw etcd data to a secure location by default.
+
+* xref:oc4:ROOT:explanations/disaster_recovery.adoc[]
+* xref:oc4:ROOT:how-tos/recover-from-backup.adoc[]
+
+== Inventory
+
+All VSHN managed configuration and software for the OpenShift clusters are stored in a central Git repository.
+Software versions are reported in a central repository and actively monitored.
+
+We use https://syn.tools/syn/index.html[Project Syn] to manage the inventory.
+
+=== Staggered Rollouts
+
+New software versions are rolled out in a staggered manner to ensure that the software is stable and secure.
+
+== Monitoring and Logging
+
+See https://kb.vshn.ch/corp-tech/centralinsights/index.html[Central Insights] for more information.
+
+=== Capacity Monitoring
+
+VSHN Managed OpenShift clusters include capacity monitoring by default.
+VSHN gets notified if the cluster is running out of resources.
+
+See xref:oc4:ROOT:explanations/cluster_monitoring.adoc[]
+
+=== Logging
+
+VSHN Managed OpenShift clusters include logging by default.
+The log management is done by the OpenShift cluster itself.
+It's based on Loki and integrated into the OpenShift console.
+
+Also see https://docs.appuio.ch/managed-openshift/logging/howto-query-logs.html[VSHN Managed OpenShift for End-Users: Query application logs].
+
+A copy of the Kubernetes audit logs is stored in a secure location at VSHN.
+
+== Deletion
+
+Robust, tested, and audited deletion processes are in place to ensure that all data is securely deleted when no longer needed.
+
+== VSHN
+
+pass:[<!-- vale off -->]
+pass:[<!-- direct quotes -->]
+
+[quote]
+====
+We are convinced that transparency and certified processes improve data security and confidentiality.
+We are ISO 27001 certified and work according to the strict FINMA guidelines to ensure the security and confidentiality of client data at all times.
+
+VSHN is the first Kubernetes Certified Service Provider (KCSP) in Switzerland, Red Hat Advanced CCSP Partner and we are ISO 27001 certified (you can download and view our ISO certificate), we work according to the strict FINMA guidelines and are ISAE 3402 Report Type 2 audited.
+====
+
+pass:[<!-- vale on -->]
+
+* https://www.vshn.ch/en/about/awards-certifications/[VSHN Awards & Certifications]
+* https://handbook.vshn.ch/ism_policies.html[Information Security Management Policies]
+* https://kb.vshn.ch/kb/security_vulnerability_process.html[Security and Vulnerability Handling Process]
+
+== Partners
+
+=== cloudscale
+
+> Builds trust
+
+https://www.cloudscale.ch/en/security[cloudscale Security]
+
+=== Exoscale
+
+> Security and safety of your data is something we make an essential priority at Exoscale.
+> We understand that trusting an external entity with your data is a difficult step to take.
+
+https://www.exoscale.com/security/[Exoscale Security Policy]

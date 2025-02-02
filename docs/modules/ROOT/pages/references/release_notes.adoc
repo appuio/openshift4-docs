@@ -2,6 +2,43 @@
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 
+== OpenShift 4.17
+
+OpenShift version 4.17 is available since 2024-10-01.
+This version is based on Kubernetes 1.30 and CRI-O 1.30.
+The RHCOS image still uses RHEL 9.4 packages.
+Find the release notes in the upstream documentation at https://docs.openshift.com/container-platform/4.17/release_notes/ocp-4-17-release-notes.html[OpenShift Container Platform 4.17 release notes].
+The https://www.redhat.com/en/blog/what-you-need-to-know-red-hat-openshift-417[Red Hat OpenShift 4.17: What you need to know] blog post is also a valuable resource.
+
+Node disruption policies::
+The node disruption policies feature has been promoted to GA.
+A node disruption policy allows you to define the configuration changes that cause a disruption to your cluster, and which changes don't.
+This allows you to reduce node downtime when making small machine configuration changes in your cluster.
++
+[Note]
+====
+See https://docs.openshift.com/container-platform/4.17/machine_configuration/machine-config-node-disruption.html#machine-config-node-disruption[Machine Configuration Documentation]
+====
+
+OpenShift SDN network plugin removed::
+The OpenShift SDN network plugin has been removed from the OpenShift Container Platform.
++
+[NOTE]
+====
+VSHN Managed OpenShift 4 clusters are installed with https://access.redhat.com/articles/5436171#isovalent-4[Cilium], a fully certified and supported 3rd party CNI plugin for OpenShift 4.
+Therefore VSHN Managed OpenShift clusters aren't affected by this block.
+====
+
+Validating Admission Policies::
+Validating Admission Policies are now available in OpenShift 4.17.
+These policies allow you to validate the incoming requests to the API server.
++
+[Note]
+====
+See https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/[Kubernetes Documentation]
+====
+
+
 == OpenShift 4.16
 
 OpenShift version 4.16 is available since 2024-06-27.
@@ -74,43 +111,3 @@ Migrate to `flowcontrol.apiserver.k8s.io/v1`.
 Monitoring stack replaces prometheus-adapter with metrics-server::
 This release removes prometheus-adapter and introduces metrics-server to provide the `metrics.k8s.io` API.
 This should reduce load on the cluster monitoring Prometheus stack.
-
-== OpenShift 4.15
-
-OpenShift version 4.15 is available since 2024-03-19.
-This version is based on Kubernetes 1.28 and CRI-O 1.28.
-The RHCOS image still uses RHEL 9.2 packages.
-Find the release notes in the upstream documentation at https://docs.openshift.com/container-platform/4.15/release_notes/ocp-4-15-release-notes.html[OpenShift Container Platform 4.15 release notes].
-The https://www.redhat.com/en/blog/unveiling-red-hat-openshift-415[Unveiling Red Hat OpenShift 4.15] blog post is also a valuable resource.
-
-Networking dashborads in the OpenShift console::
-This release brings new dashboards to the OpenShift console, which display networking metrics.
-They can be found under *Observe --> Dashboards*.
-+
-The new dashboards contain metrics from Linux networking, from OVN-Kubernetes, and from the Ingress Operator.
-You can view low-level networking metrics as well as high-level indicators, such as HTTP error rates and latency.
-+
-[NOTE]
-====
-By default, APPUiO Managed OpenShift 4 clusters are installed with https://access.redhat.com/articles/5436171#isovalent-4[Cilium], a fully certified and supported 3rd party CNI plugin for OpenShift 4.
-Therefore, the panels related to OVN-Kubernetes on the new dashboards may be empty on APPUiO Managed OpenShift 4 clusters.
-====
-
-New life cycle classification for OLM operators::
-With this release, three new life cycle classifications for cluster operators are introduced:
-*Platform Aligned*, for operators whose maintenance streams align with the OpenShift version;
-*Platform Agnostic*, for operators who make use of maintenance streams but they don't need to align with the OpenShift version;
-and *Rolling Stream*, for operators which use a single stream of rolling updates.
-+
-These classifications are meant to provide transparency and ease-of-understanding when preparing for cluster maintenance.
-
-Update to CoreDNS 1.11.1::
-With this release, OpenShift Container Platform is updated to CoreDNS 1.11.1.
-
-Deprecation of the OpenShift SDN network plugin::
-OpenShift SDN CNI is deprecated as of OCP 4.14.
-Starting with this release, Openshift SDN is no longer an option for new installations.
-In a subsequent future release, the OpenShift SDN network plugin is planned to be be removed and no longer supported.
-Red Hat will provide bug fixes and support for this feature until removed, but this feature will no longer receive enhancements.
-+
-NOTE: New APPUiO Managed OpenShift 4 clusters are installed with https://access.redhat.com/articles/5436171#isovalent-4[Cilium], a fully certified and supported 3rd party CNI plugin for OpenShift 4.

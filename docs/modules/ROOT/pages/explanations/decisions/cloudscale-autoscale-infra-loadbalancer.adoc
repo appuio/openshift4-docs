@@ -1,0 +1,66 @@
+= Managed Load Balancer and Autoscaling cloudscale Infra Nodes
+
+== Problem
+
+Every cluster needs a load balancer to distribute incoming traffic to the cluster.
+The load balancer needs to know the IP addresses of the infrastructure nodes because the OpenShift ingress runs on them.
+
+Load balancer IPs are configured in Puppet hieradata Git repositories.
+The IPs are currently set during installation and will start to drift over time if we replace infrastructure nodes.
+
+We need a way to automatically update the load balancer configuration when infrastructure nodes are replaced.
+
+=== Goals
+
+* Keep the load balancer configuration up-to-date when infrastructure nodes are replaced
+* Automate the process as much as possible
+
+=== Non-Goals
+
+* Cloud providers other than cloudscale
+* Load balancer configuration for components other than the OpenShift ingress
+
+== Proposals
+
+=== Option 1: Use cloudscale's load balancer and a in-cluster controller
+
+We switch to cloudscale's load balancer and use an in-cluster controller to update the load balancer configuration.
+
+The controller listens to infra node events and updates the load balancer configuration accordingly using the cloudscale https://www.cloudscale.ch/en/api/v1#load-balancers[API].
+
+Cloudscale's load balancer are currently missing the NAT gateway feature which is required for our clusters.
+The feature should be available soon.
+We could document the manual steps to update the load balancer configuration until the feature is available.
+
+=== Option 2: Update hieradata Git repositories from the cluster
+
+We connect to the hieradata Git repositories from the cluster and update the load balancer configuration when infrastructure nodes are replaced.
+This would need a complicated back channel to the Git repositories and would be hard to implement.
+
+We could use Commodore dynamic facts to update the hieradata Git repositories on Commodore compile runs.
+This would use a existing channel but would delay the update until the next compile run.
+
+=== Option 3: Expose the default ingress controller as service of type LoadBalancer
+
+Using the cloudscale cloud controller manager we can expose the default ingress controller as a service of type LoadBalancer.
+
+This would automatically create a cloudscale load balancer and update the load balancer configuration when infrastructure nodes are replaced.
+
+We've run into troubles before if using proxy protocol and OpenShift routes internal traffic directly to the source IP and not through the load balancer, https://github.com/cloudscale-ch/cloudscale-cloud-controller-manager/issues/15[see issue].
+OpenShift 4.17 (Kubernetes 1.30) would solve these issues.
+
+OpenShift, as of 4.17, https://docs.openshift.com/container-platform/4.17/networking/networking_operators/ingress-operator.html#nw-ingress-controller-configuration-proxy-protocol_configuring-ingress[doesn't allow] configuring PROXY protocol on the ingress controller when using endpoint publishing strategy `LoadBalancerService`.
+This can be circumvented by using endpoint publishing strategy `Private` and creating a service of type LoadBalancer manually.
+
+== Decision
+
+We choose option 3: Expose the default ingress controller as service of type LoadBalancer.
+
+This is the most straightforward solution and doesn't require any additional components.
+With OpenShift 4.17 everything should just work https://github.com/cloudscale-ch/cloudscale-cloud-controller-manager/issues/15#issuecomment-2309773240[out of the box].
+
+== Resources
+
+* https://github.com/cloudscale-ch/cloudscale-cloud-controller-manager/issues/15#issuecomment-2309773240[cloudscale-cloud-controller-manager issue]
+* https://docs.openshift.com/container-platform/4.17/networking/networking_operators/ingress-operator.html#nw-ingress-controller-configuration-proxy-protocol_configuring-ingress[OpenShift 4.17 PROXY protocol configuration]
+* https://www.cloudscale.ch/en/api/v1#load-balancers[cloudscale load balancer API]

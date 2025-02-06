@@ -223,8 +223,8 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/appcat/provider-exoscale \
 
 # Set the CSI Driver Exoscale Credentials
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/csi_driver \
-  s3_access_key=${CSI_ACCESSKEY} \
-  s3_secret_key=${CSI_SECRETKEY}
+  access_key=${CSI_ACCESSKEY} \
+  secret_key=${CSI_SECRETKEY}
 ----
 
 include::partial$get-hieradata-token-from-vault.adoc[]

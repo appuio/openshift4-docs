@@ -172,6 +172,7 @@ for fqdn in "${LB_FQDNS[@]}"; do
 done
 ----
 
+ifeval::["{provider}" == "cloudscale"]
 . Scale up the infra and worker machinesets
 +
 [source,bash]

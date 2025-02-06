@@ -1,7 +1,7 @@
 = Installation on Exoscale
 :ocp-minor-version: 4.16
 :k8s-minor-version: 1.29
-:ocp-patch-version: {ocp-minor-version}.3
+:ocp-patch-version: {ocp-minor-version}.21
 :provider: exoscale
 :kubectl_extra_args:
 
@@ -55,7 +55,7 @@ include::partial$exoscale/environment-vars.adoc[]
 include::partial$install/vshn-input.adoc[]
 
 [#_create_iam_keys]
-=== Create restricted Exoscale IAM keys for the LBs and object storage
+=== Create restricted Exoscale IAM keys for object storage, AppCat and CSI driver
 
 [NOTE]
 ====
@@ -110,7 +110,7 @@ exo iam role create appcat-provider-exoscale \
 fi
 # Create access key
 appcat_credentials=$(exo iam api-key create -O json \
-  appcat-provider-exoscale appcat-provider-exoscale)
+  "${CLUSTER_ID}_appcat-provider-exoscale" appcat-provider-exoscale)
 export APPCAT_ACCESSKEY=$(echo "${appcat_credentials}" | jq -r '.key')
 export APPCAT_SECRETKEY=$(echo "${appcat_credentials}" | jq -r '.secret')
 ----
@@ -119,7 +119,7 @@ export APPCAT_SECRETKEY=$(echo "${appcat_credentials}" | jq -r '.secret')
 +
 [source,bash]
 ----
-# Create Exoscale CSi driver Exoscale IAM role, if it doesn't exist yet in the organization
+# Create Exoscale CSI driver Exoscale IAM role, if it doesn't exist yet in the organization
 csidriver_role_id=$(exo iam role list -O json | \
   jq -r '.[] | select(.name=="csi-driver-exoscale") | .key')
 if [ -z "${csidriver_role_id}" ]; then
@@ -143,7 +143,7 @@ exo iam role create csi-driver-exoscale \
 fi
 # Create access key
 csi_credentials=$(exo iam api-key create -O json \
-  csi-driver-exoscale csi-driver-exoscale)
+  "${CLUSTER_ID}_csi-driver-exoscale" csi-driver-exoscale)
 export CSI_ACCESSKEY=$(echo "${csi_credentials}" | jq -r '.key')
 export CSI_SECRETKEY=$(echo "${csi_credentials}" | jq -r '.secret')
 ----
@@ -223,8 +223,8 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/appcat/provider-exoscale \
 
 # Set the CSI Driver Exoscale Credentials
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/csi_driver \
-  s3_access_key=${CSI_ACCESSKEY} \
-  s3_secret_key=${CSI_SECRETKEY}
+  access_key=${CSI_ACCESSKEY} \
+  secret_key=${CSI_SECRETKEY}
 ----
 
 include::partial$get-hieradata-token-from-vault.adoc[]

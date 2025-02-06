@@ -11,12 +11,6 @@ Steps to install an OpenShift 4 cluster on VMWare vSphere.
 These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_vsphere/installing-vsphere-installer-provisioned-customizations.html[Installing a cluster on vSphere] docs to set up an installer provisioned installation (IPI).
 --
 
-[IMPORTANT]
---
-This how-to guide is an early draft.
-So far, we've setup only one cluster using the instructions in this guide.
---
-
 [NOTE]
 --
 The certificates created during bootstrap are only valid for 24h.

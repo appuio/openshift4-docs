@@ -8,7 +8,7 @@ endif::[]
 
 [NOTE]
 ====
-The steps in this section must be run on a host which can reach the {provider-display} API.
+The steps related to `openshift-install` must be run on a host which can reach the {provider-display} API.
 If you can't reach the {provider-display} API directly, but a SSH jumphost is available, you can setup a SOCKS5 proxy with the following commands:
 
 [source,bash]

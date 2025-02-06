@@ -43,7 +43,7 @@ done && echo -e "\nAPI is up"
 [NOTE]
 ====
 We need to temporarily adjust the Cilium config to not use full kube-proxy replacement, since we currently don't have a way to disable the initial OpenShift-managed kube-proxy deployment.
-Additionally, Because the cloudscale Cloud Controller Manager accesses the K8s API via service IP, we need to configure Cilium to provide partial kube-proxy replacement so that the CCM can start and untaint the control plane nodes so that other pods can be scheduled.
+Additionally, because the {provider} Cloud Controller Manager accesses the K8s API via service IP, we need to configure Cilium to provide partial kube-proxy replacement so that the CCM can start and untaint the control plane nodes so that other pods can be scheduled.
 ====
 +
 [source,bash]

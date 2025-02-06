@@ -56,6 +56,19 @@ yq -i e ".stringData.access-token=\"${CLOUDSCALE_API_TOKEN}\"" \
   ${INSTALLER_DIR}/manifests/cloudscale-cloud-controller-manager_01_secret_0_secret.yml
 ----
 endif::[]
+ifeval::["{provider}" == "exoscale"]
+. Copy cloud-controller-manager manifests
++
+[source,bash,]
+----
+for f in catalog/manifests/exoscale-cloud-controller-manager/*; do
+  cp $f ${INSTALLER_DIR}/manifests/exoscale_ccm_$(basename $f)
+done
+
+yq -i e ".stringData.api-key=\"${CCM_ACCESSKEY}\",.stringData.api-secret=\"${CCM_SECRETKEY}\"" \
+  ${INSTALLER_DIR}/manifests/exoscale_ccm_01_secret.yaml
+----
+endif::[]
 
 . Copy pre-rendered Cilium manifests
 +

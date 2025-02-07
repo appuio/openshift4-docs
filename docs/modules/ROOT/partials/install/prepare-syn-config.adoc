@@ -85,6 +85,13 @@ endif::[]
 [#_compile_catalog]
 === Commit changes and compile cluster catalog
 
+ifeval::["{provider}" == "vsphere"]
+:manage-https-proxy: yes
+endif::[]
+ifeval::["{provider}" == "openstack"]
+:manage-https-proxy: yes
+endif::[]
+
 . Review changes.
 Have a look at the file `${CLUSTER_ID}.yml`.
 Override default parameters or add more component configurations as required for your cluster.
@@ -107,6 +114,27 @@ git push
 popd
 ----
 
+ifeval::["{manage-https-proxy}" == "yes"]
+. Temporarily unset `https_proxy` since Commodore currently doesn't support `https_proxy`
++
+[source,bash]
+----
+https_proxy_bak=$https_proxy
+unset https_proxy
+----
++
+TIP: You can skip this step and "Restore https_proxy" if you're not using a HTTPS proxy for the installation.
+endif::[]
+
 . Compile and push cluster catalog
 +
 include::partial$install/commodore-dynfacts.adoc[]
+
+ifeval::["{manage-https-proxy}" == "yes"]
+. Restore `https_proxy`
++
+[source,bash]
+----
+export https_proxy=$https_proxy_bak
+----
+endif::[]

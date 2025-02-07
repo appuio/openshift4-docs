@@ -11,12 +11,6 @@ Steps to install an OpenShift 4 cluster on VMWare vSphere.
 These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_vsphere/installing-vsphere-installer-provisioned-customizations.html[Installing a cluster on vSphere] docs to set up an installer provisioned installation (IPI).
 --
 
-[IMPORTANT]
---
-This how-to guide is an early draft.
-So far, we've setup only one cluster using the instructions in this guide.
---
-
 [NOTE]
 --
 The certificates created during bootstrap are only valid for 24h.
@@ -109,16 +103,7 @@ include::partial$install/prepare-commodore.adoc[]
 
 include::partial$install/configure-installer.adoc[]
 
-[#_prepare_installer]
-=== Prepare the OpenShift Installer
-
-include::partial$install/run-installer.adoc[]
-
-=== Update Project Syn cluster config
-
-include::partial$install/prepare-syn-config.adoc[]
-
-=== Provision the cluster
+=== Establish connection to vSphere
 
 include::partial$install/socks5-proxy.adoc[]
 
@@ -134,6 +119,52 @@ rm vsphere-ca.zip
 sudo update-ca-certificates
 ----
 
+. Check if the vCenter hostname resolves on the host where you plan to execute `openshift-install`
++
+[source,bash]
+----
+vcenter_ip=$(dig +short ${VCENTER_HOSTNAME})
+if [ -z "${vcenter_ip}" ]; then
+  echo -e "\033[0;31m${VCENTER_HOSTNAME} doesn't resolve on your host.\033[0;0m"
+else
+  echo -e "\033[0;32m${VCENTER_HOSTNAME} resolves to ${vcenter_ip}.\033[0;0m"
+fi
+----
+
+. If the previous step printed a red message, setup a temporary entry in `/etc/hosts` for the vCenter hostname
++
+NOTE: This step assumes that you access vCenter via a management jumphost and have set `$JUMPHOST_FQDN` as shown in the info box above.
++
+.Set IP for vCenter hostname in your `/etc/hosts`
+[source,bash]
+----
+vcenter_ip=$(ssh $JUMPHOST_FQDN dig +short "$VCENTER_HOSTNAME")
+sudo sh -c "echo \"\n$vcenter_ip $VCENTER_HOSTNAME\" >> /etc/hosts"
+----
++
+.Recheck local resolution
+[source,bash]
+----
+vcenter_ip=$(dig +short ${VCENTER_HOSTNAME})
+if [ -z "${vcenter_ip}" ]; then
+  echo -e "\033[0;31m${VCENTER_HOSTNAME} doesn't resolve on your host.\033[0;0m"
+else
+  echo -e "\033[0;32m${VCENTER_HOSTNAME} resolves to ${vcenter_ip}.\033[0;0m"
+fi
+----
+
+
+[#_prepare_installer]
+=== Prepare the OpenShift Installer
+
+include::partial$install/run-installer.adoc[]
+
+=== Update Project Syn cluster config
+
+include::partial$install/prepare-syn-config.adoc[]
+
+=== Provision the cluster
+
 . Run the OpenShift installer
 +
 [source,bash]
@@ -141,6 +172,20 @@ sudo update-ca-certificates
 openshift-install --dir "${INSTALLER_DIR}" \
   create cluster --log-level=debug
 ----
++
+[TIP]
+====
+For OpenShift 4.16 and newer, `openshift-install` spins up a local Cluster-API environment using `envtest`.
+
+If provisioning the bootstrap and control-plane nodes isn't successful, you can access the `envtest` Kubernetes API as follows:
+
+[source,bash]
+----
+export KUBECONFIG="${INSTALLER_DIR}/.clusterapi_output/envtest.kubeconfig"
+kubectl get cluster -A <1>
+----
+<1> Should show one resource in namespace `openshift-cluster-api-guests`
+====
 
 === Access cluster API
 

@@ -9,6 +9,15 @@ If you have to recreate the install config or any of the generated manifests you
 openshift-install --dir "${INSTALLER_DIR}" \
   create manifests
 ----
+ifeval::["{provider}" == "vsphere"]
++
+[IMPORTANT]
+====
+If this step prints `WARNING unable to resolve vSphere server <vcenter hostname>`, please make sure that `dig +short ${VCENTER_HOSTNAME}` returns an IP on the host where you're running `openshift-install`.
+
+If you ignore this warning, `openshift-install create cluster` will not create the bootstrap and control-plane nodes.
+====
+endif::[]
 
 .. If you want to change the default "apps" domain for the cluster:
 +

@@ -50,29 +50,42 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --
   }]'
 ----
 
-. Cordon node(s) to {mon-operation}
+. For every id in `$MON_IDS` replace the MON pod
 +
 [source,bash,subs="attributes+"]
 ----
-for node in $(echo -n {mon-replace-list}); do
-  kubectl --as=cluster-admin cordon "${node}"
-done
-----
-+
-. For every id in `$MON_IDS` replace the MON pod
-+
-[source,bash]
-----
 mon_id=<MON_ID>
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pod \
-  -l app=rook-ceph-mon,ceph_daemon_id="${mon_id}"
+
+# Scale operator down
+kubectl --as=cluster-admin syn-rook-ceph-operator scale deploy/rook-ceph-operator --replicas=0
+storage_node=<STORAGE_NODE>
+
+# Get name of storage node
+kubectl -n syn-rook-ceph-cluster get po -l ceph_daemon_id="${mon_id}" -owide
+
+# Remove MON to replace from ConfigMap
+#
+# data:
+#   csi-cluster-config-json: '[{"clusterID":"syn-rook-ceph-cluster","monitors":["194.182.183.35:6789","194.182.180.80:6789","194.182.181.220:6789"],"cephFS":{"netNamespaceFilePath":"","subvolumeGroup":"","kernelMountOptions":"","fuseMountOptions":""},"rbd":{"netNamespa    ceFilePath":"","radosNamespace":""},"nfs":{"netNamespaceFilePath":""},"readAffinity":{"enabled":false,"crushLocationLabels":null},"namespace":""}]'
+#   data: h=194.182.183.35:6789,j=194.182.180.80:6789,i=194.182.181.220:6789
+#   mapping: '{"node":{"h":{"Name":"storage-efb1","Hostname":"storage-efb1","Address":"194.182.183.35"},"i":{"Name":"storage-8bb1","Hostname":"storage-8bb1","Address":"194.182.181.220"},"j":{"Name":"storage-a79d","Hostname":"storage-a79d","Address":"194.182.180.80"}}}'
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster edit cm rook-ceph-mon-endpoints
+# data:
+#   csi-cluster-config-json: '[{"clusterID":"syn-rook-ceph-cluster","monitors":["194.182.180.80:6789","194.182.181.220:6789"],"cephFS":{"netNamespaceFilePath":"","subvolumeGroup":"","kernelMountOptions":"","fuseMountOptions":""},"rbd":{"netNamespa    ceFilePath":"","radosNamespace":""},"nfs":{"netNamespaceFilePath":""},"readAffinity":{"enabled":false,"crushLocationLabels":null},"namespace":""}]'
+#   data: j=194.182.180.80:6789,i=194.182.181.220:6789
+#   mapping: '{"node":{"i":{"Name":"storage-8bb1","Hostname":"storage-8bb1","Address":"194.182.181.220"},"j":{"Name":"storage-a79d","Hostname":"storage-a79d","Address":"194.182.180.80"}}}'
+
+# Scale operator up
+kubectl --as=cluster-admin syn-rook-ceph-operator scale deploy/rook-ceph-operator --replicas=0
 
 # Wait until new MON is scheduled
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
+kubectl -n syn-rook-ceph-cluster get pods -l app=rook-ceph-mon -w
 
 # Wait until the cluster has regained full quorum
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
-  ceph status
+kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- ceph status
+
+# Cordon node of old MON
+kubectl --as=cluster-admin cordon ${storage_node}
 
 # Repeat for all other $MON_IDS
 ----

@@ -1,3 +1,10 @@
+[IMPORTANT]
+====
+We've observed situations where the Rook operator was unable to correctly replace the old MON using the instructions in this section.
+
+If you run into issues, please double-check the Rook operator logs and create a ticket with the relevant information so we can improve the steps in this section.
+====
+
 ifeval::["{mon-expect-to-replace-nodes}" == "yes"]
 . Find the MON(s) on the node(s) to {mon-operation}
 endif::[]

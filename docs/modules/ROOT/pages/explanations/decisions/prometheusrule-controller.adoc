@@ -1,10 +1,11 @@
-= Manage Operator managed PrometheusRules
+= Manage Operator Managed PrometheusRules
 
 == Problem
 
-OpenShift4 operators manage their PrometheusRules (and alerts), we can't alter their definition.
-The current solution is to copy those PrometheusRules, label the alerts with `syn=true` and silence alerts without that label.
+OpenShift operators manage their PrometheusRules (and alerts), we can't alter their definition.
+The current solution is to find the upstream rules in the source repositories, copy those rules, label alerts we see as useful with `syn=true`, and silence alerts without that label.
 This is a manual process, as the source location may change with every change in the upstream repository.
+Some rules exist only embedded in Go code.
 Rollout of new PrometheusRules must be coordinated with the corresponding change in the operator.
 
 === Goals
@@ -18,7 +19,8 @@ Rollout of new PrometheusRules must be coordinated with the corresponding change
 We could evaluate a policy tool that helps us meet our requirements.
 Such a tool could also help with other tasks we may want to automate.
 
-Our experience with Kyverno, on the other hand, led us to implement our own controller/operator for other cases where we used a policy tool in the begining.
+The policy tools we've evaluated in the past, like Kyverno, have a lot of features that we don't need.
+Those features make the tool more complex to use and run than necessary.
 
 === Option 2: Create own dedicated controller
 
@@ -29,7 +31,13 @@ We already implemented other controller/operator in situations where we run into
 
 === Option 3: Create more generalized copy/patch operator
 
-The <<_problem,problem statement>> could be generalized.
+We've got quite a few other edge-cases where we need to copy or patch resources based on other resources.
+We use a mix of custom scripts, cron jobs, controllers and other tools to solve those problems.
+We could implement a more generalized copy/patch operator that could be used for other resources as well.
+
+This would allow us to replace multiple tools and lower our operational overhead tracking and rolling out upstream changes of those tools.
+
+By using Jsonnet as a templating engine we can create a very powerful and flexible tool that can be used for many different use-cases.
 
 === Option 4: Use Crossplane Compositions
 
@@ -74,8 +82,3 @@ By implementing our own generalized copy/patch operator can adapt better to chan
 Creating or patching resources based on other resources is an issue we encounter on multiple occasions.
 We already have tools in place to solve those problems, but all of them address a special case which could be unified in a more general approach.
 This would allow us to replace multiple tools and lower our operational overhead tracking and rolling out upstream changes of those tools.
-
-Additionally, we could implement a language that we already use and know very well as a templating engine.
-Using a definition language we know how to use effectively and works well will be most beneficial.
-
-Finally, we already have an operator that could be expanded to support our requirements.

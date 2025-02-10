@@ -1,0 +1,510 @@
+= Espejote: An in-cluster templating controller
+
+== Problem Statement
+
+Not every cluster configuration is fully static and can be managed through GitOps.
+
+Some configurations depend on the cluster state or might want to be managed by upstream, by end-users, or by third-party products directly.
+
+We got an extensive array of tools to manage these configurations, from bash "reconcilers," to cron jobs, to policy engines to fully fledged custom controllers.
+Those tools are all specialized and don't cover all use-cases.
+
+A maintainable, fully instrumented, and extensible controller that can manage arbitrary configurations in a cluster is missing.
+We decided to try our hand at creating one.
+
+== High Level Goals
+
+* We can manage arbitrary configurations in a cluster
+** The configuration may depend on external state
+** We can apply partial configurations to externally managed resources
+* The amount of requests and caching is tuneable
+* We can monitor failures and successes and have a tight feedback loop
+
+== Non-Goals
+
+* Centralized configuration management or GitOps
+* Policy enforcement
+* Security or access control
+
+== Name
+
+"Espejote" for "big mirror" in Spanish.
+It's a play on the earlier project "Espejo" which means "mirror."
+"Espejo" was a tool to mirror resources to multiple namespaces.
+"Espejote" is a more general tool to manage arbitrary configurations in a cluster.
+
+== Implementation
+
+The controller is based on `controller-runtime`.
+It's managed through a Custom Resource Definition (CRD) called `(Cluster)ManagedResource`.
+The controller uses Jsonnet to render manifests.
+Any Kubernetes manifest can be added to the templating context.
+
+Reconcile triggers are separated from the context resources to allow for more fine-grained control over the reconciliation.
+
+=== Reconcile triggers
+
+Reconcile triggers are used to re-render the template.
+They're separated from the context resources to allow for more fine-grained control.
+
+[source,yaml]
+----
+triggers:
+- interval: 10s
+- watchResource:
+    apiVersion: v1
+    kind: ConfigMap
+    labelSelector:
+      matchExpressions:
+      - key: espejote.io/created-by
+        operator: DoesNotExist
+    minTimeBetweenTriggers: 10s
+- watchResource:
+    apiVersion: v1
+    kind: ConfigMap
+    name: my-configmap
+----
+
+The trigger that fires is exposed to the Jsonnet as the `trigger` variable.
+
+[source,jsonnet]
+----
+local trigger = std.extVar('trigger');
+----
+
+Currently, we support two types of triggers:
+
+==== `interval`
+
+The template is re-rendered every `interval`.
+
+==== `watchResource`
+
+The template is re-rendered whenever the watched resource is created, changed, or deleted.
+
+The `minTimeBetweenTriggers` field can be used to limit the rate of re-renders.
+This is useful to prevent a high rate of re-renders when a resource is changed multiple times in a short period.
+If a list of resources is watched, the `minTimeBetweenTriggers` is applied to each resource individually.
+
+The `watchResource` trigger contains the full Kubernetes resource definition of the watched resource.
+
+==== Additional triggers
+
+Additional triggers can be added in the future.
+This may contain triggers based on Prometheus metrics or webhooks.
+Another option would be a trigger based on Kubernetes admission webhooks or Kubernetes events.
+
+=== Context
+
+The context is a list of resources that are available in the Jsonnet template.
+They're not watched.
+If a watch is required, it should be added as a trigger.
+
+[source,yaml]
+----
+context:
+- def: configs
+  resource:
+    apiVersion: v1
+    kind: ConfigMap
+    labelSelector:
+      matchExpressions:
+      - key: espejote.io/created-by
+        operator: DoesNotExist
+  cache: true
+- def: config
+  resource:
+    apiVersion: v1
+    kind: ConfigMap
+    name: my-configmap
+----
+
+The context is exposed to the Jsonnet as the `context` variable.
+
+[source,jsonnet]
+----
+local configs = std.extVar('context').configs;
+local config = std.extVar('context').config;
+----
+
+Currently, we support one type of context resource:
+
+==== `resource`
+
+A Kubernetes resource that and available in the Jsonnet template.
+The resource can be selected by `name` or `labelSelector`.
+
+`matchNames` and `ignoreNames` can be used to filter the resources after the labelSelector is applied.
+`matchNames` is a list of names that should be matched.
+`ignoreNames` is a list of names that should be ignored.
+Label selectors should be preferred over `matchNames` and `ignoreNames` because the resource can already be filtered on the API server.
+
+It's always a list with zero or more items.
+This is true even if a single resource is selected using the name field.
+
+The `cache` field can be used to setup a controller-runtime cache for the resource.
+This is a in-memory cache with a watch on the resource.
+This is true by default.
+Can be disabled for a trade-off between memory usage and API requests.
+
+==== Additional context resources
+
+Additional context resources may be added in the future.
+This could contain resources based on Prometheus metrics or REST APIs.
+
+=== Template
+
+The template is a Jsonnet template that returns a list of Kubernetes resources.
+
+It can pull in external resources through the context and triggers.
+
+It can return a list of resources or a single resource.
+The resources are applied in the order they're returned.
+
+==== Template libraries
+
+The template can use libraries to share code between templates.
+The libraries are stored as <<JsonnetLibrary>> resources.
+
+The name of the resource is used as the library name.
+
+[source,jsonnet]
+----
+// local myLibrary = import 'lib/RESOURCE_NAME/KEY';
+local myLibrary = import 'lib/my-library/my-function.libsonnet';
+----
+
+=== Deletion
+
+Deletion can be achieved by returning a resource with a special deletion marker.
+
+[source,jsonnet]
+----
+{
+  '$DELETE': true,
+  apiVersion: 'v1',
+  kind: 'ConfigMap',
+  metadata: {
+    namespace: 'my-namespace',
+    name: 'my-configmap',
+  }
+}
+----
+
+=== Instrumentation
+
+==== Prometheus metrics
+
+The controller is instrumented with Prometheus metrics.
+The metrics are exposed on the `/metrics` endpoint.
+
+The metrics should contain the following:
+
+* Amount of re-renders per trigger
+* Amount of re-renders per resource
+* Amount of errors per re-render
+* Amount of resources applied per re-render
+
+The metrics should be labeled with the `ManagedResource` name and namespace.
+
+==== Events
+
+The controller should emit events on errors during reconciliation.
+
+=== Apply options
+
+* `applyOptions.forceConflicts` can be used to resolve field https://kubernetes.io/docs/reference/using-api/server-side-apply/#conflicts[conflicts].
+  The ManagedResource will become the sole owner of the field.
+
+== Permissions and RBAC
+
+The `ManagedResources` should run with the least permissions possible.
+
+To start the `ManagedResources` will run in the context of the controller.
+Cluster scoped `ManagedResources` will have access to the whole cluster.
+Namespace scoped `ManagedResources` will have access to the namespace they're in.
+The namespace isolation is only enforced by the controller and not by Kubernetes.
+
+=== Running `ManagedResources` in the context of a service account
+
+The end goal is to run the `ManagedResources` in the context of a service account, defined in the `ManagedResource`.
+This will allow for more fine-grained access control.
+
+The RedHat patch operator is a good example of how this can be implemented.
+
+== Testing
+
+The controller should have a testing utility integrated that will render the template with a given context and triggers.
+The rendered manifests could then be compared to a golden file, applied to a cluster, or parts matched using further testing frameworks.
+
+For each trigger a rendered YAML is created with the output of the template.
+
+The utility checks that the triggers and contexts in the test file match the triggers and contexts in the `ManagedResource`.
+
+[source,yaml]
+----
+triggers: <1>
+- interval: {}
+- watchResource:
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: my-configmap
+    data:
+      key: value
+context:
+- def: configs
+  resources:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: my-configmap
+    data:
+      key: value
+----
+<1> The template is rendered for every trigger.
+If multiple different contexts variations are required, a new file should be created for each combination.
+
+[source,bash]
+----
+espejote render --managed-resource my-template.yaml --inputs my-input-1.yaml my-input-2.yaml <1>
+----
+<1> The command can be used with multiple input files to test different context variations.
+
+== Manifests
+
+=== `JsonnetLibrary` [[JsonnetLibrary]]
+
+[source,yaml]
+----
+apiVersion: espejote.io/v1alpha1
+kind: JsonnetLibrary
+metadata:
+  name: my-library
+  namespace: controller-namespace
+data:
+  my-function.libsonnet: |
+    {
+      myFunction: function() 42,
+    }
+  hello-world.libsonnet: |
+    {
+      helloWorld: function(name) 'Hello, %s!' % [name],
+    }
+----
+
+=== `ManagedResource`
+
+[source,yaml]
+----
+apiVersion: espejote.io/v1alpha1
+kind: ManagedResource
+metadata:
+  name: copy-configmap
+  namespace: my-namespace <1>
+spec:
+  applyOptions: <2>
+    forceConflicts: true
+  triggers:
+  - interval: 10s <3>
+  - watchResource: <4>
+      apiVersion: v1
+      kind: ConfigMap
+      # name: my-configmap <5>
+      labelSelector: <6>
+        matchExpressions:
+        - key: espejote.io/created-by
+          operator: DoesNotExist
+      # matchNames: [] <7>
+      # ignoreNames: [] <8>
+      minTimeBetweenTriggers: 10s <9>
+  context: <10>
+  - def: cm <11>
+    resource: <12>
+      apiVersion: v1
+      kind: ConfigMap
+      # name: my-configmap
+      # matchNames: []
+      # ignoreNames: []
+      labelSelector:
+        matchExpressions:
+        - key: espejote.io/created-by
+          operator: DoesNotExist
+      cache: true <13>
+  template: |
+    local trigger = std.extVar('trigger'); <14>
+    local cm = std.extVar('context').cm; <15>
+
+    [ <16>
+      c {
+        metadata: {
+          name: 'copy-of-' + c.metadata.name,
+          // namespace: c.metadata.namespace, <17>
+          labels+: {
+            'espejote.io/created-by': 'copy-configmap'
+          }
+        }
+      },
+      for c in cm.items <18>
+    ]
+  serviceAccountName: my-service-account <19>
+----
+<1> `ManagedResource` are always namespace-scoped and can't access any resources outside of their namespace.
+<2> `applyOptions` can be used to resolve field conflicts.
+<3> `interval` triggers the template every 10 seconds.
+<4> `watchResource` triggers the template whenever the watched resource is created, changed, or deleted.
+<5> `name` is optional and can be used to select a specific resource.
+<6> `labelSelector` is optional and can be used to a specific set of resources.
+<7> `matchNames` is optional and can be used to filter the resources after the labelSelector is applied.
+<8> `ignoreNames` is optional and can be used to filter the resources after the labelSelector is applied.
+<9> `minTimeBetweenTriggers` is optional and can be used to limit the rate of re-renders.
+The re-renders are limited by the specific unique resource.
+<10> Context is a list of resources that are available in the Jsonnet template.
+They're not watched.
+<11> `def` defines a variable in the Jsonnet template.
+<12> `resource` is a Kubernetes resource that's available in the Jsonnet template.
+<13> `cache` is optional and can be used to setup a controller-runtime cache for the resource.
+The default is true.
+<14> `std.extVar` is used to access the trigger data.
+The full manifest is available if using the `watchResource` trigger.
+<15> `std.extVar` is used to access the context.
+It returns a object with all defined resources as keys.
+<16> The template can return a list of resources or a single resource.
+<17> The namespace of the resource will always be overwritten to the namespace of the `ManagedResource`.
+<18> Resource variables are always a list with zero or more items.
+<19> `serviceAccountName` is optional and can be used to run the `ManagedResource` in the context of a service account.
+This will be implemented in the future but not in the initial versions.
+
+=== `ClusterManagedResource`
+
+[source,yaml]
+----
+apiVersion: espejote.io/v1alpha1
+kind: ClusterManagedResource
+metadata:
+  name: inject-configmaps
+spec:
+  triggers:
+  - watchResource:
+      apiVersion: v1
+      kind: Namespace <1>
+      labelSelector:
+        matchExpressions:
+        - key: inject-cm.syn.tools
+          operator: Exists
+  context:
+  - def: base
+    resource:
+      apiVersion: v1
+      kind: ConfigMap
+      name: cm-to-inject
+  template: |
+    local ns = std.extVar('trigger').resource; <2>
+    local base = std.extVar('context').base[0];
+
+    [
+      {
+        apiVersion: 'v1',
+        kind: 'ConfigMap',
+        metadata: {
+          name: 'injected-cm',
+          namespace: ns.metadata.name, <3>
+        }
+        data: base.data,
+      }
+    ]
+----
+<1> Cluster scoped `ClusterManagedResource` can access all resources in the cluster.
+This includes cluster scoped resources.
+<2> The full manifest of the triggering resource is available.
+<3> A cluster managed resource can create resources in any namespace and thus needs to set the namespace.
+
+== Sample use-cases
+
+=== Sync upgrade notifications with a ArgoCD sync hook and bash script
+
+We want to show a notification in the OpenShift Console when a minor upgrade is available.
+To implement this we added a job triggered by an ArgoCD sync.
+The job is reading another resource and creating a console notification manifest from it.
+
+* https://github.com/appuio/component-openshift4-console/blob/740628ebf3822ea82a64fade1e42eb9ff52f67c7/tests/golden/upgrade-notification/openshift4-console/openshift4-console/31_upgrade_notification.yaml#L63[component-openshift4-console ArgoCD sync hook]
+* https://github.com/appuio/component-openshift4-console/blob/740628ebf3822ea82a64fade1e42eb9ff52f67c7/component/scripts/create-console-notification.sh[component-openshift4-console bash script]
+
+=== Sync OpenShift Console TLS Secret with a bash "reconciler"
+
+Cert-manager only allows to create certificates in the same namespace as the ingress.
+OpenShift Console ingress is in the `openshift-console` namespace, but the secret needs to be applied in the `openshift-config` namespace.
+
+We use a bash reconciler to create the secret in the correct namespace.
+
+[source,bash]
+----
+source_namespace="openshift-console"
+target_namespace="openshift-config"
+
+# # Wait for the secret to be created before trying to get it.
+# # TODO: --for=create is included with OCP 4.17
+# kubectl -n "${source_namespace}" wait secret "${SECRET_NAME}" --for=create --timeout=30m
+echo "Waiting for secret ${SECRET_NAME} to be created"
+while test -z "$(kubectl -n "${source_namespace}" get secret "${SECRET_NAME}" --ignore-not-found -oname)" ; do
+   printf "."
+   sleep 1
+done
+printf "\n"
+
+# When using -w flag kubectl returns the secret once on startup and then again when it changes.
+kubectl -n "${source_namespace}" get secret "${SECRET_NAME}" -ojson -w | jq -c --unbuffered | while read -r secret ; do
+   echo "Syncing secret: $(printf "%s" "$secret" | jq -r '.metadata.name')"
+
+   kubectl -n "$target_namespace" apply --server-side -f <(printf "%s" "$secret" | jq '{"apiVersion": .apiVersion, "kind": .kind, "metadata": {"name": .metadata.name}, "type": .type, "data": .data}')
+done
+----
+* https://github.com/appuio/component-openshift4-console/blob/740628ebf3822ea82a64fade1e42eb9ff52f67c7/component/scripts/reconcile-console-secret.sh[component-openshift4-console]
+
+=== Default network policies for namespaces with espejo
+
+We apply default network policies to all namespaces using `espejo`.
+
+[source,yaml]
+----
+apiVersion: sync.appuio.ch/v1alpha1
+kind: SyncConfig
+[...]
+spec:
+  namespaceSelector:
+    ignoreNames:
+      - my-ignored-namespace
+    labelSelector:
+      matchExpressions:
+        - key: network-policies.syn.tools/no-defaults
+          operator: DoesNotExist
+  syncItems:
+    - apiVersion: networking.k8s.io/v1
+[...]
+----
+* https://github.com/projectsyn/component-networkpolicy/blob/3321c76c7ca6cd8bc032233c0519d1e79b26363c/tests/golden/defaults/networkpolicy/networkpolicy/10_default_networkpolicies.yaml[component-networkpolicy]
+
+==== Deletion
+
+Policies can also be deleted with `espejo`.
+
+[source,yaml]
+----
+apiVersion: sync.appuio.ch/v1alpha1
+kind: SyncConfig
+[...]
+spec:
+  deleteItems:
+    - apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      name: allow-from-same-namespace
+[...]
+  namespaceSelector:
+    matchNames: []
+----
+* https://github.com/projectsyn/component-networkpolicy/blob/3321c76c7ca6cd8bc032233c0519d1e79b26363c/tests/golden/defaults/networkpolicy/networkpolicy/05_purge_defaults.yaml#L1[component-networkpolicy]
+
+== Resources
+
+- https://github.com/vshn/espejo[Espejo]
+- https://github.com/redhat-cop/patch-operator[RedHat Patch Operator]

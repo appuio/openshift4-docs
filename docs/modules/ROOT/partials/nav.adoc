@@ -14,6 +14,7 @@
 ** xref:oc4:ROOT:references/architecture/emergency_credentials.adoc[]
 ** xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[Resource Usage Reporting]
 ** xref:oc4:ROOT:references/architecture/single_sign_on.adoc[]
+** xref:oc4:ROOT:references/architecture/espejote-in-cluster-templating-controller.adoc[]
 
 ** xref:oc4:ROOT:references/cloudscale/architecture.adoc[cloudscale.ch]
 

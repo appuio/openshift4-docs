@@ -169,9 +169,9 @@ POD_CIDR=$(kubectl get network.config cluster \
 HOST_PREFIX=$(kubectl get network.config cluster \
   -o jsonpath='{.spec.clusterNetwork[0].hostPrefix}')
 
-yq -i '.parameters.cilium.cilium_helm_values.ipam.operator.clusterPoolIPv4MaskSize = "'"${HOST_PREFIX}"'"' \
+yq -i ".parameters.cilium.cilium_helm_values.ipam.operator.clusterPoolIPv4MaskSize = ${HOST_PREFIX}" \
   "${CLUSTER_ID}.yml"
-yq -i '.parameters.cilium.cilium_helm_values.ipam.operator.~clusterPoolIPv4PodCIDRList = "'"${POD_CIDR}"'"' \
+yq -i '.parameters.cilium.cilium_helm_values.ipam.operator.~clusterPoolIPv4PodCIDRList = [ "'"${POD_CIDR}"'" ]' \
   "${CLUSTER_ID}.yml"
 ----
 

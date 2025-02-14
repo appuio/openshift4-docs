@@ -227,6 +227,15 @@ kubectl --as=cluster-admin apply -n cilium -Rf catalog/manifests/cilium/
 kubectl -n cilium get pods -w
 ----
 
+. Apply the updated default networkpolicy `SyncConfig`
++
+TIP: This should avoid issues when draining and rebooting nodes, such as pods unable to be created due to mutating admission webhooks timing out.
++
+[source,bash]
+----
+kubectl --as=cluster-admin -n syn-espejo apply -f catalog/manifests/networkpolicy/10_default_networkpolicies.yaml
+----
+
 == Finalize migration
 
 . Re-enable cluster network operator

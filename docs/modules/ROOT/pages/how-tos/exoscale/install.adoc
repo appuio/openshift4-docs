@@ -1,7 +1,7 @@
 = Installation on Exoscale
-:ocp-minor-version: 4.16
-:k8s-minor-version: 1.29
-:ocp-patch-version: {ocp-minor-version}.21
+:ocp-minor-version: 4.17
+:k8s-minor-version: 1.30
+:ocp-patch-version: {ocp-minor-version}.2
 :provider: exoscale
 :kubectl_extra_args:
 
@@ -19,7 +19,7 @@ This how-to guide is still a work in progress and will change.
 It's currently very specific to VSHN and needs further changes to be more generic.
 --
 
-NOTE: This guide is currently assuming that you're using https://github.com/appuio/terraform-openshift4-exoscale/releases/tag/v5.0.0[`terraform-openshift4-exoscale` v5] (component https://github.com/appuio/component-openshift4-terraform/releases/tag/v7.0.1[openshift4-terraform v7])
+NOTE: This guide is currently assuming that you're using https://github.com/appuio/terraform-openshift4-exoscale/releases/tag/v6.1.0[`terraform-openshift4-exoscale` v6] (component https://github.com/appuio/component-openshift4-terraform/releases/tag/v8.1.0[openshift4-terraform v8])
 
 == Starting situation
 
@@ -185,7 +185,7 @@ exo compute instance-template register "rhcos-${RHCOS_VERSION}" \
   --username core \
   --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}"
 
-exo storage delete "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
+exo storage delete -f "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
 
 export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
 ----

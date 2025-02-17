@@ -6,5 +6,6 @@ export EXOSCALE_API_SECRET=<exoscale-secret>
 export EXOSCALE_ZONE=<exoscale-zone> <2>
 export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_ZONE}.exo.io"
 ----
-<1> We recommend setting up an IAMv3 role called `unrestricted` with "Default Service Strategy" set to `allow` if it doesn't exist yet.
+<1> We recommend using the IAMv3 role called `Owner` for the API Key.
+This role gives full access to the project.
 <2> All lower case. For example `ch-dk-2`.

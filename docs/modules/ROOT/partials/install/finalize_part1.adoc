@@ -102,6 +102,16 @@ export KUBECONFIG="em-${CLUSTER_ID}"
 kubectl get nodes
 oc whoami # should output system:serviceaccount:appuio-emergency-credentials-controller:*
 ----
++
+[NOTE]
+====
+If the Let's Encrypt certificate for the API isn't fully provisioned yet, you may need to run the following `yq` to use the emergency kubeconfig:
+
+[source,bash]
+----
+yq -i e '.clusters[0].cluster.insecure-skip-tls-verify = true' "em-${CLUSTER_ID}"
+----
+====
 
 . Invalidate the 10 year admin kubeconfig.
 +

@@ -185,7 +185,7 @@ exo compute instance-template register "rhcos-${RHCOS_VERSION}" \
   --username core \
   --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}"
 
-exo storage delete "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
+exo storage delete -f "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
 
 export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
 ----

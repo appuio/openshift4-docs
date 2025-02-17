@@ -19,7 +19,7 @@ This how-to guide is still a work in progress and will change.
 It's currently very specific to VSHN and needs further changes to be more generic.
 --
 
-NOTE: This guide is currently assuming that you're using https://github.com/appuio/terraform-openshift4-exoscale/releases/tag/v5.0.0[`terraform-openshift4-exoscale` v5] (component https://github.com/appuio/component-openshift4-terraform/releases/tag/v7.0.1[openshift4-terraform v7])
+NOTE: This guide is currently assuming that you're using https://github.com/appuio/terraform-openshift4-exoscale/releases/tag/v6.1.0[`terraform-openshift4-exoscale` v6] (component https://github.com/appuio/component-openshift4-terraform/releases/tag/v8.1.0[openshift4-terraform v8])
 
 == Starting situation
 

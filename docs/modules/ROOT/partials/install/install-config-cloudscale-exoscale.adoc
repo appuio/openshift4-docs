@@ -16,16 +16,10 @@ apiVersion: v1
 metadata:
   name: ${CLUSTER_ID} <1>
 baseDomain: ${BASE_DOMAIN} <1>
-ifeval::["{provider}" == "cloudscale"]
 platform:
   external:
-    platformName: cloudscale
+    platformName: {provider}
     cloudControllerManager: External
-endif::[]
-ifeval::["{provider}" == "exoscale"]
-platform:
-  none: {}
-endif::[]
 networking:
   networkType: Cilium
 pullSecret: |

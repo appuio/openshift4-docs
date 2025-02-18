@@ -103,7 +103,7 @@ ifeval::["{provider}" == "cloudscale"]
 +
 [source,bash,subs="attributes+"]
 ----
-kapitan refs --reveal --refs-path ../../refs ../machine-api-provider-cloudscale/00_secrets.yaml | kubectl apply -f -
+kapitan refs --reveal --refs-path ../../refs -f ../machine-api-provider-cloudscale/00_secrets.yaml | kubectl apply -f -
 
 kubectl apply  -f ../machine-api-provider-cloudscale/10_clusterRoleBinding.yaml
 

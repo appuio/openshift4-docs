@@ -42,14 +42,15 @@ fi
 ifeval::["{provider}" == "cloudscale"]
 . Copy cloud-controller-manager manifests
 +
+[TIP]
+====
+This step assumes that component https://github.com/projectsyn/component-cloudscale-cloud-controller-manager/releases/tag/v1.3.0[cloudscale-cloud-controller-manager v1.3.0] or newer is used.
+====
++
 [source,bash]
 ----
 for f in catalog/manifests/cloudscale-cloud-controller-manager/*; do
-  file=$(basename $f)
-  # Split resources into individual files
-  yq --no-doc -s \
-    "\"${INSTALLER_DIR}/manifests/cloudscale-cloud-controller-manager_${file/.yaml}_\" + \$index + \"_\" + (.kind|downcase)" \
-    $f
+  cp $f ${INSTALLER_DIR}/manifests/cloudscale_ccm_$(basename $f)
 done
 yq -i e ".stringData.access-token=\"${CLOUDSCALE_API_TOKEN}\"" \
   ${INSTALLER_DIR}/manifests/cloudscale-cloud-controller-manager_01_secret_0_secret.yml

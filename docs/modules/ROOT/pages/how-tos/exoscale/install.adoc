@@ -150,13 +150,22 @@ export CSI_SECRETKEY=$(echo "${csi_credentials}" | jq -r '.secret')
 
 
 [#_bootstrap_bucket]
-=== Set up S3 bucket for cluster bootstrap
+=== Set up S3 buckets for the cluster
 
-. Create S3 bucket
+. Create S3 bucket for bootstrap
 +
 [source,bash]
 ----
 exo storage create "sos://${CLUSTER_ID}-bootstrap" --zone "${EXOSCALE_ZONE}"
+----
+
+. Create S3 bucket for the OpenShift logging LokiStack
++
+NOTE: This step can be skipped for OpenShift Kubernetes Engine (OKE)
++
+[source,bash]
+----
+exo storage create "sos://${CLUSTER_ID}-logstore" --zone "${EXOSCALE_ZONE}"
 ----
 
 [#_upload_coreos_image]
@@ -350,5 +359,12 @@ include::partial$install/registry-samples-operator.adoc[]
 include::partial$install/finalize_part1.adoc[]
 
 include::partial$install/finalize_part2.adoc[]
++
+. Remove bootstrap bucket
++
+[source,bash]
+----
+exo storage rb -r -f "sos://${CLUSTER_ID}-bootstrap"
+----
 
 include::partial$install/post-tasks.adoc[]

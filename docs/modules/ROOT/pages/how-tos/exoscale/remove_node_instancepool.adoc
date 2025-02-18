@@ -1,0 +1,98 @@
+= Remove a worker node (instance pool)
+
+:cloud_provider: exoscale
+:kubectl_extra_args: --as=cluster-admin
+:delabel_app_nodes: yes
+
+:node-delete-list: ${NODE_TO_REMOVE}
+:instance-pool-group: worker
+:delete-pvs: old_pv_names
+
+[abstract]
+--
+Steps to remove a worker node of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale] which uses instance pools.
+--
+
+== Starting situation
+
+* You already have a OpenShift 4 cluster on Exoscale
+* Your cluster uses instance pools for the worker and infra nodes
+* You have admin-level access to the cluster
+* You want to remove an existing worker node in the cluster
+
+== High-level overview
+
+* Drain the node
+* Then we remove it from Kubernetes.
+* Finally we remove the associated VM from the instance pool.
+
+== Prerequisites
+
+include::partial$exoscale/prerequisites.adoc[]
+
+== Prepare local environment
+
+include::partial$exoscale/setup-local-env.adoc[]
+
+== Prepare Terraform environment
+
+include::partial$exoscale/configure-terraform-secrets.adoc[]
+
+include::partial$setup_terraform.adoc[]
+
+== Drain and Remove Node
+
+* Select a node to remove.
+With instance pools, we can remove any node.
++
+[source,bash]
+----
+export NODE_TO_REMOVE=<node name>
+----
+
+* If you are working on a production cluster, you need to *schedule the node drain for the next maintenance.*
+* If you are working on a non-production cluster, you may *drain and remove the node immediately.*
+
+=== Schedule node drain (production clusters)
+
+include::partial$drain-node-scheduled.adoc[]
+
+=== Drain and remove node immediately
+
+include::partial$drain-node-immediately.adoc[]
+
+== Update Cluster Config
+
+. Update cluster config.
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.worker_count -= 1" \
+  ${CLUSTER_ID}.yml
+----
+
+. Review and commit
++
+[source,bash]
+----
+
+# Have a look at the file ${CLUSTER_ID}.yml.
+
+git commit -a -m "Remove worker node from cluster ${CLUSTER_ID}"
+git push
+
+popd
+----
+
+. Compile and push cluster catalog
++
+[source,bash]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i
+----
+
+== Remove VM
+
+include::partial$exoscale/delete-node-vm-instancepool.adoc[]

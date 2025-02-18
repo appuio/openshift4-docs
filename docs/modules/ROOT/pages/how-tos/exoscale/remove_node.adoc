@@ -1,4 +1,4 @@
-= Remove a worker node
+= Remove a worker node (no instance pool)
 
 :cloud_provider: exoscale
 :kubectl_extra_args: --as=cluster-admin
@@ -10,12 +10,13 @@
 
 [abstract]
 --
-Steps to remove a worker node of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale].
+Steps to remove a worker node of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale] without instance pools.
 --
 
 == Starting situation
 
 * You already have a OpenShift 4 cluster on Exoscale
+* Your cluster doesn't use Exoscale instance pools
 * You have admin-level access to the cluster
 * You want to remove an existing worker node in the cluster
 

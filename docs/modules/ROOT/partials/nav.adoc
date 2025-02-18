@@ -51,6 +51,7 @@
 // Node management
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node_instancepool.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/change_node_instancepool.adoc[]
 // Storage cluster
 *** xref:oc4:ROOT:how-tos/exoscale/add_storage_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/change_storage_node_size.adoc[]
@@ -170,6 +171,7 @@
 ** Exoscale
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node_instancepool.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/change_node_instancepool.adoc[]
 
 ** Google Cloud Platform
 *** xref:oc4:ROOT:how-tos/gcp/infrastructure_machineset.adoc[Infrastructure MachineSets]
@@ -230,6 +232,7 @@
 // Node management
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node_instancepool.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/change_node_instancepool.adoc[]
 // Storage cluster
 *** xref:oc4:ROOT:how-tos/exoscale/add_storage_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/change_storage_node_size.adoc[]

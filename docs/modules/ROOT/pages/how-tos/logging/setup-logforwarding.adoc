@@ -1,0 +1,179 @@
+= Setup Log Forwarding
+
+[abstract]
+This page describes how to setup log forwarding to 3rd party logging systems.
+
+https://docs.openshift.com/container-platform/latest/observability/logging/logging-6.1/log6x-clf-6.1.html[Official OpenShift Documentation]
+
+== Starting situation
+
+* You have an OpenShift 4 cluster with OpenShift Logging >= 6.1 installed.
+
+== Setup Namespace and ServiceAccount
+
+. Create Namespace
++
+[source,bash]
+----
+export FORWARDER_NAMESPACE=my-logging <1>
+kubectl create ns ${FORWARDER_NAMESPACE}
+----
+<1> The namespace where the ClusterLogForwarder resource will be deployed.
+
+. Create ServiceAccount
++
+[source,bash]
+----
+kubectl -n ${FORWARDER_NAMESPACE} create sa logcollector
+----
+
+. Create ClusterRoleBinding
++
+[source,bash]
+----
+kubectl create clusterrolebinding ${FORWARDER_NAMESPACE}-collect-application-logs --clusterrole=collect-application-logs --serviceaccount=${FORWARDER_NAMESPACE}:logcollector
+----
++
+[NOTE]
+====
+OpenShift Logging provides the following ClusterRoles for collecting logs:
+
+* `collect-application-logs`
+* `collect-audit-logs`
+* `collect-infrastructure-logs`
+====
+
+== Create ClusterLogForwarder
+
+A ClusterLogForwarder resource is used to deploy a log forwarder to the cluster.
+
+[source,yaml]
+----
+apiVersion: observability.openshift.io/v1
+kind: ClusterLogForwarder
+metadata:
+  name: logforwarder <1>
+  namespace: ${FORWARDER_NAMESPACE} <2>
+spec:
+  collector: {} <3>
+  managementState: Managed <4>
+  serviceAccount: <5>
+    name: logcollector
+  filters: [] <6>
+  inputs: [] <7>
+  outputs: [] <8>
+  pipelines: [] <9>
+----
+<1> The name of the ClusterLogForwarder resource.
+<2> The namespace of the ClusterLogForwarder resource.
+<3> The collector section defines the configuration for the log collector.
+<4> The managementState section defines the management state of the ClusterLogForwarder resource.
+<5> The serviceAccount section defines the service account that will be used to collect the logs.
+<6> The filters section defines the filters that can be applied to the logs.
+<7> The inputs section defines the inputs to the ClusterLogForwarder resource.
+<8> The outputs section defines the outputs of the ClusterLogForwarder resource.
+<9> The pipelines section defines the pipelines of the ClusterLogForwarder resource.
+
+=== Configure Collector
+
+[source,yaml]
+----
+spec:
+  collector:
+    resources: <1>
+      requests:
+        cpu: 20m
+        memory: 400M
+    tolerations: <2>
+      - key: storagenode
+        operator: Exists
+  managementState: Managed <3>
+  serviceAccount:
+    name: logcollector
+----
+<1> Define resource requests and limits for the log collector.
+<2> Add tolerations if you want to collect logs on nodes with special taints.
+<3> Indicator if the resource is 'Managed' or 'Unmanaged' by the operator.
+
+=== Configure Filters
+
+https://docs.openshift.com/container-platform/latest/observability/logging/logging-6.1/log6x-clf-6.1.html#clf-filters_6-1_logging-6x-6.1[Official OpenShift Documentation]
+
+[source,yaml]
+----
+spec:
+  filters:
+    - name: multiline-exception <1>
+      type: detectMultilineException <2>
+----
+<1> Name of the filter for referencing it in the pipelines.
+<2> Defines a filter of type detectMultilineException.
+
+=== Configure Inputs
+
+[source,yaml]
+----
+spec:
+  inputs:
+    - name: mylogs <1>
+      type: application <2>
+      application:
+        selector:
+          matchLabels: <3>
+            logforwarder/type: mylogs
+        excludes:
+          - namespace: "my-namespace" <4>
+----
+<1> Name of the input for referencing it in the pipelines.
+<2> Input of type application.
+<3> Select logs from pods with the label defined here.
+<4> Exclude logs from pods within this namespace.
+
+=== Configure Outputs
+
+[source,yaml]
+----
+spec:
+  outputs:
+    - name: myoutput <1>
+      type: lokiStack <2>
+      lokiStack:
+        authentication: <3>
+          token:
+            from: serviceAccount
+        target: <4>
+          name: loki
+          namespace: openshift-logging
+      tls: <5>
+        ca:
+          configMapName: openshift-service-ca.crt
+          key: service-ca.crt
+----
+<1> Name of the output for referencing it in the pipelines.
+<2> Output of type lokiStack to forward to the cluster internal LokiStack.
+<3> Use the token from this forwarders serviceAccount to authenticate at the LokiStack.
+<4> Points to the LokiStack resource of the cluster internal LokiStack.
+<5> Configure TLS options.
+
+=== Configure Pipelines
+
+[source,yaml]
+----
+spec:
+  pipelines:
+    - name: mypipeline <1>
+      filterRefs:
+        - multiline-exception <2>
+      inputRefs:
+        - application <3>
+        - infrastructure <4>
+        - mylogs <5>
+      outputRefs:
+        - myoutput <6>
+----
+<1> Name of the pipeline.
+<2> Reference to the filter to apply to the logs.
+<3> Default input for application logs, matches all application logs.
+<4> Default input for infrastructure logs, matches all OpenShift components.
+<5> Reference to the custom input from the example above.
+<6> Reference to the output from the example above.

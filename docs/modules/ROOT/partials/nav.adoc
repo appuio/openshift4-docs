@@ -176,7 +176,7 @@
 // Sandboxed Containers Support for OpenShift
 
 * Logging
-** xref:oc4:ROOT:how-tos/logging/increase-elasticsearch-storage-size.adoc[Increase Elasticsearch Storage Size]
+** xref:oc4:ROOT:how-tos/logging/setup-logforwarding.adoc[Setup Log Forwarding]
 
 * Monitoring
 ** xref:oc4:ROOT:explanations/cluster_monitoring.adoc[]

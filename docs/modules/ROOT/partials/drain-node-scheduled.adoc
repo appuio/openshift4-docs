@@ -3,7 +3,7 @@
 [source,bash,subs="attributes+"]
 ----
 pushd "../../../inventory/classes/$TENANT_ID"
-cat > manifests/$CLUSTER_ID/drain_node_hook <<EOF
+cat > manifests/$CLUSTER_ID/drain_node_hook.yaml <<EOF
 ---
 apiVersion: managedupgrade.appuio.io/v1beta1
 kind: UpgradeJobHook

@@ -10,12 +10,12 @@ We got an extensive array of tools to manage these configurations, from bash "re
 Those tools are all specialized and don't cover all use-cases.
 
 A maintainable, fully instrumented, and extensible controller that can manage arbitrary configurations in a cluster is missing.
-We decided to try our hand at creating one.
+xref:oc4:ROOT:explanations/decisions/prometheusrule-controller.adoc[We decided] to try our hand at creating one.
 
 == High Level Goals
 
 * We can manage arbitrary configurations in a cluster
-** The configuration may depend on external state
+** The configuration may depend on state managed by other controllers inside the cluster
 ** We can apply partial configurations to externally managed resources
 * The amount of requests and caching is tuneable
 * We can monitor failures and successes and have a tight feedback loop
@@ -30,7 +30,7 @@ We decided to try our hand at creating one.
 
 "Espejote" for "big mirror" in Spanish.
 It's a play on the earlier project "Espejo" which means "mirror."
-"Espejo" was a tool to mirror resources to multiple namespaces.
+https://github.com/vshn/espejo["Espejo"] is a tool to mirror resources to multiple namespaces.
 "Espejote" is a more general tool to manage arbitrary configurations in a cluster.
 
 == Implementation
@@ -215,6 +215,9 @@ The controller should emit events on errors during reconciliation.
 
 * `applyOptions.forceConflicts` can be used to resolve field https://kubernetes.io/docs/reference/using-api/server-side-apply/#conflicts[conflicts].
   The ManagedResource will become the sole owner of the field.
+
+* `applyOptions.createOnly` can be used to only create the resource.
+  If the resource already exists, the ManagedResource won't update it.
 
 == Permissions and RBAC
 
@@ -415,7 +418,7 @@ spec:
     ]
 ----
 <1> Cluster scoped `ClusterManagedResource` can access all resources in the cluster.
-This includes cluster scoped resources.
+This includes cluster scoped resources such as `Namespace`.
 <2> The full manifest of the triggering resource is available.
 <3> A cluster managed resource can create resources in any namespace and thus needs to set the namespace.
 
@@ -423,7 +426,7 @@ This includes cluster scoped resources.
 
 === Sync upgrade notifications with a ArgoCD sync hook and bash script
 
-We want to show a notification in the OpenShift Console when a minor upgrade is available.
+We want to show a notification in the OpenShift Console when a minor upgrade is scheduled.
 To implement this we added a job triggered by an ArgoCD sync.
 The job is reading another resource and creating a console notification manifest from it.
 
@@ -432,8 +435,9 @@ The job is reading another resource and creating a console notification manifest
 
 === Sync OpenShift Console TLS Secret with a bash "reconciler"
 
-Cert-manager only allows to create certificates in the same namespace as the ingress.
-OpenShift Console ingress is in the `openshift-console` namespace, but the secret needs to be applied in the `openshift-config` namespace.
+Cert-manager only allows to create the secret holding the certificate data in the same namespace as the `Certificate` resource.
+The OpenShift Console route is in the `openshift-console` namespace, but the secret needs to be applied in the `openshift-config` namespace.
+However, we must create the `Certificate` resource in `openshift-console`, since otherwise the OpenShift ingress doesn't admit the HTTP challenge ingress.
 
 We use a bash reconciler to create the secret in the correct namespace.
 

@@ -77,8 +77,8 @@ We decided to implement our own generalized copy/patch operator.
 
 == Rationale
 
-By implementing our own generalized copy/patch operator can adapt better to changes in the upstream PrometheusRules.
+By implementing our own generalized copy/patch operator we can adapt better to changes in the upstream PrometheusRules.
 
-Creating or patching resources based on other resources is an issue we encounter on multiple occasions.
+Creating or patching resources based on other resources is an issue we encounter constantly.
 We already have tools in place to solve those problems, but all of them address a special case which could be unified in a more general approach.
 This would allow us to replace multiple tools and lower our operational overhead tracking and rolling out upstream changes of those tools.

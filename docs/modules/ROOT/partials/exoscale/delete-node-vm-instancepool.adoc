@@ -1,0 +1,39 @@
+
+. Evict the VM(s) from the instance pool
++
+[NOTE]
+====
+We're going through all {instance-pool-group} instance pools to find the pool containing the node(s) to remove.
+This ensures that we can apply the step as-is on clusters on dedicated hypervisors which may have multiple {instance-pool-group} instance pools.
+====
++
+[source,bash,subs="attributes+"]
+----
+instancepool_names=$(exo compute instance-pool list -Ojson | \
+  jq --arg ip_group "{instance-pool-group}" -r \
+  '.[]|select(.name|contains($ip_group))|.name')
+
+for node in $(echo -n {node-delete-list}); do
+  for pool_name in ${instancepool_names}; do
+    has_node=$(exo compute instance-pool show "${pool_name}" -Ojson | \
+      jq --arg node "${node}" -r '.instances|index($node)!=null')
+    if [ "$has_node" == "true" ]; then
+      exo compute instance-pool evict "${pool_name}" "${node}" -z "$EXOSCALE_ZONE"
+      break
+    fi
+  done
+done
+----
+
+. Run Terraform to update the state with the new instance pool size
++
+NOTE: There shouldn't be any changes since `instance-pool evict` reduces the instance-pool size by one.
++
+NOTE: Ensure that you're still in directory `${WORK_DIR}/catalog/manifests/openshift4-terraform` before executing this command.
++
+[source,bash]
+----
+terraform apply
+----
+
+endif::[]

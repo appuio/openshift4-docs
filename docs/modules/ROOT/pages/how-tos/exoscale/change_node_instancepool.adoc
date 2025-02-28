@@ -1,0 +1,228 @@
+= Change worker node type (instance pool)
+
+:cloud_provider: exoscale
+:kubectl_extra_args: --as=cluster-admin
+:needs_hieradata_edit: no
+
+:node-delete-list: ${NODES_TO_REMOVE}
+
+[abstract]
+--
+Steps to change the instance type of an OpenShift 4 cluster on https://www.exoscale.com[Exoscale] with instance pools.
+--
+== Starting situation
+
+* You already have a OpenShift 4 cluster on Exoscale
+* Your cluster uses Exoscale instance pools for the worker and infra nodes
+* You have admin-level access to the cluster
+* Your `kubectl` context points to the cluster you're modifying
+* You want to change the node type (size) of the worker or infra nodes
+
+== High-level overview
+
+* Update the instance pool with the new desired type
+* Replace each existing node with a new node
+
+== Prerequisites
+
+include::partial$exoscale/prerequisites.adoc[]
+
+== Prepare local environment
+
+include::partial$exoscale/setup-local-env.adoc[]
+
+== Update Cluster Config
+
+. Set new desired node type
++
+[source,bash]
+----
+new_type=<exoscale instance type> <1>
+----
+<1> An Exoscale instance type, for example `standard.huge`.
+
+. Update cluster config
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.worker_type = \"${new_type}\"" \
+  ${CLUSTER_ID}.yml
+----
+
+. Review and commit
++
+[source,bash]
+----
+
+# Have a look at the file ${CLUSTER_ID}.yml.
+
+git commit -a -m "Update worker nodes of cluster ${CLUSTER_ID} to ${new_type}"
+git push
+
+popd
+----
+
+. Compile and push cluster catalog
++
+[source,bash]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i
+----
+
+== Run Terraform
+
+include::partial$exoscale/configure-terraform-secrets.adoc[]
+
+include::partial$setup_terraform.adoc[]
+
+. Run Terraform
++
+[NOTE]
+====
+This doesn't make changes to existing instances.
+However, after this step, any new instances created for the instance pool will use the new configuration.
+====
++
+[source,bash]
+----
+terraform apply
+----
+
+== Apply new instance pool configuration
+
+[IMPORTANT]
+====
+Double-check that your `kubectl` context points to the cluster you're working on
+====
+
+[TIP]
+====
+Depending on the number of nodes you're updating, you may want to execute the steps in this section for a subset of the nodes at a time.
+
+On clusters with dedicated hypervisors, you'll need to execute the steps for each `worker` instance pool.
+You can list the worker instance pools with
+
+[source,bash]
+----
+exo compute instance-pool list -Ojson | jq -r '.[]|select(.name|contains("worker"))|.name'
+----
+====
+
+[IMPORTANT]
+====
+If you're using this how-to for changing the instance type of the infra nodes, you must run Terraform again after replacing nodes to ensure that the LB hieradata is updated with the new infra node IPs.
+
+When replacing infra nodes, we strongly recommend doing so in two batches to ensure availability of the cluster ingress.
+====
+
+. Select the instance pool
++
+[source,bash]
+----
+pool_name="${CLUSTER_ID}_worker-0" <1>
+----
+
+. Compute the new instance count
++
+[source,bash]
+----
+new_count=$(exo compute instance-pool show "${pool_name}" -Ojson | jq -r '.size * 2')
+----
++
+[TIP]
+====
+For larger clusters, you'll probably want to do something like the following to replace nodes in batches.
+If you do this, you'll need to repeat the steps below this one for each batch.
+
+[source,bash]
+----
+batch_size=3 <1>
+new_count=$(exo compute instance-pool show "${pool_name}" -Ojson | \
+  jq --argjson batch "$batch_size" -r '.size + $batch')
+----
+<1> Replace with the desired batch size.
+Please ensure that you adjust the last batch size to not provision extra nodes if your node count isn't divisible by your selected batch size.
+====
+
+. Get the list of old nodes
++
+[source,bash]
+----
+NODES_TO_REMOVE=$(exo compute instance-pool show "${pool_name}" -Ojson | \
+  jq -r '.instances|join(" ")')
+----
++
+[TIP]
+====
+If you're replacing nodes in batches, save the list of old nodes in a file:
+
+[source,bash]
+----
+exo compute instance-pool show "${pool_name}" -Ojson | jq -r '.instances' > old-nodes.json <1>
+----
+<1> Run this *only once* before starting to replace nodes.
+
+Compute a batch of old nodes to remove and drop those from the file:
+
+[source,bash]
+----
+NODES_TO_REMOVE=$(jq --argjson batch "$batch_size" -r '.[:$batch]|join(" ")' old-nodes.json)
+jq -r '.[$batch:]' old-nodes.json > old-nodes-rem.json && \
+  mv old-nodes-rem.json old-nodes.json
+----
+====
+
+. Scale up the instance pool to create new instances with the new desired type
++
+[source,bash]
+----
+exo compute instance-pool scale "${pool_name}" "${new_count}" -z "${EXOSCALE_ZONE}"
+----
+
+. Approve CSRs of new nodes
++
+include::partial$install/approve-node-csrs.adoc[]
+
+. Label nodes
++
+[source,bash]
+----
+kubectl get node -ojson | \
+  jq -r '.items[] | select(.metadata.name | test("infra|master|storage-")|not).metadata.name' | \
+  xargs -I {} kubectl label node {} node-role.kubernetes.io/app=
+----
+
+. Drain and remove old nodes
++
+* If you are working on a production cluster, you need to *schedule the node drain for the next maintenance.*
++
+.Schedule node drain (production clusters)
+[%collapsible]
+====
+include::partial$drain-node-scheduled.adoc[]
+====
+* If you are working on a non-production cluster, you may *drain and remove the nodes immediately.*
++
+.Drain and remove node immediately
+[%collapsible]
+====
+include::partial$drain-node-immediately.adoc[]
+====
+
+. Remove old VMs from instance pool
++
+[IMPORTANT]
+====
+Only do this after the previous step is completed.
+On production clusters this must happen *after the maintenance*.
+====
++
+[source,bash]
+----
+for node in "$NODES_TO_REMOVE"; do
+  exo compute instance-pool evict "${pool_name}" "${node}" -z "${EXOSCALE_ZONE}"
+done
+----
+

@@ -1,3 +1,5 @@
+:vshn_input_join: yes
+
 . Create local directory to work in
 +
 [TIP]

@@ -22,7 +22,7 @@ Steps to remove a worker node of an OpenShift 4 cluster on https://www.exoscale.
 
 == High-level overview
 
-* Drain the node
+* We drain the node
 * Then we remove it from Kubernetes.
 * Finally we remove the associated VM from the instance pool.
 

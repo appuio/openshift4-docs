@@ -54,6 +54,16 @@ if ls openshift4.y*ml 1>/dev/null 2>&1; then
 fi
 ----
 
+ifeval::["{provider}" == "exoscale"]
+. Include the Exoscale cloud-controller-manager Commodore component
++
+[source,bash]
+----
+yq eval -i '.applications += "exoscale-cloud-controller-manager"' ${CLUSTER_ID}.yml
+git commit -a -m "Deploy Exoscale cloud-controller-manager on ${CLUSTER_ID}"
+----
+endif::[]
+
 . Add Cilium to cluster configuration
 +
 [NOTE]

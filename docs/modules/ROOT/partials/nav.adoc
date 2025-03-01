@@ -271,3 +271,4 @@
 ** xref:oc4:ROOT:explanations/decisions/cloudscale-cilium-egressip.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/gitlab-access-tokens.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/prometheusrule-controller.adoc[]
+** xref:oc4:ROOT:explanations/decisions/upgrade-controller-custom-healthchecks.adoc[]

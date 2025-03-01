@@ -1,0 +1,45 @@
+= Upgrade Controller Custom Health Checks
+
+== Problem
+
+Currently, our OpenShift upgrade controller doesn't support custom health checks.
+Only checking the ClusterVersion CRD is supported, which is not sufficient for all use cases.
+
+The current health check implementation can only fail jobs, but not skip them.
+We might want to skip jobs in some cases, for example, if there are maintenance blocking PDBs in place.
+
+=== Goals
+
+* We have a method of implementing custom health checks for the upgrade controller
+* We can skip jobs based on the health check results
+* We can differentiate between failing and skipping health checks
+
+=== Non-Goals
+
+* TODO
+
+== Proposals
+
+=== 1a. Extend `UpgradeJobHooks`; track pod exit codes for skipping upgrades
+
+=== 1b. Extend `UpgradeJobHooks`; upgrade controller exposes API for skipping upgrades
+
+=== 1c. Extend `UpgradeJobHooks`, upgrade controller adds CRD for skipping upgrades
+
+=== 1d. Extend `UpgradeJobHooks`, upgrade controller adds subresource for skipping upgrades
+
+=== 2. Implement a new health check mechanism in the `UpgradeJob` CRD
+
+=== 3. Implement a new health check mechanism analogous to the `UpgradeJobHook` CRD
+
+== Decision
+
+TODO
+
+== Rationale
+
+TODO
+
+== References
+
+* TODO

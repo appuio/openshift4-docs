@@ -125,7 +125,7 @@ curl -sH "$AUTH_HEADER" https://api.cloudscale.ch/v1/custom-images | jq -r '.[] 
 +
 [NOTE]
 ====
-If a URL is printed to the output, you can skip the next steps and directly jump to the next section.
+If the zone in which you're setting up the cluster is part of the list of zones returned by the command, you should skip the next steps and directly jump to the next section.
 ====
 
 . Fetch the latest Red Hat CoreOS image

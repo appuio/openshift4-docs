@@ -125,7 +125,7 @@ curl -sH "$AUTH_HEADER" https://api.cloudscale.ch/v1/custom-images | jq -r '.[] 
 +
 [NOTE]
 ====
-If a URL is printed to the output, you can skip the next steps and directly jump to the next section.
+If the zone in which you're setting up the cluster is part of the list of zones returned by the command, you should skip the next steps and directly jump to the next section.
 ====
 
 . Fetch the latest Red Hat CoreOS image
@@ -160,7 +160,7 @@ The output should be
 ----
 ====
 
-. Import the image to cloudscale.ch
+. Import the image to cloudscale
 +
 [source,bash,subs="attributes+"]
 ----
@@ -173,6 +173,27 @@ curl -i -H "$AUTH_HEADER" \
   -F user_data_handling=pass-through \
   https://api.cloudscale.ch/v1/custom-images/import
 ----
++
+[WARNING]
+====
+By default, we only import the image in the zone where we're setting up the cluster.
+If you're setting up a cluster in a project where there's already a cluster using the same image slug in the other zone, you need to import the image as a "Multi-Zone: LPG1 & RMA1" image.
+You can do so with the following command (note the duplicate `-F zones` flag):
+
+[source,bash]
+----
+curl -i -H "$AUTH_HEADER" \
+  -F url="$(mc share download --json "$\{CLUSTER_ID\}/$\{CLUSTER_ID\}-bootstrap-ignition/rhcos-{ocp-minor-version}.qcow2" | jq -r .url)" \
+  -F name='RHCOS {ocp-minor-version}' \
+  -F zones="lpg1" -F zones="rma1" \
+  -F slug=rhcos-{ocp-minor-version} \
+  -F source_format=qcow2 \
+  -F user_data_handling=pass-through \
+  https://api.cloudscale.ch/v1/custom-images/import
+----
+
+Otherwise, reusing an existing slug will deactivate it for any existing images in the other zone.
+====
 
 [#_set_vault_secrets]
 === Set secrets in Vault

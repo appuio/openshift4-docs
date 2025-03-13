@@ -15,7 +15,7 @@ The node disruption policies feature has been promoted to GA.
 A node disruption policy allows you to define the configuration changes that cause a disruption to your cluster, and which changes don't.
 This allows you to reduce node downtime when making small machine configuration changes in your cluster.
 +
-[Note]
+[NOTE]
 ====
 See https://docs.openshift.com/container-platform/4.17/machine_configuration/machine-config-node-disruption.html#machine-config-node-disruption[Machine Configuration Documentation]
 ====
@@ -33,7 +33,7 @@ Validating Admission Policies::
 Validating Admission Policies are now available in OpenShift 4.17.
 These policies allow you to validate the incoming requests to the API server.
 +
-[Note]
+[NOTE]
 ====
 See https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/[Kubernetes Documentation]
 ====

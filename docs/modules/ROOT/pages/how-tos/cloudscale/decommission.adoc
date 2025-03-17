@@ -14,6 +14,7 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch]
 == Prerequisites
 
 include::partial$cloudscale/prerequisites.adoc[]
+* `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
 
 == Cluster Decommission
 
@@ -38,6 +39,54 @@ export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMM
 export BACKUP_REGION=$(curl -H "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" https://api.cloudscale.ch/v1/regions | jq -r '.[].slug' | grep -v $REGION)
 export HIERADATA_REPO_SECRET=$(vault kv get \
   -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq -r '.data.data.token')
+----
+
+. Use emergency credentials
++
+[source,bash]
+----
+emergency-credentials-receive $CLUSTER_ID
+export KUBECONFIG="em-${CLUSTER_ID}"
+kubectl cluster-info
+----
+
+. Disable Syn
++
+[source,bash]
+----
+kubectl -n syn patch apps --type=json \
+    -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]' \
+    root argocd
+kubectl -n syn-argocd-operator scale deployment \
+    syn-argocd-operator-controller-manager --replicas 0
+kubectl -n syn scale sts syn-argocd-application-controller --replicas 0
+----
+
+. Delete all PVs
++
+[source,bash]
+----
+kubectl cordon -l node-role.kubernetes.io/worker
+kubectl get po -A -oyaml | yq '.items = [.items[] |
+    select(.spec.nodeName | test("master-") | not) |
+    select(.metadata.namespace != "syn-csi-cloudscale")]' |\
+    kubectl delete --wait=false -f-
+kubectl delete pvc -A --all --wait=false
+kubectl delete pv --all --wait=false
+kubectl wait --for=delete pv --all --timeout=120s
+----
++
+NOTE: By cordoning all non-master nodes and deleting all their pods (except the csi driver pods) we ensure that no new PVs are created, while the existing ones can be cleaned up.
+Deleting all pods has the additional benefit that we don't have to deal with PDBs when deleting the machinesets in the next step.
+
+. Delete all machinesets
++
+[source,bash]
+----
+kubectl -n openshift-machine-api delete machinesets --all
+kubectl -n openshift-machine-api wait --for=delete \
+    machinesets,machines --all --timeout=120s
+kubectl get nodes
 ----
 
 . Configure Terraform secrets
@@ -71,7 +120,7 @@ done
 +
 [source,console]
 ----
-terraform state rm module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata
+terraform state rm "module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata"
 ----
 +
 NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.

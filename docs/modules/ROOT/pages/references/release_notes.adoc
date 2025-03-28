@@ -7,7 +7,7 @@ TIP: This page lists notable changes in OpenShift releases which we find importa
 OpenShift version 4.18 is available since 2025-02-25.
 This version is based on Kubernetes 1.31 and CRI-O 1.31.
 The RHCOS image still uses RHEL 9.4 packages.
-Find the release notes in the upstream documentation at https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/release_notes/ocp-4-18-release-notes[OpenShift Container Platform 4.17 release notes].
+Find the release notes in the upstream documentation at https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/release_notes/ocp-4-18-release-notes[OpenShift Container Platform 4.18 release notes].
 The https://www.redhat.com/en/blog/what-you-need-to-know-red-hat-openshift-418[Red Hat unveils OpenShift 4.18] blog post is also a valuable resource.
 
 Improved OLM v1 now Generally Available::

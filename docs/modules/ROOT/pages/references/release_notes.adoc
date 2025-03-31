@@ -44,6 +44,20 @@ Deploying OCP across multiple vCenter clusters can be helpful for high availabil
 This feature has to be configured during installation and can't be enabled after the fact on an already running cluster.
 There is no support for shared storage between multiple vCenters using this feature.
 
+User workload monitoring improvements::
+OpenShift 4.18 brings multiple improvements in the user-workload monitoring stack:
++
+* User workload alerting and recording rules can query multiple projects (namespaces) at the same time
+* Scrape and rule evaluation intervals are configurable
+
+Route annotation updates::
+OpenShift 4.18 deprecates the `haproxy.router.openshift.io/ip_whitelist` and `haproxy.router.openshift.io/ip_blacklist` annotations in favor of `haproxy.router.openshift.io/ip_allowlist` and `haproxy.router.openshift.io/ip_denylist`.
++
+TIP: These annotations can also be used on `Ingress` objects.
+
+`crun` is the default container runtime for new clusters::
+New clusters setup with OpenShift 4.18 use `crun` as the container runtime by default.
+`runC` is still supported, and upgrading existing clusters from OpenShift 4.17 to 4.18 doesn't change the container runtime.
 == OpenShift 4.17
 
 OpenShift version 4.17 is available since 2024-10-01.

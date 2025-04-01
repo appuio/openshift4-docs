@@ -399,6 +399,20 @@ oc create secret generic image-registry-private-configuration-user \
 +
 include::partial$install/registry-samples-operator.adoc[]
 
+. Enable default instance pool annotation injector for LoadBalancer services
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+curl -fsu "${GITLAB_USER}:${GITLAB_TOKEN}" "$GITLAB_STATE_URL" |\
+  jq '[.resources[] | select(.module == "module.cluster.module.worker" and .type == "exoscale_instance_pool")][0].instances[0].attributes.id' |\
+  yq ea -i 'select(fileIndex == 0) * (select(fileIndex == 1) | {"parameters": {"exoscale_cloud_controller_manager":{"serviceLoadBalancerDefaultAnnotations":{"service.beta.kubernetes.io/exoscale-loadbalancer-service-instancepool-id": .}}}}) ' \
+  "$CLUSTER_ID.yml" -
+git commit -a -m "${CLUSTER_ID}: Enable default instance pool annotation injector for LoadBalancer services"
+git push
+popd
+----
+
 include::partial$install/finalize_part1.adoc[]
 
 include::partial$install/finalize_part2.adoc[]

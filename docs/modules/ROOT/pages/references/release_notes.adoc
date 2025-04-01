@@ -58,6 +58,7 @@ TIP: These annotations can also be used on `Ingress` objects.
 `crun` is the default container runtime for new clusters::
 New clusters setup with OpenShift 4.18 use `crun` as the container runtime by default.
 `runC` is still supported, and upgrading existing clusters from OpenShift 4.17 to 4.18 doesn't change the container runtime.
+
 == OpenShift 4.17
 
 OpenShift version 4.17 is available since 2024-10-01.

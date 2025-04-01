@@ -61,7 +61,7 @@ ifeval::["{provider}" == "exoscale"]
 +
 [source,bash,]
 ----
-for f in catalog/manifests/exoscale-cloud-controller-manager/*; do
+for f in catalog/manifests/exoscale-cloud-controller-manager/manager/*; do
   cp $f ${INSTALLER_DIR}/manifests/exoscale_ccm_$(basename $f)
 done
 

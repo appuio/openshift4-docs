@@ -72,7 +72,7 @@ triggers:
 <1> Free form name for the trigger.
 Can be referenced in the template and used to decide on partial re-renders.
 
-The trigger that fires is exposed to the Jsonnet as `esp.triggerData()` and `esp.triggerData()`.
+The trigger that fires is exposed to the Jsonnet as `esp.triggerData()` and `esp.triggerName()`.
 
 [source,jsonnet]
 ----
@@ -106,8 +106,8 @@ The resource is available in the Jsonnet template as `esp.triggerData().resource
 
 ==== `watchContextResource`
 
-The `watchContextResource` trigger works the same as the `watchResource` trigger, but copies cache and configuration from a context resource.
-This avoids duplicate, possibly drifting, configuration when using he same configuration for both the context and the trigger.
+The `watchContextResource` trigger works the same as the `watchResource` trigger, but shares cache and configuration with a context resource.
+This avoids duplicate, possibly drifting, configuration when using the same configuration for both the context and the trigger.
 This often happens when doing partial re-renders.
 See the example below.
 
@@ -221,10 +221,12 @@ The template can use libraries to share code between templates.
 The libraries are stored as <<JsonnetLibrary>> resources.
 
 The following libraries are available:
+
 - "espejote.libsonnet": The built in library for accessing the context and trigger information.
 - "lib/<NAME>/<KEY>" libraries in the shared library namespace. The name corresponds to the name of the JsonnetLibrary object and the key to the key in the data field.
 The namespace is configured at controller startup and normally points to the namespace of the controller.
 - "<NAME>/<KEY>" libraries in the same namespace as the ManagedResource.
+
 The name corresponds to the name of the JsonnetLibrary object and the key to the key in the data field.
 
 Namespace local libraries are an easy way to set configuration for a specific ManagedResource.
@@ -294,7 +296,7 @@ The `ManagedResources` should run with the least permissions possible.
 === Namespace isolation
 
 By default the `ManagedResource` is namespace scoped.
-Namespace fields need to be set to `""` explicitly if resources from all namespaces are required.
+Namespace fields for triggers and contexts need to be set to `""` explicitly if resources from all namespaces are required.
 Returned resources will default to the namespace of the `ManagedResource` if not explicitly set.
 
 === Running `ManagedResources` in the context of a service account
@@ -302,7 +304,7 @@ Returned resources will default to the namespace of the `ManagedResource` if not
 The `ManagedResource` is run in the context of a service account.
 The service account must hold all permissions required to query and apply the resources.
 
-If no service account is specified, the `ManagedResource` will run context of the namespaces default service account.
+If no service account is specified, the `ManagedResource` will run context of the namespace's `default` service account.
 
 [source,yaml]
 ----
@@ -405,8 +407,8 @@ libraries:
 <1> The template is rendered for every trigger.
 If multiple different contexts variations are required, a new file should be created for each combination.
 <2> Empty trigger to test a full `ManagedResource` reconciliation.
-<3> Real resources exporter from a cluster by using `espejote collect-input my-template.yaml`
-<4> The JsonnetLibraries used are exported from the cluster and included in the input file.
+<3> Real resources exported from a cluster by using `espejote collect-input my-template.yaml`
+<4> Any JsonnetLibraries used by the template are exported from the cluster and included in the input file.
 
 [source,bash]
 ----
@@ -422,7 +424,7 @@ The `Admission` allows validating API requests or mutating them before they're p
 === Webhook configuration
 
 Most webhook configurations are exposed in the `Admission` resource to make configuration as flexible as possible.
-Espejote manages the service part and injects a namespace selector for namespaced admissions.
+Espejote manages the service configuration for the generated admission webhook configurations and injects a namespace selector for namespaced admissions.
 
 [source,yaml]
 ----
@@ -614,7 +616,7 @@ spec:
 <3> `admissionRequest` returns the full admission request as defined in https://pkg.go.dev/k8s.io/api/admission/v1#AdmissionRequest.
 <4> `admission.patched` returns a patch that can be applied to the resource.
 Other valid return values are `admission.allowed(msg)` and `admission.denied(msg)`.
-`admission.assertPatch` ensures the patch can be applied to the resource or fail the admission otherwise.
+`admission.assertPatch` validates whether the patch can be applied to the resource and fails the admission if the patch isn't valid.
 This makes failures easier to debug than failing in the Kubernetes API server.
 <5> `webhookConfiguration` is used to configure the webhook.
 The user has basically full control over the webhook configuration with all upstream selectors available.

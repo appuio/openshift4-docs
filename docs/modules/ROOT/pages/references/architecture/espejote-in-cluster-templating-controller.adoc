@@ -23,7 +23,6 @@ xref:oc4:ROOT:explanations/decisions/prometheusrule-controller.adoc[We decided] 
 == Non-Goals
 
 * Centralized configuration management or GitOps
-* Policy enforcement
 * Security or access control
 
 == Name
@@ -36,7 +35,10 @@ https://github.com/vshn/espejo["Espejo"] is a tool to mirror resources to multip
 == Implementation
 
 The controller is based on `controller-runtime`.
-It's managed through a Custom Resource Definition (CRD) called `(Cluster)ManagedResource`.
+It's managed through two Custom Resource Definitions (CRD) called `ManagedResource` and `Admission`.
+`ManagedResource` implements a controller pattern that watches for changes in the cluster and applies the configuration.
+`Admission` implements a webhook pattern that applies the configuration on admission.
+We don't implement any logic to automatically create admission webhooks for the resources or vice versa.
 The controller uses Jsonnet to render manifests.
 Any Kubernetes manifest can be added to the templating context.
 
@@ -50,8 +52,10 @@ They're separated from the context resources to allow for more fine-grained cont
 [source,yaml]
 ----
 triggers:
-- interval: 10s
-- watchResource:
+- name: interval <1>
+  interval: 10s
+- name: ext-configmaps
+  watchResource:
     apiVersion: v1
     kind: ConfigMap
     labelSelector:
@@ -59,17 +63,26 @@ triggers:
       - key: espejote.io/created-by
         operator: DoesNotExist
     minTimeBetweenTriggers: 10s
-- watchResource:
+- name: my-configmap
+  watchResource:
     apiVersion: v1
     kind: ConfigMap
     name: my-configmap
 ----
+<1> Free form name for the trigger.
+Can be referenced in the template and used to decide on partial re-renders.
 
-The trigger that fires is exposed to the Jsonnet as the `trigger` variable.
+The trigger that fires is exposed to the Jsonnet as `esp.triggerData()` and `esp.triggerName()`.
 
 [source,jsonnet]
 ----
-local trigger = std.extVar('trigger');
+local esp = import "espejote.libsonnet";
+
+if esp.triggerName() == "ext-configmaps" then
+  // Do some partial re-rendering
+  local resource = esp.triggerData().resource;
+else
+  // Do a full re-render
 ----
 
 Currently, we support two types of triggers:
@@ -85,8 +98,48 @@ The template is re-rendered whenever the watched resource is created, changed, o
 The `minTimeBetweenTriggers` field can be used to limit the rate of re-renders.
 This is useful to prevent a high rate of re-renders when a resource is changed multiple times in a short period.
 If a list of resources is watched, the `minTimeBetweenTriggers` is applied to each resource individually.
+`minTimeBetweenTriggers` is https://github.com/vshn/espejote/issues/45[coming soon].
 
 The `watchResource` trigger contains the full Kubernetes resource definition of the watched resource.
+
+The resource is available in the Jsonnet template as `esp.triggerData().resource`.
+
+==== `watchContextResource`
+
+The `watchContextResource` trigger works the same as the `watchResource` trigger, but shares cache and configuration with a context resource.
+This avoids duplicate, possibly drifting, configuration when using the same configuration for both the context and the trigger.
+This often happens when doing partial re-renders.
+See the example below.
+
+[source,yaml]
+----
+spec:
+  context:
+  - name: namespaces
+    resource:
+      apiVersion: v1
+      kind: Namespace
+      labelSelector:
+        matchExpressions:
+        - key: netpol.example.com/no-default
+          operator: DoesNotExist
+  triggers:
+  - name: namespace
+    watchContextResource:
+      name: namespaces <1>
+  template: |
+    local esp = import 'espejote.libsonnet';
+    local netpolForNs = function(ns) {
+      [...]
+    };
+    if esp.triggerName() == 'namespace' then [
+      netpolForNs(esp.triggerData().resource),
+    ] else [
+      netpolForNs(ns)
+      for ns in esp.context().namespaces
+    ]
+----
+<1> The `name` field is used to reference the context resource where the configuration is copied from.
 
 ==== Additional triggers
 
@@ -119,19 +172,19 @@ context:
     name: my-configmap
 ----
 
-The context is exposed to the Jsonnet as the `context` variable.
+The context is exposed to the Jsonnet as the `esp.context()` function.
 
 [source,jsonnet]
 ----
-local configs = std.extVar('context').configs;
-local config = std.extVar('context').config;
+local esp = import 'espejote.libsonnet';
+local config = esp.context().config;
 ----
 
 Currently, we support one type of context resource:
 
 ==== `resource`
 
-A Kubernetes resource that and available in the Jsonnet template.
+A Kubernetes resource that's available in the Jsonnet template.
 The resource can be selected by `name` or `labelSelector`.
 
 `matchNames` and `ignoreNames` can be used to filter the resources after the labelSelector is applied.
@@ -146,6 +199,7 @@ The `cache` field can be used to setup a controller-runtime cache for the resour
 This is a in-memory cache with a watch on the resource.
 This is true by default.
 Can be disabled for a trade-off between memory usage and API requests.
+The possibility to disable the cache is https://github.com/vshn/espejote/issues/46[coming soon].
 
 ==== Additional context resources
 
@@ -166,29 +220,40 @@ The resources are applied in the order they're returned.
 The template can use libraries to share code between templates.
 The libraries are stored as <<JsonnetLibrary>> resources.
 
-The name of the resource is used as the library name.
+The following libraries are available:
+
+- "espejote.libsonnet": The built in library for accessing the context and trigger information.
+- "lib/<NAME>/<KEY>" libraries in the shared library namespace. The name corresponds to the name of the JsonnetLibrary object and the key to the key in the data field.
+The namespace is configured at controller startup and normally points to the namespace of the controller.
+- "<NAME>/<KEY>" libraries in the same namespace as the ManagedResource.
+
+The name corresponds to the name of the JsonnetLibrary object and the key to the key in the data field.
+
+Namespace local libraries are an easy way to set configuration for a specific ManagedResource.
+See component-openshift4-nodes for an example: https://github.com/appuio/component-openshift4-nodes/blob/7622ff25731f67177b0e844c22688270196d5dc5/component/autoscaler.jsonnet#L58[JsonnetLibrary], https://github.com/appuio/component-openshift4-nodes/blob/7622ff25731f67177b0e844c22688270196d5dc5/component/espejote-templates/patch-autoscaler-args.jsonnet#L4[template].
 
 [source,jsonnet]
 ----
-// local myLibrary = import 'lib/RESOURCE_NAME/KEY';
-local myLibrary = import 'lib/my-library/my-function.libsonnet';
+local esp = import 'espejote.libsonnet';
+local config = import 'my-managed-resource/config.json';
+local sharedLib = import 'lib/shared-library/prometheus.libsonnet';
 ----
 
 === Deletion
 
-Deletion can be achieved by returning a resource with a special deletion marker.
+Deletion can be achieved marking the resource for deletion using the `esp.markForDelete` function.
 
 [source,jsonnet]
 ----
-{
-  '$DELETE': true,
+local esp = import 'espejote.libsonnet';
+esp.markForDelete({
   apiVersion: 'v1',
   kind: 'ConfigMap',
   metadata: {
     namespace: 'my-namespace',
     name: 'my-configmap',
   }
-}
+})
 ----
 
 === Instrumentation
@@ -203,13 +268,18 @@ The metrics should contain the following:
 * Amount of re-renders per trigger
 * Amount of re-renders per resource
 * Amount of errors per re-render
-* Amount of resources applied per re-render
+* Amount of resources applied per re-render https://github.com/vshn/espejote/issues/47[coming soon]
+* Amount of admission requests with return status
 
 The metrics should be labeled with the `ManagedResource` name and namespace.
 
 ==== Events
 
 The controller should emit events on errors during reconciliation.
+
+==== Status
+
+The controller should update the status of the `ManagedResource` with the last error category or success.
 
 === Apply options
 
@@ -223,17 +293,25 @@ The controller should emit events on errors during reconciliation.
 
 The `ManagedResources` should run with the least permissions possible.
 
-To start the `ManagedResources` will run in the context of the controller.
-Cluster scoped `ManagedResources` will have access to the whole cluster.
-Namespace scoped `ManagedResources` will have access to the namespace they're in.
-The namespace isolation is only enforced by the controller and not by Kubernetes.
+=== Namespace isolation
+
+By default the `ManagedResource` is namespace scoped.
+Namespace fields for triggers and contexts need to be set to `""` explicitly if resources from all namespaces are required.
+Returned resources will default to the namespace of the `ManagedResource` if not explicitly set.
 
 === Running `ManagedResources` in the context of a service account
 
-The end goal is to run the `ManagedResources` in the context of a service account, defined in the `ManagedResource`.
-This will allow for more fine-grained access control.
+The `ManagedResource` is run in the context of a service account.
+The service account must hold all permissions required to query and apply the resources.
 
-The RedHat patch operator is a good example of how this can be implemented.
+If no service account is specified, the `ManagedResource` will run context of the namespace's `default` service account.
+
+[source,yaml]
+----
+spec:
+  serviceAccountRef:
+    name: my-service-account
+----
 
 == Testing
 
@@ -244,35 +322,144 @@ For each trigger a rendered YAML is created with the output of the template.
 
 The utility checks that the triggers and contexts in the test file match the triggers and contexts in the `ManagedResource`.
 
-[source,yaml]
-----
-triggers: <1>
-- interval: {}
-- watchResource:
-    apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: my-configmap
-    data:
-      key: value
-context:
-- def: configs
-  resources:
-  - apiVersion: v1
-    kind: ConfigMap
-    metadata:
-      name: my-configmap
-    data:
-      key: value
-----
-<1> The template is rendered for every trigger.
-If multiple different contexts variations are required, a new file should be created for each combination.
+The utility can export real sources from a cluster to an input file.
+It executes the template to to check which JsonnetLibraries are used and bundles them in the input file.
 
 [source,bash]
 ----
-espejote render --managed-resource my-template.yaml --inputs my-input-1.yaml my-input-2.yaml <1>
+espejote collect-input my-template.yaml > my-input-1.yaml
+----
+
+[source,yaml]
+----
+triggers: <1>
+- {} <2>
+- name: namespace
+  watchResource:
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      creationTimestamp: "2025-03-17T12:41:04Z"
+      labels:
+        kubernetes.io/metadata.name: blub
+        managedresource-sample.espejote.io/inject-cm: glug
+      name: blub
+      resourceVersion: "1268206" <3>
+      uid: 62bf8581-6e7b-49df-b1bb-3b2ad46405e9
+    spec:
+      finalizers:
+      - kubernetes
+    status:
+      phase: Active
+- name: namespace
+  watchResource:
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      creationTimestamp: "2025-03-17T20:50:58Z"
+      labels:
+        kubernetes.io/metadata.name: blub2
+        managedresource-sample.espejote.io/inject-cm: glugindeed
+      name: blub2
+      resourceVersion: "1268191"
+      uid: b1d4b12a-e7d8-4334-ba68-b598e88c4dfb
+    spec:
+      finalizers:
+      - kubernetes
+    status:
+      phase: Active
+context:
+- name: namespaces
+  resources:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      creationTimestamp: "2025-03-17T12:41:04Z"
+      labels:
+        kubernetes.io/metadata.name: blub
+        managedresource-sample.espejote.io/inject-cm: glug
+      name: blub
+      resourceVersion: "1268206"
+      uid: 62bf8581-6e7b-49df-b1bb-3b2ad46405e9
+    spec:
+      finalizers:
+      - kubernetes
+    status:
+      phase: Active
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      creationTimestamp: "2025-03-17T20:50:58Z"
+      labels:
+        kubernetes.io/metadata.name: blub2
+        managedresource-sample.espejote.io/inject-cm: glugindeed
+      name: blub2
+      resourceVersion: "1268191"
+      uid: b1d4b12a-e7d8-4334-ba68-b598e88c4dfb
+    spec:
+      finalizers:
+      - kubernetes
+    status:
+      phase: Active
+libraries:
+  jsonnetlibrary-sample/sample.libsonnet: "{Sample: 'Hello World'}" <4>
+----
+<1> The template is rendered for every trigger.
+If multiple different contexts variations are required, a new file should be created for each combination.
+<2> Empty trigger to test a full `ManagedResource` reconciliation.
+<3> Real resources exported from a cluster by using `espejote collect-input my-template.yaml`
+<4> Any JsonnetLibraries used by the template are exported from the cluster and included in the input file.
+
+[source,bash]
+----
+espejote render my-template.yaml --input my-input-1.yaml --input my-input-2.yaml <1>
 ----
 <1> The command can be used with multiple input files to test different context variations.
+
+== Admission
+
+Espejote manages `ValidatingWebhookConfiguration` or `MutatingWebhookConfiguration` through `Admission` resources.
+The `Admission` allows validating API requests or mutating them before they're persisted in the cluster.
+
+=== Webhook configuration
+
+Most webhook configurations are exposed in the `Admission` resource to make configuration as flexible as possible.
+Espejote manages the service configuration for the generated admission webhook configurations and injects a namespace selector for namespaced admissions.
+
+[source,yaml]
+----
+webhookConfiguration:
+  objectSelector:
+    matchLabels:
+      cluster-autoscaler: default
+      k8s-app: cluster-autoscaler
+  rules:
+    - apiGroups:
+        - ''
+      apiVersions:
+        - '*'
+      operations:
+        - CREATE
+      resources:
+        - pods
+----
+
+=== Requests
+
+The full request can be accessed using `admission.admissionRequest()`.
+The request contains the full admission request as defined in https://pkg.go.dev/k8s.io/api/admission/v1#AdmissionRequest.
+
+=== Responses
+
+Accepted admission responses are `allowed`, `denied`, and `patched`.
+The `allowed` and `denied` responses are used to allow or deny the admission request.
+The `patched` response is used to apply a patch to the resource.
+Patches are only allowed for `mutating: true` admissions.
+
+All responses should be created using the `(import "espejote.libsonnet").ALPHA.admission` library.
+
+If a patch is returned the patch should be tested using `admission.assertPatch`.
+This will ensure the patch can be applied to the resource or fail the admission otherwise.
 
 == Manifests
 
@@ -285,15 +472,16 @@ kind: JsonnetLibrary
 metadata:
   name: my-library
   namespace: controller-namespace
-data:
-  my-function.libsonnet: |
-    {
-      myFunction: function() 42,
-    }
-  hello-world.libsonnet: |
-    {
-      helloWorld: function(name) 'Hello, %s!' % [name],
-    }
+spec:
+  data:
+    my-function.libsonnet: |
+      {
+        myFunction: function() 42,
+      }
+    hello-world.libsonnet: |
+      {
+        helloWorld: function(name) 'Hello, %s!' % [name],
+      }
 ----
 
 === `ManagedResource`
@@ -309,8 +497,10 @@ spec:
   applyOptions: <2>
     forceConflicts: true
   triggers:
-  - interval: 10s <3>
-  - watchResource: <4>
+  - name: interval
+    interval: 10s <3>
+  - name: cm
+    watchResource: <4>
       apiVersion: v1
       kind: ConfigMap
       # name: my-configmap <5>
@@ -322,7 +512,7 @@ spec:
       # ignoreNames: [] <8>
       minTimeBetweenTriggers: 10s <9>
   context: <10>
-  - def: cm <11>
+  - name: cm <11>
     resource: <12>
       apiVersion: v1
       kind: ConfigMap
@@ -335,10 +525,13 @@ spec:
           operator: DoesNotExist
       cache: true <13>
   template: |
-    local trigger = std.extVar('trigger'); <14>
-    local cm = std.extVar('context').cm; <15>
+    local esp = import 'espejote.libsonnet';
+    local cm = esp.context().cm; <15>
 
-    [ <16>
+    if esp.triggerName() == "cm" then {
+      local triggerData = esp.triggerData().resource, <14>
+      // Do some partial re-rendering
+    } else [ <16>
       c {
         metadata: {
           name: 'copy-of-' + c.metadata.name,
@@ -350,7 +543,8 @@ spec:
       },
       for c in cm.items <18>
     ]
-  serviceAccountName: my-service-account <19>
+  serviceAccountRef:
+    name: my-service-account <19>
 ----
 <1> `ManagedResource` are always namespace-scoped and can't access any resources outside of their namespace.
 <2> `applyOptions` can be used to resolve field conflicts.
@@ -361,66 +555,73 @@ spec:
 <7> `matchNames` is optional and can be used to filter the resources after the labelSelector is applied.
 <8> `ignoreNames` is optional and can be used to filter the resources after the labelSelector is applied.
 <9> `minTimeBetweenTriggers` is optional and can be used to limit the rate of re-renders.
+https://github.com/vshn/espejote/issues/45[coming soon]
 The re-renders are limited by the specific unique resource.
 <10> Context is a list of resources that are available in the Jsonnet template.
 They're not watched.
-<11> `def` defines a variable in the Jsonnet template.
+<11> `name` defines a variable in the Jsonnet template.
 <12> `resource` is a Kubernetes resource that's available in the Jsonnet template.
 <13> `cache` is optional and can be used to setup a controller-runtime cache for the resource.
 The default is true.
-<14> `std.extVar` is used to access the trigger data.
+https://github.com/vshn/espejote/issues/46[coming soon]
+<14> `espejote.libsonnet` is used to access the trigger data.
 The full manifest is available if using the `watchResource` trigger.
-<15> `std.extVar` is used to access the context.
+<15> `espejote.libsonnet` is used to access the context.
 It returns a object with all defined resources as keys.
-<16> The template can return a list of resources or a single resource.
-<17> The namespace of the resource will always be overwritten to the namespace of the `ManagedResource`.
+<16> The template can return null, a list of resources, or a single resource.
+<17> The namespace defaults to the namespace of the `ManagedResource` if not set.
 <18> Resource variables are always a list with zero or more items.
-<19> `serviceAccountName` is optional and can be used to run the `ManagedResource` in the context of a service account.
-This will be implemented in the future but not in the initial versions.
+<19> `serviceAccountRef.name` holds the reference to the service account used to run the `ManagedResource`.
+Optional, the namespaces default service account is used if not set.
 
-=== `ClusterManagedResource`
+=== `Admission`
 
 [source,yaml]
 ----
 apiVersion: espejote.io/v1alpha1
-kind: ClusterManagedResource
+kind: Admission
 metadata:
-  name: inject-configmaps
+  name: pods-inject-creator-annotation
+  namespace: my-namespace
 spec:
-  triggers:
-  - watchResource:
-      apiVersion: v1
-      kind: Namespace <1>
-      labelSelector:
-        matchExpressions:
-        - key: inject-cm.syn.tools
-          operator: Exists
-  context:
-  - def: base
-    resource:
-      apiVersion: v1
-      kind: ConfigMap
-      name: cm-to-inject
+  mutating: true <1>
   template: |
-    local ns = std.extVar('trigger').resource; <2>
-    local base = std.extVar('context').base[0];
+    local esp = import 'espejote.libsonnet';
+    local admission = esp.ALPHA.admission; <2>
 
-    [
-      {
-        apiVersion: 'v1',
-        kind: 'ConfigMap',
-        metadata: {
-          name: 'injected-cm',
-          namespace: ns.metadata.name, <3>
-        }
-        data: base.data,
-      }
-    ]
+    local user = admission.admissionRequest().userInfo.username; <3>
+    local obj = admission.admissionRequest().object;
+
+    if std.get(obj.metadata, 'annotations') == null then
+      admission.patched('added user annotation', admission.assertPatch([ <4>
+        admission.jsonPatchOp('add', '/metadata/annotations', { 'creator': user }),
+      ]))
+    else
+      admission.patched('added user annotation', admission.assertPatch([
+        admission.jsonPatchOp('add', '/metadata/annotations/creator', user),
+      ]))
+  webhookConfiguration: <5>
+    rules:
+      - apiGroups:
+          - ''
+        apiVersions:
+          - '*'
+        operations:
+          - CREATE
+        resources:
+          - pods
 ----
-<1> Cluster scoped `ClusterManagedResource` can access all resources in the cluster.
-This includes cluster scoped resources such as `Namespace`.
-<2> The full manifest of the triggering resource is available.
-<3> A cluster managed resource can create resources in any namespace and thus needs to set the namespace.
+<1> `mutating` is true if the webhook should mutate the resource.
+<2> `espejote.libsonnet` provides facilities to access the admission request and create patches from it.
+<3> `admissionRequest` returns the full admission request as defined in https://pkg.go.dev/k8s.io/api/admission/v1#AdmissionRequest.
+<4> `admission.patched` returns a patch that can be applied to the resource.
+Other valid return values are `admission.allowed(msg)` and `admission.denied(msg)`.
+`admission.assertPatch` validates whether the patch can be applied to the resource and fails the admission if the patch isn't valid.
+This makes failures easier to debug than failing in the Kubernetes API server.
+<5> `webhookConfiguration` is used to configure the webhook.
+The user has basically full control over the webhook configuration with all upstream selectors available.
+The admission is namespace scoped and the webhook configuration has a namespace selector injecting the namespace of the `Admission` resource.
+Cluster scoped webhooks aren't yet supported and tracked https://github.com/vshn/espejote/issues/35[here].
 
 == Sample use-cases
 

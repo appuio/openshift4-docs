@@ -58,7 +58,7 @@ platform:
     externalNetwork: ${EXTERNAL_NETWORK_NAME}
     apiFloatingIP: ${API_VIP}
     ingressFloatingIP: ${INGRESS_VIP}
-networking:
+networking: <5>
   networkType: Cilium
   machineNetwork:
     - cidr: ${MACHINE_NETWORK_CIDR}
@@ -75,3 +75,4 @@ The final machine sets will be configured through Project Syn.
 This ensures that there's no issues with Cilium traffic during bootstrapping.
 <4> This field must match the entry in `clouds` in the `clouds.yaml` file.
 If you're following this guide, you shouldn't need to adjust this.
+<5> (Optional) Configure non-standard pod and service network here (https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/installing_on_openstack/installation-config-parameters-openstack#installation-configuration-parameters-network_installation-config-parameters-openstack[docs]).

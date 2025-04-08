@@ -45,6 +45,8 @@ platform:
     failureDomains:
       - name: datacenter
         server: ${VCENTER_HOSTNAME}
+        region: local
+        zone: local
         topology:
           computeCluster: "/${VSPHERE_DATACENTER}/host/${VSPHERE_CLUSTER}"
           datacenter: ${VSPHERE_DATACENTER}
@@ -62,7 +64,7 @@ platform:
         password: ${VSPHERE_PASSWORD}
         server: ${VCENTER_HOSTNAME}
         port: 443
-networking:
+networking: <4>
   networkType: Cilium
   machineNetwork:
     - cidr: ${MACHINE_NETWORK_CIDR}
@@ -75,4 +77,5 @@ EOF
 Otherwise, the installation will most likely fail.
 <2> We only provision a single compute machine set.
 The final machine sets will be configured through Project Syn.
-<3> The installer will by default create a top-level folder with the vsphere infraID, but you can optionally choose an existing folder (https://docs.openshift.com/container-platform/4.15/installing/installing_vsphere/installation-config-parameters-vsphere.html#installation-configuration-parameters-additional-vsphere_installation-config-parameters-vsphere[docs]).
+<3> The installer will by default create a top-level folder with the vsphere infraID, but you can optionally choose an existing folder (https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/installing_on_vmware_vsphere/installer-provisioned-infrastructure#installation-installer-provisioned-vsphere-config-yaml_installing-vsphere-installer-provisioned-customizations[docs]).
+<4> (Optional) Configure non-standard pod and service network here (https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/installing_on_vmware_vsphere/installer-provisioned-infrastructure#nw-operator-cr-cno-object_installing-vsphere-installer-provisioned-network-customizations[docs]).

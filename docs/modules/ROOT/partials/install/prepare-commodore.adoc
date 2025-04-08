@@ -83,6 +83,22 @@ parameters:
 For VSHN, this configuration is set in the https://git.vshn.net/syn/commodore-defaults/-/merge_requests/1789[Commodore global defaults (internal)].
 ====
 +
+[NOTE]
+====
+If you have a non-standard pod network, you need to ensure to include this in the configuration.
+
+[source,yaml]
+----
+parameters:
+  cilium:
+    cilium_helm_values:
+      ipam:
+        operator:
+          ~clusterPoolIPv4PodCIDRList:
+            - <POD_NETWORK_CIDR>
+----
+====
++
 [source,bash]
 ----
 yq eval -i '.applications += ["cilium"]' ${CLUSTER_ID}.yml

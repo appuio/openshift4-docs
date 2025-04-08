@@ -20,7 +20,7 @@ platform:
   external:
     platformName: {provider}
     cloudControllerManager: External
-networking:
+networking: <2>
   networkType: Cilium
 pullSecret: |
   ${PULL_SECRET}
@@ -29,3 +29,4 @@ EOF
 ----
 <1> Make sure that the values here match the value of `$CLUSTER_DOMAIN` when combined as `<metadata.name>.<baseDomain>`.
 Otherwise, the installation will most likely fail.
+<2> (Optional) Configure non-standard pod and service network here (https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/installing_on_bare_metal/user-provisioned-infrastructure#installation-configuration-parameters-required_installation-config-parameters-bare-metal[docs]).

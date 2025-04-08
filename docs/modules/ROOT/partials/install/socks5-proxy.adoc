@@ -15,10 +15,22 @@ If you can't reach the {provider-display} API directly, but a SSH jumphost is av
 ----
 export JUMPHOST_FQDN=<jumphost fqdn or alias from your SSH config> <1>
 ssh -D 12000 -q -f -N ${JUMPHOST_FQDN} <2>
-export https_proxy=socks5://localhost:12000 <3>
+export HTTPS_PROXY="socks5://localhost:12000" <3>
 export CURL_OPTS="-xsocks5h://localhost:12000"
 ----
 <1> The FQDN or SSH alias of the host which can reach the {provider-display} API
 <2> This command expects that your SSH config is setup so that `ssh ${JUMPHOST_FQDN}` works without further configuration
-<3> The `openshift-install` tool respects the `https_proxy` environment variable
+<3> The `openshift-install` tool respects the `HTTPS_PROXY` environment variable
+====
+
+[TIP]
+====
+If you have troubles downloading the RHCOS image,
+can happen when the jumphost isn't in the same network as the cluster,
+you need to exclude the RHCOS image mirror from downloading through the proxy.
+
+[source,bash]
+----
+export NO_PROXY="rhcos.mirror.openshift.com"
+----
 ====

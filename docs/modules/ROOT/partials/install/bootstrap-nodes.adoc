@@ -212,7 +212,12 @@ git clone git@git.vshn.net:appuio/appuio_hieradata.git
 
 pushd appuio_hieradata/lbaas
 
+# Use this with OCP
 kubectl get node -l "node-role.kubernetes.io/infra" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
+
+# Use this with OKE, since OKE does not have infra nodes and workers have the ingress deployed by default
+kubectl get node -l "node-role.kubernetes.io/worker" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
+
 
 yq -i '."profile_openshift4_gateway::backends".router = load("ips.yml")' "${CLUSTER_ID}.yaml"
 

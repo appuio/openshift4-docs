@@ -103,6 +103,7 @@ ifeval::["{provider}" == "cloudscale"]
 +
 [source,bash,subs="attributes+"]
 ----
+export VAULT_TOKEN=$(vault token lookup - format=json | jq -r .data.id) 
 kapitan refs --reveal --refs-path ../../refs -f ../machine-api-provider-cloudscale/00_secrets.yaml | kubectl apply -f -
 
 kubectl apply  -f ../machine-api-provider-cloudscale/10_clusterRoleBinding.yaml

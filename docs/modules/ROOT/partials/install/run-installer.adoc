@@ -53,7 +53,7 @@ for f in catalog/manifests/cloudscale-cloud-controller-manager/*; do
   cp $f ${INSTALLER_DIR}/manifests/cloudscale_ccm_$(basename $f)
 done
 yq -i e ".stringData.access-token=\"${CLOUDSCALE_API_TOKEN}\"" \
-  ${INSTALLER_DIR}/manifests/cloudscale-cloud-controller-manager_01_secret_0_secret.yml
+  ${INSTALLER_DIR}/manifests/cloudscale_ccm_01_secret.yaml
 ----
 endif::[]
 ifeval::["{provider}" == "exoscale"]

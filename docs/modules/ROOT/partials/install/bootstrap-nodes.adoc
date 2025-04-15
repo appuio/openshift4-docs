@@ -18,6 +18,7 @@ EOF
 terraform apply
 ----
 
+ifeval::["{provider}" != "stackit"]
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +
 [source,bash]
@@ -26,6 +27,15 @@ for fqdn in "${LB_FQDNS[@]}"; do
   ssh "${fqdn}" sudo puppetctl run
 done
 ----
+endif::[]
+ifeval::["{provider}" == "stackit"]
+. Set up DNS NS records on parent zone using the data from the Terraform output variable ns_records from the previous step
++
+[WARNING]
+--
+`component-openshift4-terraform` doesn't currently support the STACKIT cluster Terraform module, so at this time, the Terraform output for NS records isn't provided.
+--
+endif::[]
 
 . Wait for bootstrap API to come up
 +
@@ -164,6 +174,7 @@ terraform apply
 popd
 ----
 
+ifeval::["{provider}" != "stackit"]
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +
 [source,bash]
@@ -172,6 +183,7 @@ for fqdn in "${LB_FQDNS[@]}"; do
   ssh "${fqdn}" sudo puppetctl run
 done
 ----
+endif::[]
 
 ifeval::["{provider}" == "cloudscale"]
 . Scale up the infra and worker machinesets

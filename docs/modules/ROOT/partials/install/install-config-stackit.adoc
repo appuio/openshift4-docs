@@ -1,0 +1,30 @@
+[NOTE]
+====
+You can add more options to the `install-config.yaml` file.
+Have a look at the https://docs.openshift.com/container-platform/{ocp-minor-version}/installing/installing_bare_metal/installing-bare-metal.html#installation-bare-metal-config-yaml_installing-bare-metal[config example] for more information.
+
+For example, you could change the SDN from a default value to something a customer requests due to some network requirements.
+====
++
+[source,bash,subs="attributes+"]
+----
+export INSTALLER_DIR="$(pwd)/target"
+mkdir -p "${INSTALLER_DIR}"
+
+cat > "${INSTALLER_DIR}/install-config.yaml" <<EOF
+apiVersion: v1
+metadata:
+  name: ${CLUSTER_ID} <1>
+baseDomain: ${BASE_DOMAIN} <1>
+platform:
+  none: {}
+networking: <2>
+  networkType: Cilium
+pullSecret: |
+  ${PULL_SECRET}
+sshKey: "$(cat $SSH_PUBLIC_KEY)"
+EOF
+----
+<1> Make sure that the values here match the value of `$CLUSTER_DOMAIN` when combined as `<metadata.name>.<baseDomain>`.
+Otherwise, the installation will most likely fail.
+<2> (Optional) Configure non-standard pod and service network here (https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/installing_on_bare_metal/user-provisioned-infrastructure#installation-configuration-parameters-required_installation-config-parameters-bare-metal[docs]).

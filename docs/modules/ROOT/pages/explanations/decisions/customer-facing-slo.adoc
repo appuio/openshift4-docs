@@ -1,0 +1,122 @@
+= Customer facing SLOs
+
+== Problem
+
+VSHN has a huge historic mess of different SLAs sold to different customers.
+Neither account managers nor engineers have an overview.
+This leads to confusion, extra work, and frustration on both sides.
+The OpenShift team also has their own very technical SLOs, which aren't customer-facing.
+Those SLOs are too fine-grained for the customer and also don't necessarily measure only metrics in our control.
+
+We need to define a set of standardized, customer-facing SLOs that are easy to understand and measure.
+
+=== Goals
+
+* One or two standardized, easy to understand, customer-facing SLOs
+* SLOs are easy to measure and automate
+
+=== Non-Goals
+
+* Excluding non-applicable downtimes caused by the underlying infrastructure
+* SLOs for third-party services (for example VSHN AppCat, VSHN AppFlow, custom solutions)
+
+== Proposals
+
+=== Proposal 1
+
+Measure OpenShift API-Service availability and response time.
+
+There are many different samples https://monitoring.mixins.dev/kubernetes/#kube-apiserver-slos[1], https://github.com/appuio/component-openshift4-slos/blob/02130f0e9597d6562355f787858865a4e552fe86/component/slos.libsonnet#L166[2] of how to measure API-Server performance and availability.
+
+We've got an internal SLO for the OpenShift API-Service which works well for us.
+We can use this as a basis for our customer-facing SLO.
+
+==== Advantages
+
+* Easy to measure
+* Easy to understand
+* Short chain of dependencies, mostly in our control
+
+==== Disadvantages
+
+* Doesn't impact running workload directly.
+Most workload keeps working with the API down.
+* Less relevant for most customers
+
+=== Proposal 2
+
+Measure ingress availability.
+
+OpenShift already has a built-in ingress canary route and also has `haproxy` metrics for non-synthetic traffic.
+We can use this to measure the availability of the ingress.
+
+As the canary workload route is excluded from the metrics and the `haproxy` depend on the workload itself we should measure the availability by using both metrics.
+We propose a metric of NO successful request and NO successful canary request (measured with a blackbox exporter) over a period of 3 minutes starts counting to the error budget.
+
+.POC query for `haproxy` metrics
+[source,promql]
+-----
+absent_over_time((sum(rate(haproxy_frontend_http_responses_total{code=~"[1-4]xx"}[1m])) > 0)[3m:])
+-----
+
+.POC query for canary route
+
+[source,promql]
+-----
+absent_over_time((ingress_canary_route_reachable >0)[3m:])
+-----
+
+==== Advantages
+
+* Very relevant for most customers
+
+==== Disadvantages
+
+* Bigger chain of dependencies, some out of our control
+* More difficult to measure, seems possible, but the query is much harder to understand
+
+=== Other Ideas
+
+==== Upgrade success rate
+
+Not enough data points (< 25) a year to measure this SLO.
+
+Can still be a manual dashboard for marketing.
+
+==== Upgrade time
+
+Not enough data points (< 25) a year to measure this SLO.
+Depends purely on customer workload and the underlying infrastructure.
+
+Can still be a manual dashboard for marketing.
+
+==== Autoscaler scale up/down time
+
+Few data points.
+Depends heavily on the underlying infrastructure.
+
+Can still be a manual dashboard for marketing.
+
+==== Ticket reaction time
+
+Hard to measure and automate.
+
+Can still be a manual dashboard for marketing.
+
+== Decision
+
+We've decided to go with Proposal 2.
+
+== Rationale
+
+This is the most relevant SLO for our customers.
+
+It's slightly more difficult to measure than the API-Server SLO, but we can use the existing `haproxy` metrics and the canary route to measure it.
+
+We already have a Ingress canary SLO for internal use which so far had no issues and high fidelity alerts.
+
+== References
+
+* https://www.atlassian.com/incident-management/kpis/sla-vs-slo-vs-sli[Atlassian: SLA vs. SLO vs. SLI: What's the difference?]
+* https://monitoring.mixins.dev/kubernetes/#kube-apiserver-slos[Monitoring Mixins: Kubernetes API-Server SLOs]
+* https://github.com/appuio/component-openshift4-slos/blob/02130f0e9597d6562355f787858865a4e552fe86/component/slos.libsonnet#L166[APPUiO: OpenShift4 SLOs]

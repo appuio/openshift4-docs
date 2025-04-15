@@ -64,6 +64,17 @@ git commit -a -m "Deploy Exoscale cloud-controller-manager on ${CLUSTER_ID}"
 ----
 endif::[]
 
+ifeval::["{provider}" == "cloudscale"]
+. Adjust the default ingress controller to be exposed via a cloudscale LB service
++
+[source,bash]
+----
+yq eval -i '.parameters.openshift4_ingress.ingressControllers.default.~endpointPublishingStrategy.type = "cloudscale-lbaas"' \
+  ${CLUSTER_ID}.yml
+git commit -a -m "Expose default ingress controller via cloudscale LB service on ${CLUSTER_ID}"
+----
+endif::[]
+
 . Add Cilium to cluster configuration
 +
 [NOTE]

@@ -55,5 +55,8 @@ ifeval::["{provider}" == "cloudscale"]
 ----
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.image_slug = \"custom:rhcos-{ocp-minor-version}\"" \
   ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.allocate_router_vip_for_ccm = true" \
+  ${CLUSTER_ID}.yml
 ----
 endif::[]

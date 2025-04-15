@@ -29,6 +29,9 @@ endif::[]
 ifeval::["{provider}" == "cloudscale"]
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_keys = [\"$(cat ${SSH_PUBLIC_KEY})\"]" \
   ${CLUSTER_ID}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.allocate_router_vip_for_lb_controller = true" \
+  ${CLUSTER_ID}.yml
 endif::[]
 
 ifeval::["{provider}" != "stackit"]

@@ -37,18 +37,21 @@ ifeval::["{provider}" == "stackit"]
 --
 endif::[]
 ifeval::["{provider}" == "cloudscale"]
-. Store the subnet UUID in the cluster configuration
+. Store the subnet UUID and ingress floating IP in the cluster configuration
 +
 [source,bash]
 ----
 export SUBNET_UUID="$(terraform output -raw subnet_uuid)"
+export INGRESS_FLOATING_IP="$(terraform output -raw router_vip)"
 
 pushd ../../../inventory/classes/${TENANT_ID}
 
 yq eval -i '.parameters.openshift.cloudscale.subnet_uuid = "'$SUBNET_UUID'"' \
   ${CLUSTER_ID}.yml
+yq eval -i '.parameters.openshift.cloudscale.ingress_floating_ip_v4 = "'$INGRESS_FLOATING_IP'"' \
+  ${CLUSTER_ID}.yml
 
-git commit -am "Add Cloudscale Subnet UUID to cluster configuration for ${CLUSTER_ID}"
+git commit -am "Configure cloudscale subnet UUID and ingress floating IP for ${CLUSTER_ID}"
 git push
 popd
 popd # yes, twice.
@@ -168,6 +171,25 @@ kubectl apply -f ../machine-api-provider-cloudscale/11_deployment.yaml
 ----
 kubectl apply `for f in ../openshift4-nodes/machineset-*.yaml ; do echo -n "-f $f " ; done`
 ----
+
+. Deploy the cloudscale loadbalancer controller
++
+[source,bash]
+----
+kubectl apply -f ../cloudscale-loadbalancer-controller/00_namespace.yaml
+kapitan refs --reveal --refs-path ../../refs -f ../cloudscale-loadbalancer-controller/10_secrets.yaml | kubectl apply -f -
+kubectl apply -Rf ../cloudscale-loadbalancer-controller/10_kustomize
+kubectl -n appuio-cloudscale-loadbalancer-controller \
+  wait --for condition=available \
+  deploy cloudcale-loadbalancer-controller-controller-manager
+----
+
+. Deploy the ingress cloudscale loadbalancer
++
+[source,bash]
+----
+kubectl apply -f ../cloudscale-loadbalancer-controller/20_loadbalancers.yaml
+----
 endif::[]
 
 . Wait for bootstrap to complete
@@ -206,35 +228,6 @@ terraform apply
 
 popd
 ----
-
-ifeval::["{provider}" == "cloudscale"]
-. Add Infra Node IPs to LB Hieradata
-+
-[source,bash]
-----
-git clone git@git.vshn.net:appuio/appuio_hieradata.git
-
-pushd appuio_hieradata/lbaas
-
-git checkout "tf/lbaas/${CLUSTER_ID}" <1>
-
-# Use this with OCP
-kubectl get node -l "node-role.kubernetes.io/infra" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
-
-# Use this with OKE, since OKE does not have infra nodes and workers have the ingress deployed by default
-kubectl get node -l "node-role.kubernetes.io/worker" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
-
-
-yq -i '."profile_openshift4_gateway::backends".router = load("ips.yml")' "${CLUSTER_ID}.yaml"
-
-rm ips.yml
-
-git commit -am "Add infra nodes as backends for ${CLUSTER_ID}."
-git push origin "tf/lbaas/${CLUSTER_ID}"
-popd
-----
-<1> The branch and MR should exist from removing the bootstrap node.
-endif::[]
 
 ifeval::["{provider}" != "stackit"]
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
@@ -312,6 +305,18 @@ This step isn't necessary if you've disabled the proxy protocol on the load-bala
 
 By default, PROXY protocol is enabled through the VSHN Commodore global defaults.
 ====
+
+. Schedule ingress controller on infra nodes
++
+[source,bash]
+----
+kubectl -n openshift-ingress-operator patch ingresscontroller default --type=json \
+  -p '[{
+    "op":"replace",
+    "path":"/spec/nodePlacement",
+    "value":{"nodeSelector":{"matchLabels":{"node-role.kubernetes.io/infra":""}}}
+  }]'
+----
 
 . Wait for installation to complete
 +

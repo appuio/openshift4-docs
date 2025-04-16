@@ -13,6 +13,10 @@ ifeval::["{provider}" == "exoscale"]
 endif::[]
   worker_count             = 0
   additional_worker_groups = {}
+ifeval::["{provider}" == "cloudscale"]
+  # Don't output machineset YAML, so DNS zone output is easier to find
+  make_worker_adoptable_by_provider = false
+endif::[]
 }
 EOF
 terraform apply
@@ -125,6 +129,27 @@ terraform output -raw infra-machineset_yml | grep -vP '^(│|╵|╷|There are s
 head infra-machineset.yml
 kubectl apply -f infra-machineset.yml
 ----
+
+. Create the default ingress LB service
++
+[source,bash]
+----
+# TODO(sg): check if this is necessary or if the namespace is guaranteed to exist after bootstrap-complete.
+while ! kubectl get ns openshift-ingress &>/dev/null; do
+  echo -n "."
+  sleep 1
+done
+router_vip=$(curl -s -H"$AUTH_HEADER" \
+  "https://api.cloudscale.ch/v1/floating-ips?tag:appuio_io_vip_id=${CLUSTER_ID}:ingress" | \
+  jq '.[0].network|split("/")[0]') <1>
+kubectl -n openshift-ingress create -f ../openshift4-ingress/default_lb_service.yaml
+kubectl -n openshift-ingress annotate -f ../openshift4-ingress/default_lb_service.yaml \
+  k8s.cloudscale.ch/loadbalancer-floating-ips='['$router_vip"']' <2>
+----
+<1> Note that we're explicitly not using `jq -r` here to end up with a quoted string.
+<2> We need to add the annotation for the router/ingress VIP manually, since we can't preconfigure this in Project Syn easily.
++
+TODO(sg): Consider allocating the ingress VIP via API directly and importing it in Terraform
 endif::[]
 
 . Wait for bootstrap to complete
@@ -203,31 +228,6 @@ done && echo -e "\nCilium config updated"
 kubectl -n cilium rollout restart ds/cilium
 ----
 
-ifeval::["{provider}" == "cloudscale"]
-. Add Infra Node IPs to LB Hieradata
-+
-[source,bash]
-----
-git clone git@git.vshn.net:appuio/appuio_hieradata.git
-
-pushd appuio_hieradata/lbaas
-
-# Use this with OCP
-kubectl get node -l "node-role.kubernetes.io/infra" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
-
-# Use this with OKE, since OKE does not have infra nodes and workers have the ingress deployed by default
-kubectl get node -l "node-role.kubernetes.io/worker" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
-
-
-yq -i '."profile_openshift4_gateway::backends".router = load("ips.yml")' "${CLUSTER_ID}.yaml"
-
-rm ips.yml
-
-git commit -am "Add infra nodes as backends for ${CLUSTER_ID}."
-git push
-popd
-----
-endif::[]
 ifeval::["{provider}" != "cloudscale"]
 . Approve node certs
 +
@@ -279,6 +279,25 @@ This step isn't necessary if you've disabled the proxy protocol on the load-bala
 
 By default, PROXY protocol is enabled through the VSHN Commodore global defaults.
 ====
+
+ifeval::["{provider}" == "cloudscale"]
+. Add the router VIP in the tenant repo
++
+[source,bash]
+----
+pushd inventory/classes/${TENANT_ID}
+
+# NOTE(sg): this variable may already exist, but we repeat it here for consistency
+router_vip=$(curl -s -H"$AUTH_HEADER" \
+  "https://api.cloudscale.ch/v1/floating-ips?tag:appuio_io_vip_id=${CLUSTER_ID}:ingress" | \
+  jq '.[0].network|split("/")[0]') <1>
+# NOTE(sg): Clean this up once `endpointPublishingStrategy.type=cloudscale-lbaas` is the VSHN default
+yq eval -i ".parameters.openshift4_ingress.ingressControllers.default.~endpointPublishingStrategy.cloudscale.floatingIP = $router_vip" \
+  ${CLUSTER_ID}.yml
+
+popd
+----
+<1> Note that we're explicitly not using `jq -r` here to end up with a quoted string.
 
 . Wait for installation to complete
 +

@@ -272,6 +272,10 @@ module "cluster" {
   infra_count              = 0
   worker_count             = 0
   additional_worker_groups = {}
+ifeval::["{provider}" == "cloudscale"]
+  # Don't output machineset YAML, so DNS zone output is easier to find
+  make_worker_adoptable_by_provider = false
+endif::[]
 }
 EOF
 terraform apply -target "module.cluster.module.lb.module.hiera"

@@ -1,0 +1,249 @@
+= Install OpenShift 4 on STACKIT
+:ocp-minor-version: 4.17
+:k8s-minor-version: 1.30
+:ocp-patch-version: {ocp-minor-version}.2
+:provider: stackit
+
+[abstract]
+--
+Steps to install an OpenShift 4 cluster on https://stackit.cloud[STACKIT].
+
+These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html[Installing a cluster on bare metal] docs to set up a user provisioned installation (UPI).
+https://www.terraform.io[Terraform] is used to provision the cloud infrastructure.
+--
+
+[WARNING]
+--
+The install instructions for STACKIT are in early alpha state, and are still being tested and improved.
+--
+
+[NOTE]
+--
+The commands are idempotent and can be retried if any of the steps fail.
+
+The certificates created during bootstrap are only valid for 24h.
+So make sure you complete these steps within 24h.
+--
+
+[NOTE]
+--
+This how-to guide is still a work in progress and will change.
+It's currently very specific to VSHN and needs further changes to be more generic.
+--
+
+== Starting situation
+
+* You already have a Tenant and its git repository
+* You have a CCSP Red Hat login and are logged into https://cloud.redhat.com/openshift/install/metal/user-provisioned[Red Hat Openshift Cluster Manager]
++
+IMPORTANT: Don't use your personal account to login to the cluster manager for installation.
+* You want to register a new cluster in Lieutenant and are about to install Openshift 4 on STACKIT
+
+== Prerequisites
+
+include::partial$install/prerequisites.adoc[]
+* `mc` >= `RELEASE.2021-07-27T06-46-19Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
+* `stackit` >= `v0.30.0` https://github.com/stackitcloud/stackit-cli[STACKIT cli]
+
+[WARNING]
+====
+Make sure the minor version of `openshift-install` and the RHCOS image are the same as ignition will fail otherwise.
+====
+
+== Cluster Installation
+
+include::partial$install/register.adoc[]
+
+=== Configure input
+
+Ensure you have access to the appropriate STACKIT project and make note of its ID (can be found in the Resource Manager).
+
+.Access to STACKIT API
+[source,bash]
+----
+export STACKIT_PROJECT_ID="YOUR_PROJECT_ID" # STACKIT project UUID, found in the Resource Manager on portal.stackit.cloud
+
+stackit auth login
+----
+
+include::partial$install/vshn-input.adoc[]
+
+[#_bootstrap_bucket]
+=== Set up S3 bucket for cluster bootstrap
+
+. Enable STACKIT Object Storage
++
+[source,bash]
+----
+stackit object-storage enable --project-id "${STACKIT_PROJECT_ID}" -y
+----
+. Create S3 bucket
++
+[source,bash]
+----
+export BUCKET="${CLUSTER_ID}-bootstrap"
+stackit object-storage bucket create "${BUCKET}" --project-id "${STACKIT_PROJECT_ID}" -y
+----
+. Create S3 user
++
+[source,bash]
+----
+credentials_group="`stackit object-storage credentials-group list --project-id "${STACKIT_PROJECT_ID}" -o json | jq -r '.[] | select (.displayName == "default") | .credentialsGroupId'`"
+
+credential="`stackit object-storage credentials create --credentials-group-id "${credentials_group}" --project-id "${STACKIT_PROJECT_ID}" -y -o json`"
+
+export ACCESS_KEY="`echo "$credential" | jq -r .accessKeyId`"
+export SECRET_KEY="`echo "$credential" | jq -r .secretAccessKey`"
+----
+
+. Configure the Minio client
++
+[source,bash]
+----
+export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
+
+mc config host add "${CLUSTER_ID}" "https://object.storage.${REGION}.onstackit.cloud" "$ACCESS_KEY" "$SECRET_KEY"
+
+mc mb --ignore-existing \
+  "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+----
+
+[#_upload_coreos_image]
+=== Upload Red Hat CoreOS image
+
+. Check if image already exists in the project
++
+[source,bash,subs="attributes+"]
+----
+stackit curl https://iaas.api.eu01.stackit.cloud/v1/projects/${STACKIT_PROJECT_ID}/images/ | jq '.items[] | select(.name == "rhcos-{ocp-minor-version}")'
+----
++
+[NOTE]
+====
+If this command returns an image, make note of its Image ID and skip the next steps.
+====
+
+. Fetch the latest Red Hat CoreOS image
++
+[source,bash,subs="attributes+"]
+----
+curl -L https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos/{ocp-minor-version}/{ocp-patch-version}/rhcos-{ocp-patch-version}-x86_64-openstack.x86_64.qcow2.gz | gzip -d > rhcos-{ocp-minor-version}.qcow2
+----
+
+. Upload the image to STACKIT
++
+[source,bash,subs="attributes+"]
+----
+response="`stackit curl -X POST -H "Content-Type: application/json" --data '{"active": true, "diskFormat": "qcow2","name": "rhcos-{ocp-minor-version}"}' https://iaas.api.eu01.stackit.cloud/v1beta1/projects/${STACKIT_PROJECT_ID}/images`"
+
+export IMAGE_ID="`echo $response | jq -r .id`"
+IMAGE_UPLOAD_URL="`echo $response | jq -r .uploadUrl`"
+
+curl -X PUT -H 'Content-Type: binary/octet-stream' --upload-file rhcos-4.17.qcow2 "$IMAGE_UPLOAD_URL" | cat
+----
+. Wait for image import to complete
++
+[source,bash,subs="attributes+"]
+----
+echo "Waiting for image to become available..."
+while [[ `stackit curl https://iaas.api.eu01.stackit.cloud/v1/projects/"${STACKIT_PROJECT_ID}"/images/"${IMAGE_ID}" | jq -r .status` == "CREATING" ]] ; do echo -n . ; sleep 4 ; done
+
+echo -n "Status is now " ; stackit curl https://iaas.api.eu01.stackit.cloud/v1/projects/"${STACKIT_PROJECT_ID}"/images/"${IMAGE_ID}" | jq  .status
+----
+
+[#_set_vault_secrets]
+=== Set secrets in Vault
+
+include::partial$connect-to-vault.adoc[]
+
+.Store various secrets in Vault
+[source,bash]
+----
+# Store S3 credentials in Vault
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/stackit/storage_iam \
+  s3_access_key=${ACCESS_KEY} s3_secret_key=${SECRET_KEY}
+
+# Generate an HTTP secret for the registry
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
+  httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
+
+# Generate a master password for K8up backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+
+# Generate a password for the cluster object backups
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
+  password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
+----
+
+include::partial$install/prepare-commodore.adoc[]
+
+[#_configure_installer]
+=== Configure the OpenShift Installer
+
+include::partial$install/configure-installer.adoc[]
+
+[#_run_installer]
+=== Run the OpenShift Installer
+
+include::partial$install/run-installer.adoc[]
+
+. Upload ignition config
++
+[source,bash]
+----
+mc cp "${INSTALLER_DIR}/bootstrap.ign" "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/"
+
+export TF_VAR_ignition_bootstrap=$(mc share download \
+  --json --expire=4h \
+  "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition/bootstrap.ign" | jq -r '.share')
+----
+
+=== Terraform Cluster Config
+
+include::partial$install/prepare-syn-config.adoc[]
+
+=== Provision Infrastructure
+
+include::partial$stackit/configure-terraform-secrets.adoc[]
+
+
+[WARNING]
+--
+The next section assumes that `component-openshift4-terraform` is included as a Project Syn dependency for the cluster.
+This isn't the case, and won't be until we add STACKIT as a supported cloud provider in the VSHN global defaults.
+Until such time, the `tf_image` and `tf_tag` values have to be set manually for the following commands to succeed.
+
+Furthermore, without support for STACKIT in `component-openshift4-terraform`, the Terraform config files these instructions assume to be present will be missing.
+They have to be created manually as per the comments in OCP-1603.
+--
+include::partial$setup_terraform.adoc[]
+
+
+include::partial$install/bootstrap-nodes.adoc[]
+
+. Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
++
+[source,bash]
+----
+oc create secret generic image-registry-private-configuration-user \
+--namespace openshift-image-registry \
+--from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
+--from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
+----
++
+include::partial$install/registry-samples-operator.adoc[]
+
+include::partial$install/finalize_part1.adoc[]
+
+include::partial$install/finalize_part2.adoc[]
++
+. Remove bootstrap bucket
++
+[source,bash]
+----
+mc rm -r --force "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+----
+
+include::partial$install/post-tasks.adoc[]

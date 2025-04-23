@@ -1,7 +1,7 @@
 = Installation on Exoscale
-:ocp-minor-version: 4.17
-:k8s-minor-version: 1.30
-:ocp-patch-version: {ocp-minor-version}.2
+:ocp-minor-version: 4.18
+:k8s-minor-version: 1.31
+:ocp-patch-version: {ocp-minor-version}.1
 :provider: exoscale
 :kubectl_extra_args:
 
@@ -355,7 +355,7 @@ EOF
 terraform apply -target "module.cluster.module.lb.module.hiera"
 ----
 
-. Set up DNS NS records on parent zone using the data from the Terraform output variable `ns_records` from the previous step
+. Set up DNS NS records on parent zone using the data from the Terraform output variable `cluster_dns` from the previous step
 
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and wait until the deploy pipeline after the merge is completed.
 

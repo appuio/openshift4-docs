@@ -7,13 +7,33 @@ All of the SLIs are in the scope of the https://products.vshn.ch/service_levels.
 
 We use the SLIs and https://sre.google/workbook/alerting-on-slos/#6-multiwindow-multi-burn-rate-alerts[Multiwindow, Mulit-Burn-Rate Alerts] as the basis of our on-call alerting.
 
+== Customer Facing [[customer-facing]]
+
+The customer facing SLIs are the basis of our SLAs.
+
+=== Ingress
+
+Working cluster ingress is a core requirement for a Kubernetes cluster.
+If the workloads running on the cluster aren't accessible, it might as well be down from a user perspective.
+
+We see this as the most important SLI and the one that should be monitored most closely.
+This is why we base our SLAs on this SLI.
+
+The customer facing ingress SLI is a combination of two SLIs:
+
+* <<ingress-canary, Ingress Canary>>
+* OpenShift Ingress HAProxy back-end metrics
+
+After three minutes without a successful canary request AND without a successful HAProxy back-end request, based on customer workload, we start counting towards the error budget.
+Combining the two SLIs allows high fidelity alerting not dependent on customer workload or OpenShift canary configuration.
+
 
 == Ingress
 
 Working cluster ingress is a core requirement for a Kubernetes cluster.
 If the workloads running on the cluster aren't accessible, it might as well be down from a user perspective.
 
-=== Canary
+=== Canary [[ingress-canary]]
 
 ****
 *HTTP probes to a canary application*

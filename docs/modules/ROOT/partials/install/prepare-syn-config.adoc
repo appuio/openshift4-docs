@@ -58,6 +58,9 @@ endif::[]
 ifeval::["{provider}" == "exoscale"]
 :is-terraform: yes
 endif::[]
+ifeval::["{provider}" == "stackit"]
+:is-terraform: yes
+endif::[]
 
 ifeval::["{is-terraform}" == "yes"]
 include::partial$install/prepare-syn-config-terraform.adoc[]

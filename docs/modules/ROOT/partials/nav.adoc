@@ -64,6 +64,9 @@
 *** xref:oc4:ROOT:how-tos/exoscale/recover-etcd.adoc[Restore etcd]
 *** xref:oc4:ROOT:explanations/exoscale/limitations.adoc[Limitations]
 
+** STACKIT
+*** xref:oc4:ROOT:how-tos/stackit/install.adoc[Install]
+
 ** VMware vSphere
 *** xref:oc4:ROOT:references/vsphere/architecture.adoc[Architecture]
 *** xref:oc4:ROOT:how-tos/vsphere/pre-install-checklist.adoc[Pre-Install Checklist]
@@ -94,6 +97,9 @@
 ** Exoscale
 *** xref:oc4:ROOT:references/exoscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Install]
+
+** STACKIT
+*** xref:oc4:ROOT:how-tos/stackit/install.adoc[Install]
 
 ** vSphere
 *** xref:oc4:ROOT:how-tos/vsphere/install.adoc[Install]

@@ -1,5 +1,7 @@
 ifeval::["{provider}" != "exoscale"]
+ifeval::["{provider}" != "stackit"]
 :acme-dns-update-zone: yes
+endif::[]
 endif::[]
 
 :dummy:
@@ -68,6 +70,24 @@ The snippet below assumes that the cluster is configured to use the default "app
 ----
 for cname in "api" "apps"; do
   exo dns add CNAME "${CLUSTER_DOMAIN}" -n "_acme-challenge.${cname}" -a "${fulldomain}." -t 600
+done
+----
+endif::[]
+ifeval::["{provider}" == "stackit"]
+. Setup the `_acme-challenge` CNAME records in the cluster's DNS zone
++
+[IMPORTANT]
+====
+The `_acme-challenge` records must be created in the same zone as the cluster's `api` and `apps` records respectively.
+The snippet below assumes that the cluster is configured to use the default "apps" domain in the cluster's zone.
+====
++
+[source,bash]
+----
+zone_id="`stackit dns zone list -ojson  | jq -r '.[] | select(.dnsName == "'"${CLUSTER_DOMAIN}"'") | .id'`"
+
+for cname in "api" "apps"; do
+  stackit dns record-set create --zone-id "$zone_id" --ttl 600 --type CNAME --name "_acme-challenge.${cname}" --record "${fulldomain}."
 done
 ----
 endif::[]

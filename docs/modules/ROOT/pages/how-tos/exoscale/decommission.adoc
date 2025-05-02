@@ -19,47 +19,78 @@ Always follow the https://wiki.vshn.net/display/VINT/4-eye+data+deletion[4-eye d
 == Prerequisites
 
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
+* `kubectl`
 * `docker`
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * `exo` >= v1.28.0, https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
 
 == Cluster Decommission
 
-. Create a new API key with role `unrestricted` for the decommissioning
-
-. Export the following vars
+. Create a new API key with role `Owner` in the project of the cluster
 +
-[source,console]
+TIP: The `Owner` role is created automatically for each Exoscale project
+
+. Setup environment variables for Exoscale, GitLab and Vault credentials
++
+[source,bash]
 ----
-export EXOSCALE_ACCOUNT=<exoscale-account>
-export EXOSCALE_API_KEY=<exoscale-key>
-export EXOSCALE_API_SECRET=<exoscale-secret>
-export EXOSCALE_ZONE=<cluster-region>  # e.g. ch-gva-2
-
-export CLUSTER_ID=<cluster-name>
-
-# From https://git.vshn.net/-/user_settings/personal_access_tokens
-export GITLAB_TOKEN=<gitlab-api-token>
+export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/-/user_settings/personal_access_tokens
 export GITLAB_USER=<gitlab-user-name>
+export EXOSCALE_API_KEY=<exoscale api key>
+export EXOSCALE_API_SECRET=<exoscale api secret>
+----
++
+include::partial$connect-to-vault.adoc[]
 
-# For example: https://api.syn.vshn.net
-# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
-export COMMODORE_API_URL=<lieutenant-api-endpoint>
+include::partial$commodore-init.adoc[]
+
+. Setup environment variables for Exoscale credentials
++
+[source,bash]
+----
+export EXOSCALE_ZONE=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
+export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_ZONE}.exo.io"
 ----
 
-. Compile cluster catalog to get input variables
+. Get emergency credentials for cluster access
++
+[source,bash]
+----
+API_URL=$(yq '.spec.dnsNames[0]' catalog/manifests/openshift4-api/00_certs.yaml)
+export EMR_KUBERNETES_ENDPOINT="https://${API_URL}:6443"
+emergency-credentials-receive $CLUSTER_ID
+export KUBECONFIG="em-${CLUSTER_ID}"
+kubectl cluster-info
+----
+
+. Disable Project Syn ArgoCD
++
+[source,bash]
+----
+kubectl -n syn patch apps --type=json \
+    -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]' \
+    root argocd
+kubectl -n syn-argocd-operator scale deployment \
+    syn-argocd-operator-controller-manager --replicas 0
+kubectl -n syn scale sts syn-argocd-application-controller --replicas 0
+----
+
+. Delete all `LoadBalancer` services on the cluster
 +
 [source,console]
 ----
-commodore catalog compile ${CLUSTER_ID}
+kubectl delete svc --field-selector spec.type=LoadBalancer -A
 ----
++
+NOTE: This is required in order for Terraform to be able to delete the instance pool.
 
 . Configure Terraform secrets
 +
 [source,console]
 ----
-cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
+cat <<EOF > terraform.env
 EXOSCALE_API_KEY
 EXOSCALE_API_SECRET
 EOF
@@ -76,7 +107,7 @@ for id in 1 2; do
   LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.exoscale_domain_record.lb[$(expr $id - 1)]" | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
 done
 for lb in ${LB_FQDNS[*]}; do
-  ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf"
+  ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf" | tee "../../../$lb.info"
 done
 ----
 
@@ -96,28 +127,20 @@ NOTE: This step is necessary to ensure the subsequent `terraform destroy` comple
 [source,console]
 ----
 terraform destroy
+
+popd
 ----
 
 . Use Exoscale CLI tool to empty and remove buckets
 +
 [source,console]
 ----
-mkdir -p ~/.config/exoscale
-cat <<EOF >> ~/.config/exoscale/exoscale.toml
-
-[[accounts]]
-  account = "${EXOSCALE_ACCOUNT}"
-  defaultZone = "${EXOSCALE_ZONE}"
-  endpoint = "https://api.exoscale.ch/v1"
-  name = "${CLUSTER_ID}"
-EOF
-
 # Bootstrap bucket
-exo storage delete -r -f "sos://${CLUSTER_ID}-bootstrap/"
-exo storage rb -f "${CLUSTER_ID}-bootstrap"
+exo storage rb -r -f "${CLUSTER_ID}-bootstrap"
 # OpenShift Image Registry bucket
-exo storage delete -r -f "sos://${CLUSTER_ID}-image-registry/"
-exo storage rb -f "${CLUSTER_ID}-image-registry"
+exo storage rb -r -f "${CLUSTER_ID}-image-registry"
+# OpenShift Loki logstore
+exo storage rb -r -f "${CLUSTER_ID}-logstore"
 ----
 
 . Delete the cluster-backup bucket
@@ -132,16 +155,124 @@ At this point in the decommissioning process, you'll have to extract the Restic 
 +
 [source,bash]
 ----
-exo storage delete -r -f "sos://${CLUSTER_ID}-cluster-backup/"
-exo storage rb -f "${CLUSTER_ID}-cluster-backup"
+exo storage rb -r -f "${CLUSTER_ID}-cluster-backup"
 ----
 
 . Delete the cluster's API keys and the API key created for decommissioning
-
-. Decommission Puppet-managed LBs according to the https://wiki.vshn.net/display/VT/How+To%3A+Decommission+a+VM[VSHN documentation] (Internal link).
 +
-NOTE: Don't forget to remove the LB configuration in the https://git.vshn.net/appuio/appuio_hieradata/-/tree/master/lbaas[APPUiO hieradata] and the https://git.vshn.net/vshn-puppet/nodes_hieradata[nodes hieradata].
+[source,bash]
+----
+# delete restricted api keys
+exo iam api-key delete -f ${CLUSTER_ID}_appcat-provider-exoscale
+exo iam api-key delete -f ${CLUSTER_ID}_ccm-exoscale
+exo iam api-key delete -f ${CLUSTER_ID}_csi-driver-exoscale
+exo iam api-key delete -f ${CLUSTER_ID}_floaty
+exo iam api-key delete -f ${CLUSTER_ID}_object_storage
+
+# delete decommissioning api key
+exo iam api-key delete -f ${CLUSTER_ID} <1>
+----
+<1> This command assumes that the decommissioning api key's name is the cluster's Project Syn ID
+
+. Decommission Puppet-managed LBs
++
+TIP: See the https://vshnwiki.atlassian.net/wiki/spaces/VT/pages/8290422/How+To+Decommission+a+VM[VSHN documentation] (Internal link) for the full instructions.
++
+.. Remove both LBs in https://control.vshn.net/servers/definitions/appuio[control.vshn.net]
+.. Clean encdata caches
++
+[source,bash]
+----
+for lb in ${LB_FQDNS[*]}; do
+  ssh nfs1.ch1.puppet.vshn.net \
+    "sudo rm /srv/nfs/export/puppetserver-puppetserver-enc-cache-pvc-*/${lb}.yaml"
+done
+----
+
+.. Clean up LBs in Icinga
++
+[source,bash]
+----
+parent_zone=$(grep "ParentZone = " ${LB_FQDNS[1]}.info | cut -d = -f2 | tr -d '" ')
+if [ "$parent_zone" != "master" ]; then
+  icinga_host="$parent_zone"
+else
+  icinga_host="master2.prod.monitoring.vshn.net"
+fi
+
+read -p "Clean up LBs in Icinga ${icinga_host}? " -n 1 -r && echo
+if [[ $REPLY =~ '^[Yy]$' ]]; then
+  for lb in ${LB_FQDNS[*]}; do
+    ssh "${icinga_host}" "sudo rm -rf /var/lib/icinga2/api/zones/${lb}"
+  done
+  if [ "$parent_zone" != "master" ]; then
+    ssh "${icinga_host}" sudo puppetctl run
+  fi
+  ssh master2.prod.monitoring.vshn.net sudo puppetctl run
+fi
+----
+
+.. Remove LBs in nodes hieradata
++
+[source,bash]
+----
+git clone git@git.vshn.net:vshn-puppet/nodes_hieradata.git
+pushd nodes_hieradata
+
+for lb in ${LB_FQDNS[*]}; do
+  git rm ${lb}.yaml
+done
+
+git commit -m"Decommission LBs for ${CLUSTER_ID}"
+git push origin master
+
+popd
+----
+
+.. Remove cluster in appuio hieradata
++
+[source,bash]
+----
+git clone git@git.vshn.net:appuio/appuio_hieradata.git
+pushd appuio_hieradata
+
+git rm -rf lbaas/${CLUSTER_ID}*
+
+git commit -m"Decommission ${CLUSTER_ID}"
+git push origin master
+
+popd
+----
+
+.. Delete LB backup client certs and backups on Burp server
++
+[source,bash]
+----
+for lb in ${LB_FQDNS[*]}; do
+  backup_server=$(grep "server = " ${lb}.info | cut -d= -f2)
+  ssh "$backup_server" "rm /var/lib/burp/CA/${lb}.*"
+  ssh "$backup_server" "rm -rf /var/lib/burp/${lb}"
+done
+----
 
 . Remove cluster DNS records from VSHN DNS
 
-. https://kb.vshn.ch/vshnsyn/how-tos/decommission.html[Decommission cluster in Project Syn]
+. Delete cluster from Lieutenant API (via portal)
++
+Go to https://control.vshn.net/syn/lieutenantclusters
++
+- Select the Lieutenant API Endpoint
++
+- Search cluster name
++
+- Delete cluster entry using the delete button
+
+. Delete Keycloak service (via portal)
++
+Go to https://control.vshn.net/vshn/services
++
+- Search cluster name
++
+- Delete cluster entry service using the delete button
+
+. Update any related documentation

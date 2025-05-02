@@ -1,5 +1,7 @@
 = Uninstallation on Exoscale
 
+:lb_tf_resource: module.cluster.module.lb.exoscale_domain_record.lb
+
 [abstract]
 --
 Steps to remove an OpenShift 4 cluster from https://exoscale.com[Exoscale].
@@ -54,32 +56,11 @@ export EXOSCALE_ZONE=$(curl -sH "Authorization: Bearer $(commodore fetch-token)"
 export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_ZONE}.exo.io"
 ----
 
-. Get emergency credentials for cluster access
-+
-[source,bash]
-----
-API_URL=$(yq '.spec.dnsNames[0]' catalog/manifests/openshift4-api/00_certs.yaml)
-export EMR_KUBERNETES_ENDPOINT="https://${API_URL}:6443"
-emergency-credentials-receive $CLUSTER_ID
-export KUBECONFIG="em-${CLUSTER_ID}"
-kubectl cluster-info
-----
-
-. Disable Project Syn ArgoCD
-+
-[source,bash]
-----
-kubectl -n syn patch apps --type=json \
-    -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]' \
-    root argocd
-kubectl -n syn-argocd-operator scale deployment \
-    syn-argocd-operator-controller-manager --replicas 0
-kubectl -n syn scale sts syn-argocd-application-controller --replicas 0
-----
+include::partial$decommission-disable-syn.adoc[]
 
 . Delete all `LoadBalancer` services on the cluster
 +
-[source,console]
+[source,bash]
 ----
 kubectl delete svc --field-selector spec.type=LoadBalancer -A
 ----
@@ -88,7 +69,7 @@ NOTE: This is required in order for Terraform to be able to delete the instance 
 
 . Configure Terraform secrets
 +
-[source,console]
+[source,bash]
 ----
 cat <<EOF > terraform.env
 EXOSCALE_API_KEY
@@ -98,33 +79,11 @@ EOF
 
 include::partial$setup_terraform.adoc[]
 
-. Grab location of LB backups and potential Icinga2 satellite host before decommissioning VMs.
-+
-[source,shell]
-----
-declare -a LB_FQDNS
-for id in 1 2; do
-  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.exoscale_domain_record.lb[$(expr $id - 1)]" | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
-done
-for lb in ${LB_FQDNS[*]}; do
-  ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf" | tee "../../../$lb.info"
-done
-----
-
-. Set downtimes for both LBs in https://monitoring.vshn.net[Icinga2].
-
-. Remove APPUiO hieradata Git repository resource from Terraform state
-+
-[source,console]
-----
-terraform state rm 'module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata'
-----
-+
-NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.
+include::partial$prepare-for-lb-decommission.adoc[]
 
 . Delete resources using Terraform
 +
-[source,console]
+[source,bash]
 ----
 terraform destroy
 
@@ -133,7 +92,7 @@ popd
 
 . Use Exoscale CLI tool to empty and remove buckets
 +
-[source,console]
+[source,bash]
 ----
 # Bootstrap bucket
 exo storage rb -r -f "${CLUSTER_ID}-bootstrap"
@@ -174,105 +133,4 @@ exo iam api-key delete -f ${CLUSTER_ID} <1>
 ----
 <1> This command assumes that the decommissioning api key's name is the cluster's Project Syn ID
 
-. Decommission Puppet-managed LBs
-+
-TIP: See the https://vshnwiki.atlassian.net/wiki/spaces/VT/pages/8290422/How+To+Decommission+a+VM[VSHN documentation] (Internal link) for the full instructions.
-+
-.. Remove both LBs in https://control.vshn.net/servers/definitions/appuio[control.vshn.net]
-.. Clean encdata caches
-+
-[source,bash]
-----
-for lb in ${LB_FQDNS[*]}; do
-  ssh nfs1.ch1.puppet.vshn.net \
-    "sudo rm /srv/nfs/export/puppetserver-puppetserver-enc-cache-pvc-*/${lb}.yaml"
-done
-----
-
-.. Clean up LBs in Icinga
-+
-[source,bash]
-----
-parent_zone=$(grep "ParentZone = " ${LB_FQDNS[1]}.info | cut -d = -f2 | tr -d '" ')
-if [ "$parent_zone" != "master" ]; then
-  icinga_host="$parent_zone"
-else
-  icinga_host="master2.prod.monitoring.vshn.net"
-fi
-
-read -p "Clean up LBs in Icinga ${icinga_host}? " -n 1 -r && echo
-if [[ $REPLY =~ '^[Yy]$' ]]; then
-  for lb in ${LB_FQDNS[*]}; do
-    ssh "${icinga_host}" "sudo rm -rf /var/lib/icinga2/api/zones/${lb}"
-  done
-  if [ "$parent_zone" != "master" ]; then
-    ssh "${icinga_host}" sudo puppetctl run
-  fi
-  ssh master2.prod.monitoring.vshn.net sudo puppetctl run
-fi
-----
-
-.. Remove LBs in nodes hieradata
-+
-[source,bash]
-----
-git clone git@git.vshn.net:vshn-puppet/nodes_hieradata.git
-pushd nodes_hieradata
-
-for lb in ${LB_FQDNS[*]}; do
-  git rm ${lb}.yaml
-done
-
-git commit -m"Decommission LBs for ${CLUSTER_ID}"
-git push origin master
-
-popd
-----
-
-.. Remove cluster in appuio hieradata
-+
-[source,bash]
-----
-git clone git@git.vshn.net:appuio/appuio_hieradata.git
-pushd appuio_hieradata
-
-git rm -rf lbaas/${CLUSTER_ID}*
-
-git commit -m"Decommission ${CLUSTER_ID}"
-git push origin master
-
-popd
-----
-
-.. Delete LB backup client certs and backups on Burp server
-+
-[source,bash]
-----
-for lb in ${LB_FQDNS[*]}; do
-  backup_server=$(grep "server = " ${lb}.info | cut -d= -f2)
-  ssh "$backup_server" "rm /var/lib/burp/CA/${lb}.*"
-  ssh "$backup_server" "rm -rf /var/lib/burp/${lb}"
-done
-----
-
-. Remove cluster DNS records from VSHN DNS
-
-. Delete cluster from Lieutenant API (via portal)
-+
-Go to https://control.vshn.net/syn/lieutenantclusters
-+
-- Select the Lieutenant API Endpoint
-+
-- Search cluster name
-+
-- Delete cluster entry using the delete button
-
-. Delete Keycloak service (via portal)
-+
-Go to https://control.vshn.net/vshn/services
-+
-- Search cluster name
-+
-- Delete cluster entry service using the delete button
-
-. Update any related documentation
+include::partial$vshn-decommission.adoc[]

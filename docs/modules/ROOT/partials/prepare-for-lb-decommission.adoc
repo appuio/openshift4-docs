@@ -1,0 +1,23 @@
+. Grab location of LB backups and potential Icinga2 satellite host before decommissioning VMs.
++
+[source,bash,subs="attributes+"]
+----
+declare -a LB_FQDNS
+for id in 1 2; do
+  LB_FQDNS[$id]=$(terraform state show "{lb_tf_resource}[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
+done
+for lb in ${LB_FQDNS[*]}; do
+  ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf" | tee "../../../$lb.info"
+done
+----
+
+. Set downtimes for both LBs in https://monitoring.vshn.net[Icinga2].
+
+. Remove APPUiO hieradata Git repository resource from Terraform state
++
+[source,bash]
+----
+terraform state rm "module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata"
+----
++
+NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.

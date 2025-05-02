@@ -1,5 +1,7 @@
 = Uninstallation on Exoscale
 
+:lb_tf_resource: module.cluster.module.lb.exoscale_domain_record.lb
+
 [abstract]
 --
 Steps to remove an OpenShift 4 cluster from https://exoscale.com[Exoscale].
@@ -19,47 +21,57 @@ Always follow the https://wiki.vshn.net/display/VINT/4-eye+data+deletion[4-eye d
 == Prerequisites
 
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
+* `kubectl`
 * `docker`
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * `exo` >= v1.28.0, https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
+* `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
 
 == Cluster Decommission
 
-. Create a new API key with role `unrestricted` for the decommissioning
-
-. Export the following vars
+. Create a new API key with role `Owner` in the project of the cluster
 +
-[source,console]
+TIP: The `Owner` role is created automatically for each Exoscale project
+
+. Setup environment variables for Exoscale, GitLab and Vault credentials
++
+[source,bash]
 ----
-export EXOSCALE_ACCOUNT=<exoscale-account>
-export EXOSCALE_API_KEY=<exoscale-key>
-export EXOSCALE_API_SECRET=<exoscale-secret>
-export EXOSCALE_ZONE=<cluster-region>  # e.g. ch-gva-2
-
-export CLUSTER_ID=<cluster-name>
-
-# From https://git.vshn.net/-/user_settings/personal_access_tokens
-export GITLAB_TOKEN=<gitlab-api-token>
+export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/-/user_settings/personal_access_tokens
 export GITLAB_USER=<gitlab-user-name>
-
-# For example: https://api.syn.vshn.net
-# IMPORTANT: do NOT add a trailing `/`. Commands below will fail.
-export COMMODORE_API_URL=<lieutenant-api-endpoint>
+export EXOSCALE_API_KEY=<exoscale api key>
+export EXOSCALE_API_SECRET=<exoscale api secret>
 ----
-
-. Compile cluster catalog to get input variables
 +
-[source,console]
+include::partial$connect-to-vault.adoc[]
+
+include::partial$commodore-init.adoc[]
+
+. Setup environment variables for Exoscale credentials
++
+[source,bash]
 ----
-commodore catalog compile ${CLUSTER_ID}
+export EXOSCALE_ZONE=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
+export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_ZONE}.exo.io"
 ----
+
+include::partial$decommission-disable-syn.adoc[]
+
+. Delete all `LoadBalancer` services on the cluster
++
+[source,bash]
+----
+kubectl delete svc --field-selector spec.type=LoadBalancer -A
+----
++
+NOTE: This is required in order for Terraform to be able to delete the instance pool.
 
 . Configure Terraform secrets
 +
-[source,console]
+[source,bash]
 ----
-cat <<EOF > catalog/manifests/openshift4-terraform/terraform.env
+cat <<EOF > terraform.env
 EXOSCALE_API_KEY
 EXOSCALE_API_SECRET
 EOF
@@ -67,57 +79,27 @@ EOF
 
 include::partial$setup_terraform.adoc[]
 
-. Grab location of LB backups and potential Icinga2 satellite host before decommissioning VMs.
-+
-[source,shell]
-----
-declare -a LB_FQDNS
-for id in 1 2; do
-  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.exoscale_domain_record.lb[$(expr $id - 1)]" | grep hostname | cut -d'=' -f2 | tr -d ' "\r\n')
-done
-for lb in ${LB_FQDNS[*]}; do
-  ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf"
-done
-----
-
-. Set downtimes for both LBs in https://monitoring.vshn.net[Icinga2].
-
-. Remove APPUiO hieradata Git repository resource from Terraform state
-+
-[source,console]
-----
-terraform state rm 'module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata'
-----
-+
-NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.
+include::partial$prepare-for-lb-decommission.adoc[]
 
 . Delete resources using Terraform
 +
-[source,console]
+[source,bash]
 ----
 terraform destroy
+
+popd
 ----
 
 . Use Exoscale CLI tool to empty and remove buckets
 +
-[source,console]
+[source,bash]
 ----
-mkdir -p ~/.config/exoscale
-cat <<EOF >> ~/.config/exoscale/exoscale.toml
-
-[[accounts]]
-  account = "${EXOSCALE_ACCOUNT}"
-  defaultZone = "${EXOSCALE_ZONE}"
-  endpoint = "https://api.exoscale.ch/v1"
-  name = "${CLUSTER_ID}"
-EOF
-
 # Bootstrap bucket
-exo storage delete -r -f "sos://${CLUSTER_ID}-bootstrap/"
-exo storage rb -f "${CLUSTER_ID}-bootstrap"
+exo storage rb -r -f "${CLUSTER_ID}-bootstrap"
 # OpenShift Image Registry bucket
-exo storage delete -r -f "sos://${CLUSTER_ID}-image-registry/"
-exo storage rb -f "${CLUSTER_ID}-image-registry"
+exo storage rb -r -f "${CLUSTER_ID}-image-registry"
+# OpenShift Loki logstore
+exo storage rb -r -f "${CLUSTER_ID}-logstore"
 ----
 
 . Delete the cluster-backup bucket
@@ -132,16 +114,23 @@ At this point in the decommissioning process, you'll have to extract the Restic 
 +
 [source,bash]
 ----
-exo storage delete -r -f "sos://${CLUSTER_ID}-cluster-backup/"
-exo storage rb -f "${CLUSTER_ID}-cluster-backup"
+exo storage rb -r -f "${CLUSTER_ID}-cluster-backup"
 ----
 
 . Delete the cluster's API keys and the API key created for decommissioning
-
-. Decommission Puppet-managed LBs according to the https://wiki.vshn.net/display/VT/How+To%3A+Decommission+a+VM[VSHN documentation] (Internal link).
 +
-NOTE: Don't forget to remove the LB configuration in the https://git.vshn.net/appuio/appuio_hieradata/-/tree/master/lbaas[APPUiO hieradata] and the https://git.vshn.net/vshn-puppet/nodes_hieradata[nodes hieradata].
+[source,bash]
+----
+# delete restricted api keys
+exo iam api-key delete -f ${CLUSTER_ID}_appcat-provider-exoscale
+exo iam api-key delete -f ${CLUSTER_ID}_ccm-exoscale
+exo iam api-key delete -f ${CLUSTER_ID}_csi-driver-exoscale
+exo iam api-key delete -f ${CLUSTER_ID}_floaty
+exo iam api-key delete -f ${CLUSTER_ID}_object_storage
 
-. Remove cluster DNS records from VSHN DNS
+# delete decommissioning api key
+exo iam api-key delete -f ${CLUSTER_ID} <1>
+----
+<1> This command assumes that the decommissioning api key's name is the cluster's Project Syn ID
 
-. https://kb.vshn.ch/vshnsyn/how-tos/decommission.html[Decommission cluster in Project Syn]
+include::partial$vshn-decommission.adoc[]

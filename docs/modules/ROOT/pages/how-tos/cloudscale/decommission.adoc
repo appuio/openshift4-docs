@@ -1,8 +1,10 @@
-= Uninstallation on cloudscale.ch
+= Uninstallation on cloudscale
+
+:lb_tf_resource: module.cluster.module.lb.cloudscale_server.lb
 
 [abstract]
 --
-Steps to remove an OpenShift 4 cluster from https://cloudscale.ch[cloudscale.ch].
+Steps to remove an OpenShift 4 cluster from https://cloudscale[cloudscale.ch].
 --
 
 [NOTE]
@@ -18,19 +20,19 @@ include::partial$cloudscale/prerequisites.adoc[]
 
 == Cluster Decommission
 
-. Export the following vars
+. Setup environment variables for GitLab and Vault credentials
 +
 [source,bash]
 ----
 export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/-/user_settings/personal_access_tokens
 export GITLAB_USER=<gitlab-user-name>
 ----
-
-. Grab cluster tokens and facts from Vault and Lieutenant
 +
 include::partial$connect-to-vault.adoc[]
-+
+
 include::partial$commodore-init.adoc[]
+
+. Setup environment variables for cloudscale credentials
 +
 [source,bash]
 ----
@@ -41,26 +43,7 @@ export HIERADATA_REPO_SECRET=$(vault kv get \
   -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq -r '.data.data.token')
 ----
 
-. Use emergency credentials
-+
-[source,bash]
-----
-emergency-credentials-receive $CLUSTER_ID
-export KUBECONFIG="em-${CLUSTER_ID}"
-kubectl cluster-info
-----
-
-. Disable Syn
-+
-[source,bash]
-----
-kubectl -n syn patch apps --type=json \
-    -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]' \
-    root argocd
-kubectl -n syn-argocd-operator scale deployment \
-    syn-argocd-operator-controller-manager --replicas 0
-kubectl -n syn scale sts syn-argocd-application-controller --replicas 0
-----
+include::partial$decommission-disable-syn.adoc[]
 
 . Delete all PVs
 +
@@ -101,31 +84,9 @@ EOF
 
 include::partial$setup_terraform.adoc[]
 
-. Grab location of LB backups and potential Icinga2 satellite host before decommissioning VMs.
-+
-[source,shell]
-----
-declare -a LB_FQDNS
-for id in 1 2; do
-  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
-done
-for lb in ${LB_FQDNS[*]}; do
-  ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf" | tee "../../../$lb.info"
-done
-----
+include::partial$prepare-for-lb-decommission.adoc[]
 
-. Set downtimes for both LBs in https://monitoring.vshn.net[Icinga2].
-
-. Remove APPUiO hieradata Git repository resource from Terraform state
-+
-[source,console]
-----
-terraform state rm "module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata"
-----
-+
-NOTE: This step is necessary to ensure the subsequent `terraform destroy` completes without errors.
-
-. Delete resources from clouscale.ch using Terraform
+. Delete resources from cloudscale using Terraform
 +
 [source,bash]
 ----
@@ -162,7 +123,7 @@ mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition" --force
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry" --force
 ----
 
-. Delete the cluster-backup bucket in the cloudscale.ch project
+. Delete the cluster-backup bucket in the cloudscale project
 +
 [NOTE]
 ====
@@ -182,65 +143,14 @@ mc config host add \
 
 mc rb "${CLUSTER_ID}_backup/${CLUSTER_ID}-cluster-backup" --force
 
-# delete cloudscale.ch user object
+# delete cloudscale object user
 curl -i -H "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" -X DELETE $(echo $response | jq -r '.href')
 ----
 
-. Delete vault entries:
-+
-[source,bash]
-----
-for secret in $(find catalog/refs/ -type f -printf "clusters/kv/%P\n" \
-    | sed -r 's#(.*)/.*#\1#' | grep -v '__shared__/__shared__' \
-    | sort -u);
-do
-  vault kv delete "$secret"
-done
-----
-
-. Decommission Puppet-managed LBs according to the https://wiki.vshn.net/display/VT/How+To%3A+Decommission+a+VM[VSHN documentation] (Internal link).
-+
-[NOTE]
---
-The documentation linked above requires some information to be retrieved from the already-deleted load balancers.
-
-If you've been following these instructions, you stored this information into a file earlier:
-
-[source,bash]
-----
-for lb in ${LB_FQDNS[*]}; do
-  echo "$lb"
-  cat "$lb.info"
-done
-----
---
-+
-NOTE: Don't forget to remove the LB configuration in the https://git.vshn.net/appuio/appuio_hieradata/-/tree/master/lbaas[APPUiO hieradata] and the https://git.vshn.net/vshn-puppet/nodes_hieradata[nodes hieradata].
-
-. Delete cluster from Lieutenant API (via portal)
-+
-Go to https://control.vshn.net/syn/lieutenantclusters
-+
-- Select the Lieutenant API Endpoint
-+
-- Search cluster name
-+
-- Delete cluster entry using the delete button
-
-. Delete all remaining volumes which were associated with the cluster in the cloudscale.ch project.
+. Delete all remaining volumes which were associated with the cluster in the cloudscale project.
 +
 TIP: This step is required because the csi-cloudscale driver doesn't have time to properly cleanup PVs when the cluster is decommissioned with `terraform destroy`.
 
 . Delete the cluster's API tokens in the cloudscale UI
 
-. Delete Keycloak service (via portal)
-+
-Go to https://control.vshn.net/vshn/services
-+
-- Search cluster name
-+
-- Delete cluster entry service using the delete button
-
-. Delete all DNS records related with cluster (zonefiles)
-
-. Update any related documentation
+include::partial$vshn-decommission.adoc[]

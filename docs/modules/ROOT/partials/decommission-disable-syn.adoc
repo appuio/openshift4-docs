@@ -1,0 +1,22 @@
+. Get emergency credentials for cluster access
++
+[source,bash]
+----
+API_URL=$(yq '.spec.dnsNames[0]' catalog/manifests/openshift4-api/00_certs.yaml)
+export EMR_KUBERNETES_ENDPOINT="https://${API_URL}:6443"
+emergency-credentials-receive $CLUSTER_ID
+export KUBECONFIG="em-${CLUSTER_ID}"
+kubectl cluster-info
+----
+
+. Disable Syn
++
+[source,bash]
+----
+kubectl -n syn patch apps --type=json \
+    -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]' \
+    root argocd
+kubectl -n syn-argocd-operator scale deployment \
+    syn-argocd-operator-controller-manager --replicas 0
+kubectl -n syn scale sts syn-argocd-application-controller --replicas 0
+----

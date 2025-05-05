@@ -10,17 +10,8 @@ To implement your own automated upgrades, please take a look at the underlying h
 
 VSHN has predefined maintenance schedules defined for OpenShift clusters.
 The schedules are defined in the global defaults and can be chosen on a per-cluster basis.
+The schedules are set with the `maintenance_window` Lieutenant cluster fact.
 
 . Select a schedule from https://git.vshn.net/syn/commodore-defaults/-/tree/master/distribution/openshift4/managed-upgrade-schedules[distribution/openshift4/managed-upgrade-schedules].
 
-. Add the schedule to the cluster's `CLUSTER_ID.yaml`:
-+
-[source,yaml]
-----
-classes:
- - global.distribution.openshift4.managed-upgrade-schedules.monday-afternoon
-----
-
-. Commit and push the changes.
-
-. Mark the cluster as auto upgrading in the maintenance log: https://wiki.vshn.net/display/VT/How+to+Edit+Maintenance+Log+Template.
+. Set it as `maintenance_window` fact in https://control.vshn.net/syn/lieutenantclusters[control.vshn.net].

@@ -74,7 +74,8 @@ popd
 ----
 for lb in ${LB_FQDNS[*]}; do
   backup_server=$(grep "server = " ${lb}.info | cut -d= -f2)
-  ssh "$backup_server" "rm /var/lib/burp/CA/${lb}.*"
+  ssh "$backup_server" "rm /var/lib/burp/CA/${lb}.crt"
+  ssh "$backup_server" "rm /var/lib/burp/CA/${lb}.csr"
   ssh "$backup_server" "rm -rf /var/lib/burp/${lb}"
 done
 ----

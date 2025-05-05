@@ -45,6 +45,13 @@ export HIERADATA_REPO_SECRET=$(vault kv get \
 
 include::partial$decommission-disable-syn.adoc[]
 
+. Delete all LB services
++
+[source,bash]
+----
+kubectl delete svc --field-selector spec.type=LoadBalancer -A
+----
+
 . Delete all PVs
 +
 [source,bash]

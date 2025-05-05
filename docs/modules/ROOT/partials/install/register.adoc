@@ -14,6 +14,7 @@ For customer clusters, set the following cluster facts in Lieutenant:
 * `service_level`: Name of the service level agreement for this cluster, such as `guaranteed-availability`
 * `access_policy`: Access-Policy of the cluster, such as `regular` or `swissonly`
 * `release_channel`: Name of the syn component release channel to use, such as `stable`
+* `maintenance_window`: Pick the appropriate https://git.vshn.net/syn/commodore-defaults/-/tree/master/distribution/openshift4/managed-upgrade-schedules[upgrade schedule], such as `monday-1400` for test clusters, `tuesday-1000` for prod or `custom` to not (yet) enable maintenance
 * `cilium_addons`: Comma-separated list of cilium addons the customer gets billed for, such as `advanced_networking` or `tetragon`. Set to `NONE` if no addons should be billed.
 
 === Set up Keycloak service

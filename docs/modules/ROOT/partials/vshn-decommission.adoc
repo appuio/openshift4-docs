@@ -24,8 +24,13 @@ else
   icinga_host="master2.prod.monitoring.vshn.net"
 fi
 
-read -p "Clean up LBs in Icinga ${icinga_host}? " -n 1 -r && echo
-if [[ $REPLY =~ '^[Yy]$' ]]; then
+prompt="Clean up LBs in Icinga ${icinga_host}? "
+if [ -n "$ZSH_VERSION" ]; then
+  read -k 1 "?${prompt}"
+else
+  read -p "${prompt}" -n 1 -r && echo
+fi
+if [[ $REPLY =~ '^[Yy]' ]]; then
   for lb in ${LB_FQDNS[*]}; do
     ssh "${icinga_host}" "sudo rm -rf /var/lib/icinga2/api/zones/${lb}"
   done
@@ -74,7 +79,8 @@ popd
 ----
 for lb in ${LB_FQDNS[*]}; do
   backup_server=$(grep "server = " ${lb}.info | cut -d= -f2)
-  ssh "$backup_server" "rm /var/lib/burp/CA/${lb}.*"
+  ssh "$backup_server" "rm /var/lib/burp/CA/${lb}.crt"
+  ssh "$backup_server" "rm /var/lib/burp/CA/${lb}.csr"
   ssh "$backup_server" "rm -rf /var/lib/burp/${lb}"
 done
 ----

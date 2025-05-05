@@ -38,12 +38,19 @@ include::partial$commodore-init.adoc[]
 ----
 export CLOUDSCALE_API_TOKEN=$(vault kv get -format=json clusters/kv/$TENANT_ID/$CLUSTER_ID/cloudscale | jq -r .data.data.token)
 export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
-export BACKUP_REGION=$(curl -H "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" https://api.cloudscale.ch/v1/regions | jq -r '.[].slug' | grep -v $REGION)
+export BACKUP_REGION=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" https://api.cloudscale.ch/v1/regions | jq -r '.[].slug' | grep -v $REGION)
 export HIERADATA_REPO_SECRET=$(vault kv get \
   -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq -r '.data.data.token')
 ----
 
 include::partial$decommission-disable-syn.adoc[]
+
+. Delete all LB services
++
+[source,bash]
+----
+kubectl delete svc --field-selector spec.type=LoadBalancer -A
+----
 
 . Delete all PVs
 +
@@ -55,12 +62,21 @@ kubectl get po -A -oyaml | yq '.items = [.items[] |
     select(.metadata.namespace != "syn-csi-cloudscale")]' |\
     kubectl delete --wait=false -f-
 kubectl delete pvc -A --all --wait=false
-kubectl delete pv --all --wait=false
 kubectl wait --for=delete pv --all --timeout=120s
 ----
 +
 NOTE: By cordoning all non-master nodes and deleting all their pods (except the csi driver pods) we ensure that no new PVs are created, while the existing ones can be cleaned up.
 Deleting all pods has the additional benefit that we don't have to deal with PDBs when deleting the machinesets in the next step.
++
+[NOTE]
+====
+Delete remaining PVs explicitly if not all PVs were deleted in the previous step.
+
+[source,bash]
+----
+kubectl delete pv --all
+----
+====
 
 . Delete all machinesets
 +

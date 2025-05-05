@@ -38,7 +38,7 @@ include::partial$commodore-init.adoc[]
 ----
 export CLOUDSCALE_API_TOKEN=$(vault kv get -format=json clusters/kv/$TENANT_ID/$CLUSTER_ID/cloudscale | jq -r .data.data.token)
 export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
-export BACKUP_REGION=$(curl -H "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" https://api.cloudscale.ch/v1/regions | jq -r '.[].slug' | grep -v $REGION)
+export BACKUP_REGION=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" https://api.cloudscale.ch/v1/regions | jq -r '.[].slug' | grep -v $REGION)
 export HIERADATA_REPO_SECRET=$(vault kv get \
   -format=json "clusters/kv/lbaas/hieradata_repo_token" | jq -r '.data.data.token')
 ----

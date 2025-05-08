@@ -264,7 +264,7 @@ export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig-socks5"
 +
 [source,bash]
 ----
-openstack server group create $(jq -r '.infraID "${INSTALLER_DIR}/metadata.json")-infra \
+openstack server group create $(jq -r '.infraID' "${INSTALLER_DIR}/metadata.json")-infra \
   --policy soft-anti-affinity
 ----
 

@@ -36,6 +36,35 @@ ifeval::["{provider}" == "stackit"]
 `component-openshift4-terraform` doesn't currently support the STACKIT cluster Terraform module, so at this time, the Terraform output for NS records isn't provided.
 --
 endif::[]
+ifeval::["{provider}" == "cloudscale"]
+. Store the subnet UUID in the cluster configuration
++
+[source,bash]
+----
+export SUBNET_UUID="`terraform output -raw subnet_uuid`"
+
+pushd ../../../inventory/classes/${TENANT_ID}
+
+yq eval -i ".parameters.openshift.cloudscale.subnet_uuid = $SUBNET_UUID" \
+  ${CLUSTER_ID}.yml
+
+git commit -am "Add Cloudscale Subnet UUID to cluster configuration for ${CLUSTER_ID}"
+git push
+popd
+popd
+----
+
+. Compile and push the cluster catalog
++
+include::partial$install/commodore-dynfacts.adoc[]
+
+. Return to Terraform directory
++
+[source,bash]
+----
+pushd catalog/manifests/openshift4-terraform/
+----
+endif::[]
 
 . Wait for bootstrap API to come up
 +
@@ -123,17 +152,11 @@ kubectl apply -f ../machine-api-provider-cloudscale/10_serviceAccount.yaml
 kubectl apply -f ../machine-api-provider-cloudscale/11_deployment.yaml
 ----
 
-. Apply the machinesets from terraform
+. Apply the machinesets from the catalog
 +
 [source,bash,subs="attributes+"]
 ----
-terraform output -raw worker-machineset_yml | grep -vP '^(│|╵|╷|There are some problems with the CLI configuration)' | yq -P > worker-machineset.yml
-head worker-machineset.yml
-kubectl apply -f worker-machineset.yml
-
-terraform output -raw infra-machineset_yml | grep -vP '^(│|╵|╷|There are some problems with the CLI configuration)' | yq -P > infra-machineset.yml
-head infra-machineset.yml
-kubectl apply -f infra-machineset.yml
+kubectl apply -f ../openshift4-nodes/machineset-*.yaml
 ----
 endif::[]
 

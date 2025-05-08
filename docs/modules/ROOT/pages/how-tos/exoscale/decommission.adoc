@@ -1,6 +1,6 @@
 = Uninstallation on Exoscale
 
-:lb_tf_resource: module.cluster.module.lb.exoscale_domain_record.lb
+:provider: exoscale
 
 [abstract]
 --

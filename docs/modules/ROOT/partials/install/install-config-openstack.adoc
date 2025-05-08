@@ -9,7 +9,7 @@ Have a look at the https://docs.openshift.com/container-platform/4.13/installing
 export INSTALLER_DIR="$(pwd)/target"
 mkdir -p "${INSTALLER_DIR}"
 
-cat > "${INSTALLER_DIR}/clouds.yaml" <<EOF
+cat > "clouds.yaml" <<EOF
 clouds:
   shiftstack:
     auth:

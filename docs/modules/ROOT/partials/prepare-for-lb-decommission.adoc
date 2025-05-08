@@ -4,7 +4,12 @@
 ----
 declare -a LB_FQDNS
 for id in 1 2; do
+ifeval::["{provider}" == "cloudscale"]
   LB_FQDNS[$id]=$(terraform state show "{lb_tf_resource}[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
+endif::[]
+ifeval::["{provider}" == "exoscale"]
+  LB_FQDNS[$id]=$(terraform state show "{lb_tf_resource}[$(expr $id - 1)]" | grep hostname | awk '{print $3}' | tr -d ' "\r\n')
+endif::[]
 done
 for lb in ${LB_FQDNS[*]}; do
   ssh "${lb}" "sudo grep 'server =' /etc/burp/burp.conf && sudo grep 'ParentZone' /etc/icinga2/constants.conf" | tee "../../../$lb.info"

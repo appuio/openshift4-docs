@@ -1,5 +1,6 @@
 = Uninstallation on cloudscale
 
+:provider: cloudscale
 :lb_tf_resource: module.cluster.module.lb.cloudscale_server.lb
 
 [abstract]

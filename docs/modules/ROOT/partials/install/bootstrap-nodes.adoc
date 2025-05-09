@@ -51,7 +51,7 @@ yq eval -i ".parameters.openshift.cloudscale.subnet_uuid = $SUBNET_UUID" \
 git commit -am "Add Cloudscale Subnet UUID to cluster configuration for ${CLUSTER_ID}"
 git push
 popd
-popd
+popd # yes, twice.
 ----
 
 . Compile and push the cluster catalog
@@ -63,6 +63,8 @@ include::partial$install/commodore-dynfacts.adoc[]
 [source,bash]
 ----
 pushd catalog/manifests/openshift4-terraform/
+
+terraform init
 ----
 endif::[]
 

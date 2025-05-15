@@ -39,7 +39,7 @@ kubectl get nodes -l $node_selector
 [source,bash]
 ----
 for node in $(kubectl get nodes -oname -l $node_selector); do
-  oc --as=cluster-admin debug $node -- chroot /host touch /run/machine-config-daemon-force
+  oc -n syn-debug-nodes --as=cluster-admin debug $node -- chroot /host touch /run/machine-config-daemon-force
 done
 ----
 
@@ -59,6 +59,7 @@ old_mc=$(kubectl get mc -o json | \
   | sort_by(.metadata.creationTimestamp) | reverse
   | .[1] | .metadata.name' \
 )
+echo $old_mc
 ----
 
 . Trigger machine config daemon resync for *one node at a time*

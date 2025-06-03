@@ -20,7 +20,7 @@
 Steps to replace a storage node of an OpenShift 4 cluster on https://www.cloudscale.ch/[cloudscale.ch].
 --
 
-== Starting situtation
+== Starting situation
 
 * You already have a OpenShift 4 cluster on cloudscale.ch
 * You have admin-level access to the cluster

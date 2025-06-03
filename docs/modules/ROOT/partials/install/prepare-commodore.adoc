@@ -74,6 +74,9 @@ yq eval -i '.parameters.openshift.cloudscale.subnet_uuid = "TO_BE_DEFINED"' ${CL
 yq eval -i '.parameters.openshift.cloudscale.rhcos_image_slug = "rhcos-{ocp-minor-version}"' \
   ${CLUSTER_ID}.yml
 
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"TO_BE_DEFINED\"" \
+  ${CLUSTER_ID}.yml
+
 git commit -a -m "Configure Cloudscale metaparameters on ${CLUSTER_ID}"
 ----
 endif::[]

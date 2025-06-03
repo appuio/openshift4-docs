@@ -57,8 +57,10 @@ node_name=$(kubectl --as=cluster-admin get pv ${pv_name} \
 
 == Create silence in Alertmanager
 
-:duration: +30 minutes
-include::partial$create-alertmanager-silence.adoc[]
+:duration: 30m
+:alert_statement: syn_component=rook-ceph
+:comment: Silence rook-ceph alerts
+include::partial$create-amtool-silence.adoc[]
 
 == Reinitialize disk
 
@@ -235,6 +237,6 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 
 == Finish up
 
-include::partial$remove-alertmanager-silence.adoc[]
+include::partial$expire-amtool-silence.adoc[]
 
 include::partial$enable-argocd-autosync.adoc[]

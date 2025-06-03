@@ -25,8 +25,10 @@ include::partial$exoscale/setup-local-env.adoc[]
 
 == Set alert silence
 
-:duration: +60 minutes
-include::partial$create-alertmanager-silence.adoc[]
+:duration: 1h
+:alert_statement: syn_component=rook-ceph
+:comment: Silence rook-ceph alerts
+include::partial$create-amtool-silence.adoc[]
 
 == Update Cluster Config
 
@@ -104,4 +106,4 @@ include::partial$storage-ceph-backfilling.adoc[]
 
 == Finish up
 
-include::partial$remove-alertmanager-silence.adoc[]
+include::partial$expire-amtool-silence.adoc[]

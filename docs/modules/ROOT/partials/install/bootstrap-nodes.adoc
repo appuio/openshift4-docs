@@ -45,7 +45,7 @@ export SUBNET_UUID="`terraform output -raw subnet_uuid`"
 
 pushd ../../../inventory/classes/${TENANT_ID}
 
-yq eval -i ".parameters.openshift.cloudscale.subnet_uuid = $SUBNET_UUID" \
+yq eval -i '.parameters.openshift.cloudscale.subnet_uuid = "'$SUBNET_UUID'"' \
   ${CLUSTER_ID}.yml
 
 git commit -am "Add Cloudscale Subnet UUID to cluster configuration for ${CLUSTER_ID}"
@@ -64,7 +64,15 @@ include::partial$install/commodore-dynfacts.adoc[]
 ----
 pushd catalog/manifests/openshift4-terraform/
 
-terraform init
+terraform init \
+  "-backend-config=address=${GITLAB_STATE_URL}" \
+  "-backend-config=lock_address=${GITLAB_STATE_URL}/lock" \
+  "-backend-config=unlock_address=${GITLAB_STATE_URL}/lock" \
+  "-backend-config=username=${GITLAB_USER}" \
+  "-backend-config=password=${GITLAB_TOKEN}" \
+  "-backend-config=lock_method=POST" \
+  "-backend-config=unlock_method=DELETE" \
+  "-backend-config=retry_wait_min=5"
 ----
 endif::[]
 
@@ -144,7 +152,7 @@ ifeval::["{provider}" == "cloudscale"]
 +
 [source,bash,subs="attributes+"]
 ----
-export VAULT_TOKEN=$(vault token lookup - format=json | jq -r .data.id) 
+export VAULT_TOKEN=$(vault token lookup -format=json | jq -r .data.id) 
 kapitan refs --reveal --refs-path ../../refs -f ../machine-api-provider-cloudscale/00_secrets.yaml | kubectl apply -f -
 
 kubectl apply  -f ../machine-api-provider-cloudscale/10_clusterRoleBinding.yaml
@@ -158,7 +166,7 @@ kubectl apply -f ../machine-api-provider-cloudscale/11_deployment.yaml
 +
 [source,bash,subs="attributes+"]
 ----
-kubectl apply -f ../openshift4-nodes/machineset-*.yaml
+kubectl apply `for f in ../openshift4-nodes/machineset-*.yaml ; do echo -n "-f $f " ; done`
 ----
 endif::[]
 

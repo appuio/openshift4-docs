@@ -20,7 +20,7 @@
 Steps to replace a storage node of an OpenShift 4 cluster on https://www.cloudscale.ch/[cloudscale.ch].
 --
 
-== Starting situtation
+== Starting situation
 
 * You already have a OpenShift 4 cluster on cloudscale.ch
 * You have admin-level access to the cluster
@@ -43,8 +43,10 @@ include::partial$setup_terraform.adoc[]
 
 == Set alert silence and pause ArgoCD
 
-:duration: +60 minutes
-include::partial$create-alertmanager-silence.adoc[]
+:duration: 1h
+:alert_statement: syn_component=rook-ceph
+:comment: Silence rook-ceph alerts
+include::partial$create-amtool-silence.adoc[]
 
 . Disable auto sync for component `rook-ceph`.
 This allows us to temporarily make manual changes to the Rook Ceph cluster.
@@ -76,7 +78,7 @@ include::partial$delete-node-vm.adoc[]
 
 == Finish up
 
-include::partial$remove-alertmanager-silence.adoc[]
+include::partial$expire-amtool-silence.adoc[]
 
 include::partial$enable-argocd-autosync.adoc[]
 

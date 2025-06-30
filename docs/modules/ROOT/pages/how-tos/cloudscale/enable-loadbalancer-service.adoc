@@ -1,13 +1,13 @@
-= Enable `LoadBalancer` services on cloudscale.ch
+= Enable `LoadBalancer` services on cloudscale
 
 [abstract]
 --
-Steps to enable `LoadBalancer` services on an OpenShift 4 cluster on https://cloudscale.ch[cloudscale.ch].
+Steps to enable `LoadBalancer` services on an OpenShift 4 cluster on https://cloudscale.ch[cloudscale].
 --
 
 == Starting situation
 
-* You already have an OpenShift 4 cluster on cloudscale.ch
+* You already have an OpenShift 4 cluster on cloudscale
 * You have admin-level access to the cluster
 * The cluster is using https://cilium.io[Cilium] as the network plugin
 * You want to enable LoadBalancer services
@@ -34,7 +34,7 @@ Please coordinate with VSHN Corporate IT before using an IP range.
 . Update https://www.ripe.net/manage-ips-and-asns/db[RIPE DB] to reflect the new usage of the IP range.
 Add the IP range with a descriptive name.
 
-. Create a ticket with cloudscale.ch to make the range available as a Floating Network in the project of the cluster.
+. Create a ticket with cloudscale to make the range available as a Floating Network in the project of the cluster.
 
 == Configure Loadbalancers
 
@@ -118,58 +118,130 @@ We propose to peer with each of the infrastructure nodes.
 
 == Configure Cilium
 
-. Add a ConfigMap called `bgp-config` in the namespace `cilium`.
-This ConfigMap contains https://metallb.universe.tf/usage/#bgp[MetalLB] configuration.
-+
-Here's an example ConfigMap.
-+
-[source,yaml]
-----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: bgp-config
-  namespace: cilium
-data:
-  config.yaml: |
-    peers:
-      - peer-address: 172.18.200.2 <1>
-        peer-asn: 64512
-        my-asn: 64512
-      - peer-address: 172.18.200.3 <1>
-        peer-asn: 64512
-        my-asn: 64512
-    address-pools:
-      - name: default
-        protocol: bgp
-        addresses:
-          - 203.0.113.128/25 <2>
-----
-<1> IP addresses of the loadbalancers.
-If necessary, adjust these to match your cluster's private network CIDR.
-<2> The public IP range you allocated for the cluster
+TIP: See the https://hub.syn.tools/cilium/references/parameters.html#_bgp[component-cilium] documentation for detailed documentation of the `bgp` component parameters.
 
-. Update the Cilium configuration to enable BGP.
-Our Cilium setup is configured through the `CiliumConfig` CRD called `cilium` in namespace `cilium`.
-The CRD contains Helm values.
-Update the CRD `spec` with
+We configure Cilium via `component-cilium` in the cluster's tenant repo.
+
+. Ensure that `component-cilium` is at least v2.0.0 for the cluster
 +
 [source,yaml]
 ----
-apiVersion: cilium.io/v1alpha1
-kind: CiliumConfig
-metadata:
-  ...
-  name: cilium
-  namespace: cilium
-  ...
-spec:
-  bgp:
-    announce:
-      loadbalancerIP: true
-    enabled: true
-  ...
+parameters:
+  components:
+    cilium:
+      version: v2.0.0
 ----
+
+. Enable Cilium's BGP control plane feature in the cluster's config
++
+[source,yaml]
+----
+parameters:
+  cilium:
+    cilium_helm_values:
+      LBIPAM:
+        requireLBClass: true <1>
+    bgp:
+      enabled: true
+----
+<1> Configure Cilium to only allocate LB IPs for services which have an `io.cilium` load balancer class (`spec.loadBalancerClass`).
+This ensures that Cilium BGP LB services can co-exist with LB services provisioned through the cloudscale cloud-controller-manager.
+
+. Configure the Cilium BGP control plane
++
+[source,yaml]
+----
+parameters:
+  cilium:
+    bgp:
+      cluster_configs:
+        lb-services:
+          nodeSelector: <1>
+            matchLabels:
+              node-role.kubernetes.io/infra: ""
+          bgpInstances:
+            lbs:
+              localASN: 64512 <2>
+              peers: <3>
+                lb-XY:
+                  peerAddress: 172.18.200.2
+                  peerASN: 64512
+                  peerConfigRef:
+                    name: lb-services <4>
+                lb-ZW:
+                  peerAddress: 172.18.200.3
+                  peerASN: 64512
+                  peerConfigRef:
+                    name: lb-services <4>
+      peer_configs:
+        lb-services: <4>
+          spec:
+            gracefulRestart: <5>
+              enabled: true
+              restartTimeSeconds: 30
+          families: <6>
+            unicast-v4:
+              afi: ipv4
+              safi: unicast
+              advertisements:
+                matchLabels:
+                  cilium.syn.tools/advertise: bgp <7>
+      advertisements:
+        lb-services:
+          metadata:
+            labels:
+              cilium.syn.tools/advertise: bgp <7>
+          advertisements:
+            lb-ips: <8>
+              advertisementType: Service
+              service:
+                addresses:
+                  - LoadBalancerIP
+              selector:
+                matchLabels:
+                  appuio.io/load-balancer-class: cilium <9>
+----
+<1> `nodeSelector` defines on which nodes Cilium will start BGP speakers.
+Since we've setup the infra nodes as peers on the LBs, we select the infra nodes here.
+<2> the local ASN for the Cilium speakers.
+This needs to match the ASN we configured for the infra nodes in `frr` on the LBs.
+<3> The peers for the Cilium BGP speakers.
+We configure both LBs here with their static IPs.
+If necessary, adjust the IPs for the cluster's private network range.
+The ASN needs to match the FRR config on the LBs.
+We recommend using the LB host names as keys for the `peers` configuration.
+<4> Each peer references a `CiliumBGPPeerConfig`.
+The name here must match an entry in `bgp.peer_configs`.
+<5> We explicitly configure graceful restart because Cilium doesn't enable it by default.
+Graceful restart is required to ensure that FRR doesn't withdraw the advertised routes immediately when the Cilium agent pod restarts.
+<6> We need to configure at least one address family to advertise.
+For LB services we want to advertise IPv4 unicast routes.
+<7> The family config has a label selector which must match the labels of the entry in `bgp.advertisements`.
+<8> We configure one advertisement for K8s service load balancer IPs.
+<9> This label selector defines for which services Cilium will announce ingress IPs.
+This can be changed to a `NotIn` match expression on a non-existent service label to announce all services.
+We recommend to configure a matching label selector for the LB service IP pool to reduce the potential for partially managed LB services.
+
+. Configure a Cilium LB IP pool
++
+[source,yaml]
+----
+parameters:
+  cilium:
+    bgp:
+      loadbalancer_ip_pools:
+        lb-services:
+          blocks:
+            lb_ips:
+              cidr: 203.0.113.128/25 <1>
+          serviceSelector:
+            matchLabels:
+              appuio.io/load-balancer-class: cilium <2>
+----
+<1> The public IP range you allocated for the cluster.
+<2> Service label selector which matches the one in the BGP advertisement configuration.
+
+. Commit the changes and compile the cluster catalog
 
 == Test `LoadBalancer` service
 
@@ -181,8 +253,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: test-lb
+  labels:
+    appuio.io/load-balancer-class: cilium <1>
 spec:
   type: LoadBalancer
+  loadBalancerClass: io.cilium/bgp-control-plane <2>
   ports:
   - port: 80
     targetPort: 8080
@@ -215,8 +290,10 @@ spec:
             path: /
             port: 8080
 ----
+<1> We need to add label `appuio.io/load-balancer-class=cliium` to the service, since we configure the Cilium LB IP pool and BGP advertisement to only process services with that label.
+<2> We need to set `spec.loadBalancerClass=io.cilium/bgp-control-plane` to tell Cilium to manage this service and to tell the cloudscale CCM to not manage this service.
 
-. Observe that the Operator allocates an external IP for `test-lb`
+. Observe that Cilium allocates an external IP for `test-lb`
 +
 [source,console]
 ----

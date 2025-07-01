@@ -100,8 +100,12 @@ mc mb --ignore-existing \
   "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
 mc mb --ignore-existing \
   "${CLUSTER_ID}/${CLUSTER_ID}-image-registry" <1>
+# The next command isn't required for OKE!
+mc mb --ignore-existing \
+  "${CLUSTER_ID}/${CLUSTER_ID}-logstore" <2>
 ----
 <1> We need to manually create the image registry bucket because we need to disable the registry operator's bucket management since the operator wants to use server-side encryption which isn't supported on cloudscale S3.
+<2> (OCP only) We need to manually create the logstore bucket since the LokiStack doesn't do so automatically.
 
 [#_upload_coreos_image]
 === Upload Red Hat CoreOS image

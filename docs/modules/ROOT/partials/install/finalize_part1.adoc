@@ -37,6 +37,8 @@ fulldomain=$(kubectl -n syn-cert-manager \
   jq -r '[.[]][0].fulldomain')
 echo "$fulldomain"
 ----
++
+NOTE: If the `acme-dns-client` secret hasn't yet been populated, re-trigger the ArgoCD sync for `cert-manager`.
 
 ifeval::["{acme-dns-update-zone}" == "yes"]
 . Add the following CNAME records to the cluster's DNS zone

@@ -59,7 +59,7 @@ ifeval::["{provider}" == "exoscale"]
 +
 [source,bash]
 ----
-yq eval -i '.applications += "exoscale-cloud-controller-manager"' ${CLUSTER_ID}.yml
+yq eval -i '.applications += ["exoscale-cloud-controller-manager"]' ${CLUSTER_ID}.yml
 git commit -a -m "Deploy Exoscale cloud-controller-manager on ${CLUSTER_ID}"
 ----
 endif::[]

@@ -8,8 +8,5 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.worker_count = 
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.infra_count = 0" \
   ${CLUSTER_ID}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.make_worker_adoptable_by_provider = true" \
-  ${CLUSTER_ID}.yml
 ----
 endif::[]

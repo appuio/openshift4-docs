@@ -38,6 +38,9 @@ IMPORTANT: Don't use your personal account to login to the cluster manager for i
 
 include::partial$install/prerequisites.adoc[]
 * `mc` >= `RELEASE.2021-07-27T06-46-19Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
+* `aws` CLI https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html[Official install instructions].
+You can also install the Python package with your favorite package manager (we recommend https://docs.astral.sh/uv/[`uv`]: `uv tool install awscli`).
+
 
 [WARNING]
 ====
@@ -62,11 +65,11 @@ export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 include::partial$install/vshn-input.adoc[]
 
 [#_bootstrap_bucket]
-=== Set up S3 bucket for cluster bootstrap
+=== Set up S3 buckets for the cluster
 
-. Create S3 bucket
+. Create an S3 objects user
 
-.. If a bucket user already exists for this cluster:
+.. If an objects user already exists for this cluster:
 +
 [source,bash]
 ----
@@ -76,7 +79,7 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
   jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
 ----
 
-.. To create a new bucket user:
+.. To create a new objects user:
 +
 [source,bash]
 ----
@@ -95,9 +98,50 @@ mc config host add \
   "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
   $(echo $response | jq -r '.keys[0].access_key') \
   $(echo $response | jq -r '.keys[0].secret_key')
+----
 
+. Create buckets for cluster bootstrap, the image registry and the Loki logstore
++
+[source,bash]
+----
 mc mb --ignore-existing \
   "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
+mc mb --ignore-existing \
+  "${CLUSTER_ID}/${CLUSTER_ID}-image-registry" <1>
+# The next command isn't required for OKE!
+mc mb --ignore-existing \
+  "${CLUSTER_ID}/${CLUSTER_ID}-logstore" <2>
+----
+<1> We need to manually create the image registry bucket because we need to disable the registry operator's bucket management since the operator wants to use server-side encryption which isn't supported on cloudscale S3.
+<2> (OCP only) We need to manually create the logstore bucket since the LokiStack doesn't do so automatically.
+
+. Configure the registry bucket: Set `BlockPublicAcls=False` and setup a lifecycle policy to abort incomplete multipart uploads after a day.
++
+[source,bash]
+----
+export AWS_ACCESS_KEY_ID=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey)
+export AWS_SECRET_ACCESS_KEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
+export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
+
+aws s3api put-public-access-block \
+  --endpoint-url "https://objects.${REGION}.cloudscale.ch" \
+  --bucket "${CLUSTER_ID}-image-registry" \
+  --public-access-block-configuration BlockPublicAcls=false
+aws s3api put-bucket-lifecycle-configuration \
+  --endpoint-url "https://objects.${REGION}.cloudscale.ch" \
+  --bucket "${CLUSTER_ID}-image-registry" \
+  --lifecycle-configuration '{
+    "Rules": [
+      {
+        "ID": "cleanup-incomplete-multipart-registry-uploads",
+        "Prefix": "",
+        "Status": "Enabled",
+        "AbortIncompleteMultipartUpload": {
+          "DaysAfterInitiation": 1
+        }
+      }
+    ]
+  }'
 ----
 
 [#_upload_coreos_image]
@@ -310,21 +354,28 @@ include::partial$install/bootstrap-lb.adoc[]
 
 include::partial$install/bootstrap-nodes.adoc[]
 
-. Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
+include::partial$install/finalize_part1.adoc[]
+
+=== Check image registry config
+
+Verify that the cluster image registry has been deployed correctly with the Project Syn-managed config.
+
+. Check that no conditions show any errors in the image registry custom resource
 +
 [source,bash]
 ----
-oc create secret generic image-registry-private-configuration-user \
---namespace openshift-image-registry \
---from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
---from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
+kubectl get config.imageregistry/cluster -oyaml
 ----
+
+. Verify that the registry pods are running
++
+[source,bash]
+----
+kubectl -n openshift-image-registry get pods -l docker-registry=default <1>
+----
+<1> This should show two pods
 +
 include::partial$install/registry-samples-operator.adoc[]
-
-include::partial$install/finalize_part1.adoc[]
-
-include::partial$install/registry-acl-fix.adoc[]
 
 include::partial$install/finalize_part2.adoc[]
 +

@@ -2,8 +2,46 @@
 
 ==== VSHN
 
-. xref:oc4:ROOT:how-tos/update_maintenance/automated-upgrades-at-vshn.adoc[Enable automated upgrades]
-. Add the cluster to the https://wiki.vshn.net/pages/templates2/editpagetemplate.action?entityId=137527297&key=VT[maintenance template], if necessary
+. Verify that an `UpgradeConfig` is present
++
+[source,bash]
+----
+kubectl -n appuio-openshift-upgrade-controller get upgradeconfig
+----
++
+TIP: Double-check the cluster's `maintenance_window` fact, if this command doesn't return any objects.
+
+. Schedule a first maintenance 1 minute in the future
++
+[source,bash]
+----
+uc=$(yq .parameters.facts.maintenance_window inventory/classes/params/cluster.yml)
+kubectl -n appuio-openshift-upgrade-controller get upgradeconfig $uc -oyaml | \
+  yq '
+    .metadata.name = "first", <1>
+    .metadata.labels = {}, <2>
+    .spec.jobTemplate.metadata.labels.upgradeconfig/name = "first", <1>
+    .spec.schedule.cron = ((now+"1m")|format_datetime("4 15")) + " * * *", <3>
+    .spec.pinVersionWindow = "0m" <4>
+  ' | \
+  kubectl create -f - --as=cluster-admin
+----
+<1> The name doesn't matter, but the `upgradeconfig/name` label in the job template must match `metadata.name` of the copied `UpgradeConfig`.
+<2> We clear the resource labels so ArgoCD doesn't delete the copied resource.
+<3> This expression converts `now+1m` to a valid cronspec for daily runs at that time of day.
+<4> We set the `pinVersionWindow` to 0 minutes to ensure that the first job actually gets scheduled one minute in the future.
++
+[WARNING]
+====
+Don't forget to delete the copied `UpgradeConfig` resource after the initial maintenance completes.
+
+[source,bash]
+----
+kubectl --as=cluster-admin -n appuio-openshift-upgrade-controller \
+  delete upgradeconfig first
+----
+====
+
 
 ==== Generic
 

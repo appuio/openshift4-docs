@@ -135,8 +135,11 @@ mc config host add \
 # delete bootstrap-ignition bucket (should already be deleted after setup)
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition" --force
 
-# delete image-registry object
+# delete image-registry bucket
 mc rb "${CLUSTER_ID}/${CLUSTER_ID}-image-registry" --force
+
+# delete Loki logstore bucket
+mc rb "${CLUSTER_ID}/${CLUSTER_ID}-logstore" --force
 ----
 
 . Delete the cluster-backup bucket in the cloudscale project

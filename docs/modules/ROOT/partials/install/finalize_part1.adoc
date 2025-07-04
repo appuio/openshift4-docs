@@ -100,8 +100,8 @@ endif::[]
 +
 [source,bash]
 ----
+export EMR_KUBERNETES_ENDPOINT=https://api.${CLUSTER_DOMAIN}:6443
 emergency-credentials-receive "${CLUSTER_ID}"
-# Follow the instructions to use the downloaded kubeconfig file
 ----
 +
 [NOTE]

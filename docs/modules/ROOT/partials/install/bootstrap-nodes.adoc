@@ -41,7 +41,7 @@ ifeval::["{provider}" == "cloudscale"]
 +
 [source,bash]
 ----
-export SUBNET_UUID="`terraform output -raw subnet_uuid`"
+export SUBNET_UUID="$(terraform output -raw subnet_uuid)"
 
 pushd ../../../inventory/classes/${TENANT_ID}
 
@@ -207,6 +207,35 @@ terraform apply
 popd
 ----
 
+ifeval::["{provider}" == "cloudscale"]
+. Add Infra Node IPs to LB Hieradata
++
+[source,bash]
+----
+git clone git@git.vshn.net:appuio/appuio_hieradata.git
+
+pushd appuio_hieradata/lbaas
+
+git checkout "tf/lbaas/${CLUSTER_ID}" <1>
+
+# Use this with OCP
+kubectl get node -l "node-role.kubernetes.io/infra" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
+
+# Use this with OKE, since OKE does not have infra nodes and workers have the ingress deployed by default
+kubectl get node -l "node-role.kubernetes.io/worker" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
+
+
+yq -i '."profile_openshift4_gateway::backends".router = load("ips.yml")' "${CLUSTER_ID}.yaml"
+
+rm ips.yml
+
+git commit -am "Add infra nodes as backends for ${CLUSTER_ID}."
+git push origin "tf/lbaas/${CLUSTER_ID}"
+popd
+----
+<1> The branch and MR should exist from removing the bootstrap node.
+endif::[]
+
 ifeval::["{provider}" != "stackit"]
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +
@@ -215,22 +244,6 @@ ifeval::["{provider}" != "stackit"]
 for fqdn in "${LB_FQDNS[@]}"; do
   ssh "${fqdn}" sudo puppetctl run
 done
-----
-endif::[]
-
-ifeval::["{provider}" == "cloudscale"]
-. Scale up the infra and worker machinesets
-+
-[source,bash]
-----
-INFRA_NODES=4 # adjust to desired number of infra nodes
-WORKER_NODES=3 # adjust to desired number of worker nodes
-----
-+
-[source,bash]
-----
-kubectl scale machineset -nopenshift-machine-api infra --replicas="${INFRA_NODES}"
-kubectl scale machineset -nopenshift-machine-api worker --replicas="${WORKER_NODES}"
 ----
 endif::[]
 
@@ -248,31 +261,6 @@ done && echo -e "\nCilium config updated"
 kubectl -n cilium rollout restart ds/cilium
 ----
 
-ifeval::["{provider}" == "cloudscale"]
-. Add Infra Node IPs to LB Hieradata
-+
-[source,bash]
-----
-git clone git@git.vshn.net:appuio/appuio_hieradata.git
-
-pushd appuio_hieradata/lbaas
-
-# Use this with OCP
-kubectl get node -l "node-role.kubernetes.io/infra" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
-
-# Use this with OKE, since OKE does not have infra nodes and workers have the ingress deployed by default
-kubectl get node -l "node-role.kubernetes.io/worker" -oyaml | yq '.items[].status.addresses | filter(.type == "InternalIP") | map(.address)' > ips.yml
-
-
-yq -i '."profile_openshift4_gateway::backends".router = load("ips.yml")' "${CLUSTER_ID}.yaml"
-
-rm ips.yml
-
-git commit -am "Add infra nodes as backends for ${CLUSTER_ID}."
-git push
-popd
-----
-endif::[]
 ifeval::["{provider}" != "cloudscale"]
 . Approve node certs
 +

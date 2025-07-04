@@ -354,30 +354,28 @@ include::partial$install/bootstrap-lb.adoc[]
 
 include::partial$install/bootstrap-nodes.adoc[]
 
-. Create secret with S3 credentials https://docs.openshift.com/container-platform/{ocp-minor-version}/registry/configuring_registry_storage/configuring-registry-storage-aws-user-infrastructure.html#registry-operator-config-resources-secret-aws_configuring-registry-storage-aws-user-infrastructure[for the registry]
+include::partial$install/finalize_part1.adoc[]
+
+=== Check image registry config
+
+Verify that the cluster image registry has been deployed correctly with the Project Syn-managed config.
+
+. Check that no conditions show any errors in the image registry custom resource
 +
 [source,bash]
 ----
-oc create secret generic image-registry-private-configuration-user \
---namespace openshift-image-registry \
---from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
---from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
+kubectl get config.imageregistry/cluster -oyaml
 ----
-+
-. Patch registry config to not try to encrypt the bucket on cloudscale
+
+. Verify that the registry pods are running
 +
 [source,bash]
 ----
-kubectl patch config.imageregistry/cluster \
-  --type=merge -p '{"spec":{"storage":{
-    "managementState":"Unmanaged",
-    "s3":{"encrypt":false}
-  }}}'
+kubectl -n openshift-image-registry get pods -l docker-registry=default <1>
 ----
+<1> This should show two pods
 +
 include::partial$install/registry-samples-operator.adoc[]
-
-include::partial$install/finalize_part1.adoc[]
 
 include::partial$install/finalize_part2.adoc[]
 +

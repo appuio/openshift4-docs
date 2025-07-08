@@ -1,0 +1,216 @@
+= SLI & SLO Reporting Service
+
+== Problem Statement
+VSHN has a defined set of xref:oc4:ROOT:explanations/decisions/customer-facing-slo.adoc[customer facing SLOs] which are monitored automatically on VSHN managed OpenShift.
+However, the SLI numbers reported by monitoring don't directly correspond to numbers that can be compared against a contractual SLA.
+
+VSHN isn't contractually accountable for service interruptions that are a direct result of 3rd party service interruptions outside of VSHN's control.
+Even so, a 3rd party service interruption can be picked up by VSHN's SLI monitoring, since it can result in a real service interruption.
+
+For customer-facing SLI and SLO reporting, we need a way to exclude any service interruptions that are caused by a 3rd party.
+This exclusion should be automatic to reduce the risk of human error during calculation.
+
+== High Level Goals
+
+* We've a well-defined source of truth for adjusted SLIs and SLOs.
+* SLOs and remaining error budget can be viewed at any time without doubt about the correctness of the numbers
+* 3rd party outages are detected automatically where possible, but can also be entered manually.
+
+== Non-Goals
+
+* Pretty user interface
+* Automatic reporting of SLO burndown to customers
+
+== Implementation
+
+We write a new service that stores external downtime windows and calculates the adjusted SLIs.
+The service provides a simple REST API to manage 3rd party downtime windows.
+Downtime windows are stored in a simple database.
+
+The service queries our existing monitoring (Mimir) for the SLO monitoring data, and adjusts the results to exclude any service interruptions that fall into a 3rd party downtime window.
+A simple query API can be used to query for the updated SLOs.
+
+The service runs on VSHN's centralized infrastructure, same as VSHN's central monitoring.
+Thanks to this, the service doesn't need to be exposed to the internet.
+
+
+=== Service architecture
+
+The SLO reporting service consists of two architectural components: the downtime window API, and the data querying API.
+While both components are largely independent and could easily be split into separate services, we gain no real benefit from doing so: we require none of the benefits provided by a microservice-style architecture.
+
+However, separation of concerns should be maintained within the codebase.
+
+==== Downtime Window API
+
+The SLO reporting service provides a simple REST API to create, manage and delete 3rd-party downtime windows.
+
+A 3rd-party downtime window has the following properties:
+
+[source,json]
+----
+{
+  "StartTime": "2025-07-08T00:00:00Z", <1>
+  "EndTime": "2025-07-08T01:00:00Z", <2>
+  "Title": "DNS interruption", <3>
+  "Description": "DNS queries for zone XYZ could not be resolved.", <4>
+  "ExternalID": "12345", <5>
+  "ExternalLink": "https://status.somecsp.com/incidents/12345", <6>
+  "Affects": [{ <7>
+    "cloud": "SomeCSP", <8>
+    "region": "SomeCSPRegion"
+  }]
+}
+----
+<1> Timestamp of the start of the downtime
+<2> Timestamp of the end of the downtime
+<3> (optional) Short title describing the nature of the downtime
+<4> (optional) Longer description of the nature of the downtime
+<5> (optional) Unique identifier of this outage time window in a 3rd party system.
+Used for deduplication.
+<6> (optional) Link to further information on this outage provided by 3rd party.
+<7> List of selectors that determine which clusters are affected by the downtime.
+An empty list matches no clusters.
+A cluster is matched if any selector in the list matches its properties.
+<8> Each selector contains a number of properties.
+These correspond to Lieutenant cluster facts.
+The key designates the fact, and the value corresponds to a possible value of the fact.
+A selector with no fields matches every cluster.
+A cluster is matched if for every key in the selector, the corresponding cluster fact matches the value specified in the selector.
+
+In addition to providing CRUD endpoints for maintaining the downtime windows, the service also provides an interface for serving all relevant downtime windows given just a cluster ID.
+This is achieved by querying the Lieutenant API in the background and retrieving the cluster facts from there, which can then be used to find matching downtime windows.
+
+If a new time window is created with the same non-null `ExternalID` as an existing time window, the existing window is updated instead.
+
+==== Data Querying API
+
+The SLO reporting service provides a simple querying API to retrieve adjusted SLO data for a specific cluster and time window.
+The querying API is effectively a proxy for the Mimir querying API.
+
+The querying API is capable of providing the following for each customer-facing SLO:
+
+* Adjusted SLI Error Rate: this corresponds to `slo:sli_error:ratio_rate1h` with every data point inside a relevant downtime window set to zero.
+* Adjusted Cumulative SLI Error Rate: This corresponds to a `sum_over_time( .. [32d:1h])` of the above result.
+* Adjusted Cumulative SLO Burndown: This corresponds to 1 minus (the above divided by the corresponding SLO error budget).
+* Adjusted Cluster Availability Percentage: This corresponds to the SLO plus (1-SLO times the above).
+
+For each query, the service returns all the datapoints in the timeseries, at a granularity of 1 per hour.
+
+The Querying API accepts the following query parameters:
+* `from`: Timestamp of the start of the timeframe for which data is delivered
+* `to`: Timestamp of the end of said timeframe
+* `cluster_id`: ID of the cluster for which data is requested
+
+Accepting these as query parameters will simplify eventual integration with Grafana.
+
+Sample query response:
+[source,json]
+----
+{
+  "cluster_id": "c-appuio-cloudscale-lpg-2",
+  "sli_data": {
+    "ingress": {
+      "objective": 0.999,
+      "error_budget": 4,
+      "error_rate_1h": [
+        {
+          "timestamp": "2025-07-08T12:00:00Z",
+          "value": 0
+        },
+        {
+          "timestamp": "2025-07-08T13:00:00Z",
+          "value": 0.1
+        },
+        {
+          "timestamp": "2025-07-08T14:00:00Z",
+          "value": 0.3
+        },
+        {
+          "timestamp": "2025-07-08T15:00:00Z",
+          "value": 0.0
+        }
+      ]
+    },
+    "api": {
+      "objective": 0.999,
+      "error_budget": 1.8,
+      "error_rate_1h": [
+        {
+          "timestamp": "2025-07-08T12:00:00Z",
+          "value": 0
+        },
+        {
+          "timestamp": "2025-07-08T13:00:00Z",
+          "value": 0.4
+        },
+        {
+          "timestamp": "2025-07-08T14:00:00Z",
+          "value": 0.2
+        },
+        {
+          "timestamp": "2025-07-08T15:00:00Z",
+          "value": 0.0
+        }
+      ]
+
+    }
+  }
+}
+----
+
+=== Downtime reporting
+
+Downtime windows can be added manually via the Downtime Window API.
+However, in some cases we can automate the reporting of downtime windows, such as when the 3rd party maintains a status page.
+Generally, such status pages provide an RSS feed with information about downtimes.
+
+RSS feeds are only loosely standardized and it's hard to generalize a field mapping for this specific use of RSS.
+For that reason, it would be significant effort to build our own RSS reading service.
+Instead, RSS ingestion can be handled by a simple bash script that's regularly run in a Kubernetes CronJob on VSHN's central cluster.
+
+We can use multiple bash scripts for different sources of RSS feeds.
+The bash script sends the parsed outage time window to the Downtime Window API.
+
+If more sophisticated processing of the 3rd party provided data is required, the simple bash script can be replaced with literally anything else.
+
+=== Access to Data
+
+The adjusted SLI/SLO data provided by the SLO reporting service can be integrated into Grafana dashboards via the Grafana `Infinity` data source plugin.
+
+The plugin queries the Data Querying API, and can apply arbitrary transformations to the result.
+
+For example, the following transform extracts the rate, cumulative sum (`sum_over_time` equivalent), error budget burndown/burnup, and cluster availability percentage for each SLO:
+[source,jsonata]
+----
+$sort($map($keys($.sli_data), function($key) {(
+    return {
+        $key : $map($lookup($$.sli_data, $key).error_rate_1h, function($v, $i, $a) {(
+            $cumulative := $sum($filter($a, function($sv, $j) {
+                    $j <= $i
+                }).value);
+            $objective := $lookup($$.sli_data, $key).objective;
+            $error_budget := $lookup($$.sli_data, $key).error_budget;
+            return {
+                "key": $key,
+                "timestamp": $v.timestamp,
+                "value": $v.value,
+                "cumulative": $cumulative,
+                "objective": $objective,
+                "error_budget": $error_budget,
+                "burnup": $cumulative / $error_budget,
+                "burndown": 1 - $cumulative / $error_budget,
+                "availability": $objective + (1-$objective) * (1 - $cumulative / $error_budget)
+            }
+        )})
+    }
+)}).*, function($l,$r){
+    $l.timestamp > $r.timestamp
+})
+----
+
+Since it's only possible to query one cluster at a time, it's not possible to create single panels that show data for all clusters on the same graph.
+However, it's possible to create a repeat panel that automatically generates one panel per cluster, which should be sufficient for an overview.
+
+If desired, the Data Querying API can be extended to provide data for multiple clusters in a single API response.
+With that, combining data from multiple clusters in a single Grafana panel becomes possible.

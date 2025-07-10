@@ -12,7 +12,7 @@ This exclusion should be automatic to reduce the risk of human error during calc
 
 == High Level Goals
 
-* We've a well-defined source of truth for adjusted SLIs and SLOs.
+* We've got a well-defined source of truth for adjusted SLIs and SLOs.
 * SLOs and remaining error budget can be viewed at any time without doubt about the correctness of the numbers
 * 3rd party outages are detected automatically where possible, but can also be entered manually.
 
@@ -41,6 +41,15 @@ While both components are largely independent and could easily be split into sep
 
 However, separation of concerns should be maintained within the codebase.
 
+==== Authentication
+
+Authentication of requests is kept simple with a static token.
+
+The token must be provided in the `Authentication` header of any request to the Downtime Window API, in the form `Authentication: Token <token>`.
+Otherwise, the service must return `403 Forbidden`.
+
+The token is provided to the service via command line argument or environment variable.
+
 ==== Downtime Window API
 
 The SLO reporting service provides a simple REST API to create, manage and delete 3rd-party downtime windows.
@@ -50,29 +59,33 @@ A 3rd-party downtime window has the following properties:
 [source,json]
 ----
 {
-  "StartTime": "2025-07-08T00:00:00Z", <1>
-  "EndTime": "2025-07-08T01:00:00Z", <2>
-  "Title": "DNS interruption", <3>
-  "Description": "DNS queries for zone XYZ could not be resolved.", <4>
-  "ExternalID": "12345", <5>
-  "ExternalLink": "https://status.somecsp.com/incidents/12345", <6>
-  "Affects": [{ <7>
-    "cloud": "SomeCSP", <8>
+  "ID": "15a45185-3e79-4d22-8962-15fc31944d66", <1>
+  "StartTime": "2025-07-08T00:00:00Z", <2>
+  "EndTime": "2025-07-08T01:00:00Z", <3>
+  "Title": "DNS interruption", <4>
+  "Description": "DNS queries for zone XYZ could not be resolved.", <5>
+  "ExternalID": "12345", <6>
+  "ExternalLink": "https://status.somecsp.com/incidents/12345", <7>
+  "Affects": [{ <8>
+    "cloud": "SomeCSP", <9>
     "region": "SomeCSPRegion"
   }]
 }
 ----
-<1> Timestamp of the start of the downtime
-<2> Timestamp of the end of the downtime
-<3> (optional) Short title describing the nature of the downtime
-<4> (optional) Longer description of the nature of the downtime
-<5> (optional) Unique identifier of this outage time window in a 3rd party system.
+<1> Unique identifier of the downtime window.
+Set by the SLO reporting service upon creation of a downtime window.
+<2> Timestamp of the start of the downtime
+<3> Timestamp of the end of the downtime
+<4> (optional) Short title describing the nature of the downtime
+<5> (optional) Longer description of the nature of the downtime
+<6> (optional) Unique identifier of this outage time window in a 3rd party system.
 Used for deduplication.
-<6> (optional) Link to further information on this outage provided by 3rd party.
-<7> List of selectors that determine which clusters are affected by the downtime.
+Must be unique if set.
+<7> (optional) Link to further information on this outage provided by 3rd party.
+<8> List of selectors that determine which clusters are affected by the downtime.
 An empty list matches no clusters.
 A cluster is matched if any selector in the list matches its properties.
-<8> Each selector contains a number of properties.
+<9> Each selector contains a number of properties.
 These correspond to Lieutenant cluster facts.
 The key designates the fact, and the value corresponds to a possible value of the fact.
 A selector with no fields matches every cluster.
@@ -83,6 +96,80 @@ This is achieved by querying the Lieutenant API in the background and retrieving
 
 If a new time window is created with the same non-null `ExternalID` as an existing time window, the existing window is updated instead.
 
+===== API endpoints
+
+The REST API endpoints of the Downtime Window API also correspond to the programmatic interface of this component within the SLO reporting service.
+
+====== `GET /downtime/`
+
+Lists all available downtime windows.
+
+Query parameters:
+
+* `from`: ISO timestamp defining the start time from which to include downtime windows.
+* `to`: ISO timestamp defining the end time until which to include downtime windows.
+
+The result contains all downtime windows that overlap with the time interval `[from, to]`.
+Notably, this also includes downtime windows that start before `from` but end after `from` (and conversely for `to`), as well as downtime windows that completely encompass the specified time interval.
+
+Returns:
+
+A list of downtime window records (as defined above).
+
+====== `GET /downtime/for-cluster/:cluster-id`
+
+Lists all available downtime windows that apply to a specific cluster (according to the match rules in `Affects`).
+
+Path parameters:
+* `cluster-id`: Lieutenant ID of the cluster for which to retrieve downtime windows.
+
+Query parameters:
+
+* `from`: ISO timestamp defining the start time from which to include downtime windows.
+* `to`: ISO timestamp defining the end time until which to include downtime windows.
+
+The result contains all downtime windows that overlap with the time interval `[from, to]`.
+Notably, this also includes downtime windows that start before `from` but end after `from` (and conversely for `to`), as well as downtime windows that completely encompass the specified time interval.
+
+Returns:
+
+A list of downtime window records (as defined above).
+
+====== `POST /downtime`
+
+Creates a new downtime window.
+
+Body parameters:
+
+The body of the request corresponds to the JSON example given above, minus the `ID` property.
+Any parameters marked as optional may be omitted.
+
+If an `ExternalID` is provided in the request body, and an existing downtime window shares the same `ExternalID`, then the existing window should be updated (replaced) instead of a new one created.
+Otherwise, a new record is created from the request body and assigned a new random ID.
+
+Returns:
+
+The newly created record, including ID.
+
+====== `POST /downtime/:id`
+
+Updates an existing downtime window.
+
+Path parameters:
+* `id`: ID of the existing downtime window record to update.
+
+Body parameters:
+
+The body of the request corresponds to the JSON example given above.
+Any parameters marked as optional may be omitted.
+
+If the `ExternalID` property is modified, a check must be made to ensure the new `ExternalID` doesn't conflict with any existing record.
+If a conflict is found, return an error 400.
+
+Returns:
+
+The newly updated record, including ID.
+
 ==== Data Querying API
 
 The SLO reporting service provides a simple querying API to retrieve adjusted SLO data for a specific cluster and time window.
@@ -90,67 +177,70 @@ The querying API is effectively a proxy for the Mimir querying API.
 
 The querying API is capable of providing the following for each customer-facing SLO:
 
-* Adjusted SLI Error Rate: this corresponds to `slo:sli_error:ratio_rate1h` with every data point inside a relevant downtime window set to zero.
-* Adjusted Cumulative SLI Error Rate: This corresponds to a `sum_over_time( .. [32d:1h])` of the above result.
-* Adjusted Cumulative SLO Burndown: This corresponds to 1 minus (the above divided by the corresponding SLO error budget).
-* Adjusted Cluster Availability Percentage: This corresponds to the SLO plus (1-SLO times the above).
+* Adjusted SLI Error Rate: this corresponds to `slo:sli_error:ratio_rate1h` metric, but with every data point inside a relevant downtime window set to zero.
+* Service Level Objective: this corresponds to `slo:objective:ratio`. Since this metric shouldn't change frequently, it's sampled only once at the end of the requested time window.
+* Error Budget: this corresponds to `slo:error_budget:ratio`. Since this metric shouldn't change frequently, it's sampled only once at the end of the requested time window.
 
 For each query, the service returns all the datapoints in the timeseries, at a granularity of 1 per hour.
+It's important to keep the granularity of 1 per hour, as otherwise the cumulative sum of error rate samples no longer corresponds to the total error.
 
 The Querying API accepts the following query parameters:
 * `from`: Timestamp of the start of the timeframe for which data is delivered
 * `to`: Timestamp of the end of said timeframe
 * `cluster_id`: ID of the cluster for which data is requested
+* `filter`: (Optional) Comma-separated list of (urlencoded) PromQL label matchers that are used when querying Mimir.
+Can be used to narrow down the list of SLI/SLO pairs that are queried.
+Example: `?filter=sloth_service%3D~%22customer-facing.%2A%22` (`sloth_service=~"customer-facing.*"`)
 
-Accepting these as query parameters will simplify eventual integration with Grafana.
+Accepting these as query parameters (as opposed to body parameters) will simplify eventual integration with Grafana.
 
 Sample query response:
 [source,json]
 ----
 {
-  "cluster_id": "c-appuio-cloudscale-lpg-2",
+  "cluster_id": "c-appuio-cloudscale-lpg-2", <1>
   "sli_data": {
-    "ingress": {
-      "objective": 0.999,
-      "error_budget": 4,
-      "error_rate_1h": [
+    "customer-facing-ingress": { <2>
+      "objective": 0.999, <3>
+      "error_budget": 4, <4>
+      "data_points": [
         {
-          "timestamp": "2025-07-08T12:00:00Z",
-          "value": 0
+          "timestamp": "2025-07-08T12:00:00Z", <5>
+          "error_rate_1h": 0 <6>
         },
         {
           "timestamp": "2025-07-08T13:00:00Z",
-          "value": 0.1
+          "error_rate_1h": 0.1
         },
         {
           "timestamp": "2025-07-08T14:00:00Z",
-          "value": 0.3
+          "error_rate_1h": 0.3
         },
         {
           "timestamp": "2025-07-08T15:00:00Z",
-          "value": 0.0
+          "error_rate_1h": 0.0
         }
       ]
     },
-    "api": {
+    "customer-facing-api": {
       "objective": 0.999,
       "error_budget": 1.8,
-      "error_rate_1h": [
+      "data_points": [
         {
           "timestamp": "2025-07-08T12:00:00Z",
-          "value": 0
+          "error_rate_1h": 0
         },
         {
           "timestamp": "2025-07-08T13:00:00Z",
-          "value": 0.4
+          "error_rate_1h": 0.4
         },
         {
           "timestamp": "2025-07-08T14:00:00Z",
-          "value": 0.2
+          "error_rate_1h": 0.2
         },
         {
           "timestamp": "2025-07-08T15:00:00Z",
-          "value": 0.0
+          "error_rate_1h": 0.0
         }
       ]
 
@@ -158,6 +248,22 @@ Sample query response:
   }
 }
 ----
+<1> ID of the cluster which is being queried.
+Currently redundant, but included in case we wish to extend the API to return data for multiple clusters in one go.
+<2> Each entry in `sli_data` corresponds to one specific SLI/SLO pair.
+The dictionary key is the name of the pair, which can be derived from the label `sloth_id`.
+<3> Service level objective in % (for example, `0.999` would be 99.9% availability).
+Corresponds to the `slo:objective:ratio` metric in Mimir.
+Should be sampled at the end of the time period.
+<4> Error budget (count) for the SLO.
+Corresponds to the `slo:error_budget:ratio` metric in Mimir.
+Should be sampled at the end of the time period.
+<5> ISO timestamp of the data point.
+<6> 1-hour average error rate for this SLI.
+Corresponds to the `slo:sli_error:ratio_rate1h` metric in Mimir.
+Any data point that falls within a downtime window should be zeroed.
+
+If needed, further data points can be included in the `data_points` list-of-dicts, each under its own key.
 
 === Downtime reporting
 
@@ -185,16 +291,16 @@ For example, the following transform extracts the rate, cumulative sum (`sum_ove
 ----
 $sort($map($keys($.sli_data), function($key) {(
     return {
-        $key : $map($lookup($$.sli_data, $key).error_rate_1h, function($v, $i, $a) {(
+        $key : $map($lookup($$.sli_data, $key).data_points, function($v, $i, $a) {(
             $cumulative := $sum($filter($a, function($sv, $j) {
                     $j <= $i
-                }).value);
+                }).error_rate_1h);
             $objective := $lookup($$.sli_data, $key).objective;
             $error_budget := $lookup($$.sli_data, $key).error_budget;
             return {
                 "key": $key,
                 "timestamp": $v.timestamp,
-                "value": $v.value,
+                "error_rate_1h": $v.error_rate_1h,
                 "cumulative": $cumulative,
                 "objective": $objective,
                 "error_budget": $error_budget,

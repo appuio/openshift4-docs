@@ -116,7 +116,7 @@ Returns:
 
 A list of downtime window records (as defined above).
 
-====== `GET /downtime/for-cluster/:cluster-id`
+====== `GET /downtime/cluster/:cluster-id`
 
 Lists all available downtime windows that apply to a specific cluster (according to the match rules in `Affects`).
 
@@ -153,7 +153,26 @@ The newly created record, including ID.
 
 ====== `POST /downtime/:id`
 
-Updates an existing downtime window.
+Updates (replaces) an existing downtime window.
+
+Path parameters:
+* `id`: ID of the existing downtime window record to update.
+
+Body parameters:
+
+The body of the request corresponds to the JSON example given above.
+Any parameters marked as optional may be omitted.
+
+If the `ExternalID` property is modified, a check must be made to ensure the new `ExternalID` doesn't conflict with any existing record.
+If a conflict is found, return an error 400.
+
+Returns:
+
+The newly updated record, including ID.
+
+====== `PATCH /downtime/:id`
+
+Updates an existing downtime window, supporting partial updates.
 
 Path parameters:
 * `id`: ID of the existing downtime window record to update.

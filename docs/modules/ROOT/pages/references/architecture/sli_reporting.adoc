@@ -36,19 +36,16 @@ Thanks to this, the service doesn't need to be exposed to the internet.
 
 === Service architecture
 
-The SLO reporting service consists of two architectural components: the downtime window API, and the data querying API.
-While both components are largely independent and could easily be split into separate services, we gain no real benefit from doing so: we require none of the benefits provided by a microservice-style architecture.
+The SLO reporting service consists of three architectural components: the downtime window API, the data querying API, and the RSS transformer.
+While all components are largely independent and could easily be split into separate services, we gain no real benefit from doing so: we require none of the benefits provided by a microservice-style architecture.
 
 However, separation of concerns should be maintained within the codebase.
 
 ==== Authentication
 
-Authentication of requests is kept simple with a static token.
+Authentication of requests is kept simple with a static username and password via HTTP basic authentication.
 
-The token must be provided in the `Authentication` header of any request to the Downtime Window API, in the form `Authentication: Token <token>`.
-Otherwise, the service must return `403 Forbidden`.
-
-The token is provided to the service via command line argument or environment variable.
+The password and username are provided to the service via command line argument or environment variable.
 
 ==== Downtime Window API
 
@@ -180,7 +177,7 @@ Path parameters:
 Body parameters:
 
 The body of the request corresponds to the JSON example given above.
-Any parameters marked as optional may be omitted.
+Any parameter may be omitted.
 
 If the `ExternalID` property is modified, a check must be made to ensure the new `ExternalID` doesn't conflict with any existing record.
 If a conflict is found, return an error 400.
@@ -284,20 +281,25 @@ Any data point that falls within a downtime window should be zeroed.
 
 If needed, further data points can be included in the `data_points` list-of-dicts, each under its own key.
 
-=== Downtime reporting
+=== RSS transformer
 
-Downtime windows can be added manually via the Downtime Window API.
-However, in some cases we can automate the reporting of downtime windows, such as when the 3rd party maintains a status page.
-Generally, such status pages provide an RSS feed with information about downtimes.
+The final component of the service is used to automatically ingest RSS feeds, parse the information therein, and store it as downtime windows in the Downtime Window API service.
 
 RSS feeds are only loosely standardized and it's hard to generalize a field mapping for this specific use of RSS.
-For that reason, it would be significant effort to build our own RSS reading service.
-Instead, RSS ingestion can be handled by a simple bash script that's regularly run in a Kubernetes CronJob on VSHN's central cluster.
+For that reason, the transformation from RSS to json is defined in Jsonnet.
 
-We can use multiple bash scripts for different sources of RSS feeds.
-The bash script sends the parsed outage time window to the Downtime Window API.
+The available RSS feeds as well as their corresponding transformations are configured statically.
+The SLI reporting service reads a configuration file, whose path is provided via command line or environment variable.
+The config file contains structured data listing the RSS feeds to be ingested, including their URLs and their transformation Jsonnet.
 
-If more sophisticated processing of the 3rd party provided data is required, the simple bash script can be replaced with literally anything else.
+The Jsonnet is rendered for each RSS entry, with the full structured content of the RSS entry provided as context.
+The Jsonnet, when rendered, must result in a valid Downtime Window API record (as defined above).
+
+Existing libraries can be used for parsing XML and for rendering Jsonnet, keeping this component relatively simple.
+
+The RSS feed is fetched, transformed and stored at a regular time interval, which is set globally via command line parameter or environment variable.
+
+The RSS transformer shouldn't need to handle deduplication of entries; instead it should make sure each entry has a consistent `ExternalID`.
 
 === Access to Data
 

@@ -286,8 +286,8 @@ If needed, further data points can be included in the `data_points` list-of-dict
 The final component of the service is used to automatically ingest RSS feeds, parse the information therein, and store it as downtime windows in the Downtime Window API service.
 
 RSS feeds are only loosely standardized and it's hard to generalize a field mapping for this specific use of RSS.
-For that reason, the transformation from RSS to json is defined in Jsonnet.
-
+For that reason, the transformation from /RSS to JSON is defined in Jsonnet.
+op
 The available RSS feeds as well as their corresponding transformations are configured statically.
 The SLI reporting service reads a configuration file, whose path is provided via command line or environment variable.
 The config file contains structured data listing the RSS feeds to be ingested, including their URLs and their transformation Jsonnet.

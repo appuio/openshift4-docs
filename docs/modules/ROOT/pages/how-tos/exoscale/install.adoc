@@ -151,41 +151,7 @@ export CSI_SECRETKEY=$(echo "${csi_credentials}" | jq -r '.secret')
 
 . Create restricted API key for the Exoscale cloud-controller-manager
 +
-[source,bash]
-----
-# Create Exoscale CCM Exoscale IAM role, if it doesn't exist yet in the organization
-ccm_role_id=$(exo iam role list -O json | \
-  jq -r '.[] | select(.name=="ccm-exoscale") | .key')
-if [ -z "${ccm_role_id}" ]; then
-cat <<EOF | exo iam role create ccm-exoscale \
-  --description "Exoscale CCM: Allow managing NLBs and reading instances/instance pools" \
-  --policy -
-{
-  "default-service-strategy": "deny",
-  "services": {
-    "compute": {
-      "type": "rules",
-      "rules": [
-        {
-          "expression": "operation in ['add-service-to-load-balancer', 'create-load-balancer', 'delete-load-balancer', 'delete-load-balancer-service', 'get-load-balancer', 'get-load-balancer-service', 'get-operation', 'list-load-balancers', 'reset-load-balancer-field', 'reset-load-balancer-service-field', 'update-load-balancer', 'update-load-balancer-service']",
-          "action": "allow"
-        },
-        {
-          "expression": "operation in ['get-instance', 'get-instance-pool', 'get-instance-type', 'list-instances', 'list-instance-pools', 'list-zones']",
-          "action": "allow"
-        }
-      ]
-    }
-  }
-}
-EOF
-fi
-# Create access key
-ccm_credentials=$(exo iam api-key create -O json \
-  "${CLUSTER_ID}_ccm-exoscale" ccm-exoscale)
-export CCM_ACCESSKEY=$(echo "${ccm_credentials}" | jq -r '.key')
-export CCM_SECRETKEY=$(echo "${ccm_credentials}" | jq -r '.secret')
-----
+include::partial$exoscale/ccm-iam.adoc[]
 
 [#_bootstrap_bucket]
 === Set up S3 buckets for the cluster

@@ -1,0 +1,220 @@
+= Migrate worker nodes to instance pools
+
+:cloud_provider: exoscale
+:kubectl_extra_args: --as=cluster-admin
+:needs_hieradata_edit: no
+
+[abstract]
+--
+Steps to migrate an existing OpenShift 4 cluster on https://www.exoscale.com[Exoscale] to use instance pools for all worker nodes.
+--
+
+== Starting situation
+
+* You already have an OpenShift 4 cluster on Exoscale
+* Your cluster doesn't use Exoscale instance pools for the worker nodes
+* You have admin-level access to the cluster
+* Your `kubectl` context points to the cluster you're modifying
+* You want to migrate the cluster to use instance pools for all worker nodes
+
+== High-level overview
+
+* Enable instance pool provisioning in Terraform
+* Remove the existing worker nodes from the Terraform state
+* Deploy the instance pool
+* Drain and delete the non-instance pool worker nodes
+
+== Prerequisites
+
+include::partial$exoscale/prerequisites.adoc[]
+
+== Prepare local environment
+
+include::partial$exoscale/setup-local-env.adoc[]
+
+== Update Cluster Config
+
+IMPORTANT: Make sure that the cluster you want to migrate uses `terraform-openshift4-exoscale` v7 or newer.
+
+. Update cluster config
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.use_instancepools = true" \
+  ${CLUSTER_ID}.yml
+----
+
+. Review and commit
++
+[source,bash]
+----
+
+# Have a look at the file ${CLUSTER_ID}.yml.
+
+git commit -a -m "Migrate cluster ${CLUSTER_ID} to instance pool worker nodes"
+git push
+
+popd
+----
+
+. Compile and push cluster catalog
++
+[source,bash]
+----
+commodore catalog compile ${CLUSTER_ID} --push -i
+----
+
+== Run Terraform
+
+include::partial$exoscale/configure-terraform-secrets.adoc[]
+
+include::partial$setup_terraform.adoc[]
+
+. Download a copy of the state before removing non-instance pool worker nodes
++
+[source,bash]
+----
+terraform state pull > state.json
+----
+
+. Remove non-instance pool worker nodes from Terraform state
++
+[source,bash]
+----
+terraform state rm "module.cluster.module.worker.random_id.node_id"
+terraform state rm "module.cluster.module.worker.exoscale_compute_instance.nodes"
+----
+
+. Remove non-instance pool additional worker nodes from Terraform state
++
+NOTE: This step can be skipped if there's no additional worker groups
++
+NOTE: This step only operates on additional worker groups which don't explicitly enable or disable instance pool provisioning.
++
+[source,bash]
+----
+for name in $(
+  jq '.module.cluster.additional_worker_groups
+      | to_entries[]
+      | select(.value.use_instancepool == null)
+      | .key' \
+    main.tf.json
+); do
+  terraform state rm "module.cluster.module.additional_worker[$name].random_id.node_id"
+  terraform state rm "module.cluster.module.additional_worker[$name].exoscale_compute_instance.nodes"
+done
+----
+
+. Deploy instance pool(s)
++
+[source,bash]
+----
+terraform apply
+----
+
+== Join instance pool nodes to the cluster
+
+. Approve CSRs for new nodes
++
+include::partial$install/approve-node-csrs.adoc[]
+
+. Label new worker nodes
++
+[source,bash]
+----
+kubectl get node -ojson | \
+  jq -r '.items[] 
+    | select(.metadata.name | test("app|infra|master|storage-")|not)
+    | select(.metadata.labels["node-role.kubernetes.io/app"] == null)
+    .metadata.name' | \
+  xargs -I {} kubectl label --as=cluster-admin \
+    node {} node-role.kubernetes.io/app=
+----
+
+== Drain and remove non-instance pool nodes
+
+. Drain non-instance pool worker nodes
++
+[source,bash]
+----
+for node in $(
+  jq -r '.resources[]
+         | select(.module == "module.cluster.module.worker" and .type == "random_id")
+         | .instances[].attributes.hex' \
+    state.json
+); do
+  kubectl drain --as=cluster-admin --ignore-daemonsets \
+    --delete-emptydir-data --force node "$node"
+done
+----
+
+. Drain non-instance pool additional worker nodes
++
+NOTE: This step can be skipped if there's no additional worker groups
++
+NOTE: This step only operates on additional worker groups which don't explicitly enable or disable instance pool provisioning.
++
+[source,bash]
+----
+for name in $(
+  jq -r '.module.cluster.additional_worker_groups
+      | to_entries[]
+      | select(.value.use_instancepool == null)
+      | .key' \
+    main.tf.json
+); do
+  echo "Draining nodes for additional worker group $name"
+  for node in $(
+    jq --arg name "$name" -r \
+      '.resources[]
+       | select(.module == "module.cluster.module.additional_worker[\""+$name+"\"]" and .type == "random_id")
+       | .instances[].attributes.hex' \
+      state.json
+  ); do
+    echo $node
+  done
+done
+----
+    kubectl drain --as=cluster-admin --ignore-daemonsets \
+      --delete-emptydir-data --force node "$node"
+
+== Deploy Exoscale Cloud Controller Manager
+
+. Create restricted API key for the Exoscale cloud-controller-manager
++
+include::partial$exoscale/ccm-iam.adoc[]
+
+. Store CCM API key in Vault
++
+[source,bash]
+----
+# Set the CCM Exoscale Credentials
+vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/ccm \
+  access_key=${CCM_ACCESSKEY} \
+  secret_key=${CCM_SECRETKEY}
+----
+
+. Deploy Exoscale CCM via Project Syn and enable default instance pool annotation injector
++
+[source,bash]
+----
+pushd "inventory/classes/${TENANT_ID}/"
+
+# Enable component
+yq eval -i ".applications += [\"exoscale-cloud-controller-manager\"]" \
+  ${CLUSTER_ID}.yml
+
+# Configure default instance pool annotation injector
+curl -fsu "${GITLAB_USER}:${GITLAB_TOKEN}" "$GITLAB_STATE_URL" |\
+  jq '[.resources[] | select(.module == "module.cluster.module.worker" and .type == "exoscale_instance_pool")][0].instances[0].attributes.id' |\
+  yq ea -i 'select(fileIndex == 0) * (select(fileIndex == 1) | {"parameters": {"exoscale_cloud_controller_manager":{"serviceLoadBalancerDefaultAnnotations":{"service.beta.kubernetes.io/exoscale-loadbalancer-service-instancepool-id": .}}}}) ' \
+  "$CLUSTER_ID.yml" -
+
+git commit -a -m "Deploy Exoscale CCM on cluster ${CLUSTER_ID}"
+git push
+
+popd
+----
+

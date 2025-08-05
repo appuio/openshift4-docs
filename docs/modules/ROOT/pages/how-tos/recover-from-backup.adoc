@@ -7,6 +7,7 @@
 ** `jq`
 ** `yq` https://mikefarah.gitbook.io/yq[yq] (version 4 or higher)
 ** `restic`
+** `vault`
 * API access to the target cluster
 
 == General procedure
@@ -37,6 +38,8 @@ export AWS_SECRET_ACCESS_KEY=$(kubectl --as cluster-admin -n syn-cluster-backup 
 1. Obtain the repository URL of the clusters catalog and export it to `REPO_URL`
 +
 Get the URL from https://control.vshn.net/syn/lieutenantclusters.
+Ensure to use the `ssh://` URL not https one.
++
 Alternatively, get it from the Lieutenant API or the Kubernetes API Lieutenant is running on.
 +
 .Use the Lieutenant API
@@ -63,6 +66,7 @@ git archive --remote ${REPO_URL} master | tar -xC catalog
 +
 [source,console]
 ----
+export VAULT_ADDR=https://vault-prod.syn.vshn.net
 vault login -method=oidc
 ----
 

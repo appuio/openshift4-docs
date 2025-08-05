@@ -1,7 +1,7 @@
 = Install OpenShift 4 on vSphere
-:ocp-minor-version: 4.16
-:k8s-minor-version: 1.29
-:ocp-patch-version: {ocp-minor-version}.3
+:ocp-minor-version: 4.18
+:k8s-minor-version: 1.31
+:ocp-patch-version: {ocp-minor-version}.1
 :provider: vsphere
 
 [abstract]

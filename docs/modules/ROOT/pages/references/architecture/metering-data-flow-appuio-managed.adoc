@@ -1,13 +1,13 @@
-= Resource Usage Reporting for APPUiO Managed
+= Resource Usage Reporting for Managed OpenShift
 
 
 [abstract]
 ====
 https://docs.central.vshn.ch/metered-billing-data-flow.html[Data model and data flow for Resource Usage Reporting] explains how usage data gets reported and billed in general.
-This page explains in detail how the general concept is applied for APPUiO Managed.
+This page explains in detail how the general concept is applied for Managed OpenShift.
 ====
 
-The system for APPUiO Managed usage reporting must provide usage data for customer resources in all APPUiO Managed clusters, at cluster granularity.
+The system for Managed OpenShift usage reporting must provide usage data for customer resources in all Managed OpenShift clusters, at cluster granularity.
 
 Usage data is stored in a central Mimir instance and queried via the Prometheus Query API.
 A reporting tool implements the ETL process described in https://docs.central.vshn.ch/metered-billing-data-flow.html[Data model and data flow for Resource Usage Reporting].
@@ -17,7 +17,7 @@ A reporting tool implements the ETL process described in https://docs.central.vs
 All usage data is stored in Mimir.
 This makes it possible to obtain all the necessary information for usage data reporting via the Prometheus Query API.
 
-The reporting interval for APPUiO Managed resource usage is 1 hour.
+The reporting interval for Managed OpenShift resource usage is 1 hour.
 The PromQL queries executed against Mimir therefore need to sum up the resource usage accordingly.
 
 Any metadata that's required by the Metered Billing API needs to be present in Mimir, for instance, in the form of labels on timeseries.
@@ -51,14 +51,14 @@ parameters:
               cloud_provider: exoscale
         instance_id_pattern: '%(cluster)s'
         item_description_pattern: 'All Compute Resources'
-        item_group_description_pattern: 'APPUiO Managed OpenShift - Cluster: %(cluster)s'
+        item_group_description_pattern: 'Managed OpenShift - Cluster: %(cluster)s'
         unit_id: '300'
         query_pattern: ''
 ----
 
 === Billing API Parameters
 
-For APPUiO Managed, the *Instance ID* is equal to the cluster name.
+For Managed OpenShift, the *Instance ID* is equal to the cluster name.
 The *item group description* is also the cluster name, since it happens to also be a sensible grouping parameter.
 The *item description* doesn't need to provide dynamic information (since that information is all redundant with the item group description), and can thus be a static description of the context in which a metric is being measured.
 Note that it's not necessary to say what the metric is; that information is already contained in the product name.
@@ -102,7 +102,7 @@ This is an (excerpt of an) example payload that's sent to the Metered Billing AP
     "product_id": "ID_of_cloudscale_besteffort_vCPU",
     "instance_id": "c-my-awesome-cluster",
     "item_description": "All compute resources", <1>
-    "item_group_description": "APPUiO Managed - Cluster: c-my-awesome-cluster",
+    "item_group_description": "Managed OpenShift - Cluster: c-my-awesome-cluster",
     ...
 }
 ----
@@ -119,5 +119,5 @@ This section describes how Sales Orders are managed, and how the Sales Order ID 
 The Sales Order ID must be present as a label on each Prometheus query result.
 To enable this, metrics containing the Sales Order ID need to be present in Mimir.
 
-For APPUiO Managed clusters, the sales order for a given cluster is stored in a static cluster fact, and maintained manually.
+For Managed OpenShift clusters, the sales order for a given cluster is stored in a static cluster fact, and maintained manually.
 The cluster fact is shipped to Mimir via the `appuio_managed_info` metric, and can be used in queries to associate usage data with the correct Sales Order ID.

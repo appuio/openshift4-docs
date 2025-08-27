@@ -2,6 +2,71 @@
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 
+== OpenShift 4.19
+
+OpenShift version 4.19 is available since 2025-06-17.
+This version is based on Kubernetes 1.32 and CRI-O 1.32.
+The RHCOS image uses RHEL 9.6 packages.
+Find the release notes in the upstream documentation at https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/release_notes/ocp-4-19-release-notes[OpenShift Container Platform 4.19 release notes].
+The https://www.redhat.com/en/blog/red-hat-openshift-419-accelerates-virtualization-and-enterprise-ai-innovation[Red Hat unveils OpenShift 4.19] blog post is also a valuable resource.
+
+Direct authentication with external OIDC identity providers is coming to Tech Preview::
+With this release, you can enable direct integration with an external OpenID Connect (OIDC) identity provider to issue tokens for cluster authentication.
+The built-in OAuth server is bypassed.
++
+For further information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/authentication_and_authorization/#external-auth[Enabling direct authentication with an external OIDC identity provider].
+
+Routes with externally managed certificates are becoming Generally Available::
+With this release, OpenShift Container Platform routes can be configured with third-party certificate management solutions, utilizing the `.spec.tls.externalCertificate` field in the route API.
+In this way, an externally managed TLS certificate can be referenced through secrets.
++
+For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/ingress_and_load_balancing/index#nw-ingress-route-secret-load-external-cert_secured-routes[Creating a route with externally managed certificate].
+
+Cluster installation on VMware vSphere with multiple disks::
+With this release, cluster installation is possible on VMware vSphere with multiple storage disks as a Technology Preview feature.
+These additional disks can be assigned to special functions within the cluster, such as etcd storage.
++
+For further information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/installing_on_vmware_vsphere/#installation-configuration-parameters-optional-vsphere_installation-config-parameters-vsphere[Optional vSphere configuration parameters].
+
+OpenShift zones support for vSphere host groups (Technology Preview)::
+This release makes it possible to map OpenShift Container Platform failure domains to VMware vSphere host groups.
+This leverages the high availability offered by vSphere stretched cluster configurations.
++
+For further information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/installing_on_vmware_vsphere/index#installation-vsphere-regions-zones-host-groups_installing-vsphere-installer-provisioned-customizations[vSphere host group enablement (during installation)] and https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/installing_on_vmware_vsphere/index#specifying-host-groups-vsphere_post-install-vsphere-zones-regions-configuration[vSphere host group specification (post installation)].
+
+Customization options for control plane machine names::
+This release enables specifying a prefix for machine names in the control plane machine set by setting `spec.machineNamePrefix` in the `ControlPlaneMachineSet` resource.
++
+For further information see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/machine_management/#cpmso-config-prefix_cpmso-configuration[Adding a custom prefix to control plane machine names].
+
+New CLI command to show PVC usage::
+
+With 4.19, the `oc` CLI supports a new admin command to see PVC usage: `oc adm top pvc`
+
+Major version upgrade for Prometheus::
+In this release, Prometheus is upgraded from v2 to v3.
+This incurs some breaking changes that may affect user-managed configuration.
++
+* The `le` and `quantile` labels for classic histograms and summaries are now normalized during ingestion.
++
+For instance, `le="10"` is ingested as `le="10.0"` - as a result, queries that reference these labels as integers may no longer work as intended.
+* Configurations that send alerts to additional Alertmanager instances through `additionalAlertmanagerConfigs` through the Alertmanager v1 API are no longer supported.
+
+cgroup v1 is removed::
+
+With 4.19, support for the deprecated cgroup v1 mode is dropped entirely.
+
+Removal of deprecated APIs in Kubernetes 1.32::
+
+The following APIs are no longer available in Kubernetes 1.32 and need to be migrated:
+* `FlowSchema` needs to be migrated from `flowcontrol.apiserver.k8s.io/v1beta3` to `flowcontrol.apiserver.k8s.io/v1`
+* `PriorityLevelConfiguration` needs to be migrated from `flowcontrol.apiserver.k8s.io/v1beta3` to `flowcontrol.apiserver.k8s.io/v1`.
++
+This migration includes one notable change in the `spec.limited.nominalConcurrencyShares` field, which now only defaults to `30` when unspecified - an explicit value of `0` is left unchanged.
++
+For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/release_notes/ocp-4-19-release-notes#ocp-4-19-removed-kube-1-32-apis_release-notes[APIs removed from Kubernetes 1.32].
+
+
 == OpenShift 4.18
 
 OpenShift version 4.18 is available since 2025-02-25.
@@ -58,39 +123,3 @@ TIP: These annotations can also be used on `Ingress` objects.
 `crun` is the default container runtime for new clusters::
 New clusters setup with OpenShift 4.18 use `crun` as the container runtime by default.
 `runC` is still supported, and upgrading existing clusters from OpenShift 4.17 to 4.18 doesn't change the container runtime.
-
-== OpenShift 4.17
-
-OpenShift version 4.17 is available since 2024-10-01.
-This version is based on Kubernetes 1.30 and CRI-O 1.30.
-The RHCOS image still uses RHEL 9.4 packages.
-Find the release notes in the upstream documentation at https://docs.openshift.com/container-platform/4.17/release_notes/ocp-4-17-release-notes.html[OpenShift Container Platform 4.17 release notes].
-The https://www.redhat.com/en/blog/what-you-need-to-know-red-hat-openshift-417[Red Hat OpenShift 4.17: What you need to know] blog post is also a valuable resource.
-
-Node disruption policies::
-The node disruption policies feature has been promoted to GA.
-A node disruption policy allows you to define the configuration changes that cause a disruption to your cluster, and which changes don't.
-This allows you to reduce node downtime when making small machine configuration changes in your cluster.
-+
-[NOTE]
-====
-See https://docs.openshift.com/container-platform/4.17/machine_configuration/machine-config-node-disruption.html#machine-config-node-disruption[Machine Configuration Documentation]
-====
-
-OpenShift SDN network plugin removed::
-The OpenShift SDN network plugin has been removed from the OpenShift Container Platform.
-+
-[NOTE]
-====
-VSHN Managed OpenShift 4 clusters are installed with https://access.redhat.com/articles/5436171#isovalent-4[Cilium], a fully certified and supported 3rd party CNI plugin for OpenShift 4.
-Therefore VSHN Managed OpenShift clusters aren't affected by this block.
-====
-
-Validating Admission Policies::
-Validating Admission Policies are now available in OpenShift 4.17.
-These policies allow you to validate the incoming requests to the API server.
-+
-[NOTE]
-====
-See https://kubernetes.io/docs/reference/access-authn-authz/validating-admission-policy/[Kubernetes Documentation]
-====

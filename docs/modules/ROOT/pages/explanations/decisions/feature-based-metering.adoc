@@ -2,7 +2,7 @@
 
 [abstract]
 ====
-xref:oc4:ROOT:references/architecture/metering-dataa-flow-appuio-managed.adoc[Resource Usage Reporting for Managed OpenShift] explains how basic usage data gets reported and billed for Managed OpenShift.
+xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[] explains how basic usage data gets reported and billed for Managed OpenShift.
 This page explains our decision on how add-on features are metered on Managed OpenShift.
 ====
 
@@ -12,7 +12,7 @@ The system for Feature Metering reports which features are in use on a given clu
 == Problem
 
 We already have a system for continually reporting resource usage on Managed OpenShift clusters for the purpose of invoicing.
-The system is explained in detail under xref:oc4:ROOT:references/architecture/metering-dataa-flow-appuio-managed.adoc[Resource Usage Reporting for Managed OpenShift].
+The system is explained in detail under xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[].
 
 A limitation of the current system is that it doesn't include a standardized way to report the presence of invoiceable features and add-ons present on clusters.
 When a feature is present on a cluster, that fact is currently tracked separately by hand, which can lead to invoicing errors.
@@ -48,7 +48,7 @@ The metric is specified as follows:
 * If the feature indicated by the `feature` label is present on the cluster, the metric must report a value of `1`.
 * Any other value, or absence of the timeseries for a given `feature` label, indicates absence of the feature.
 
-This metric is exported to a central TSDB, analogous to invoicing-relevant cluster usage metrics as described in xref:oc4:ROOT:references/architecture/metering-dataa-flow-appuio-managed.adoc[Resource Usage Reporting for Managed OpenShift]
+This metric is exported to a central TSDB, analogous to invoicing-relevant cluster usage metrics as described in xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[]
 
 
 ==== Syn-managed constant timeseries
@@ -193,5 +193,5 @@ Since this solution doesn't require any code changes or new software components,
 
 == References
 
-* xref:oc4:ROOT:references/architecture/metering-dataa-flow-appuio-managed.adoc[Resource Usage Reporting for Managed OpenShift]
+* xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[]
 * https://docs.central.vshn.ch/metered-billing-data-flow.html[Data model and data flow for Resource Usage Reporting]

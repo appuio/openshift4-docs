@@ -1,0 +1,197 @@
+= Feature Metering for Managed OpenShift
+
+[abstract]
+====
+xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[] explains how basic usage data gets reported and billed for Managed OpenShift.
+This page explains our decision on how add-on features are metered on Managed OpenShift.
+====
+
+The system for Feature Metering reports which features are in use on a given cluster at a given time.
+
+
+== Problem
+
+We already have a system for continually reporting resource usage on Managed OpenShift clusters for the purpose of invoicing.
+The system is explained in detail under xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[].
+
+A limitation of the current system is that it doesn't include a standardized way to report the presence of invoiceable features and add-ons present on clusters.
+When a feature is present on a cluster, that fact is currently tracked separately by hand, which can lead to invoicing errors.
+
+=== Goals
+
+* Define a method for detecting the presence of product features and add-ons on clusters.
+* Define how detected features and add-ons are reported for invoicing.
+
+=== Non-Goals
+
+* Replace the existing metering system
+* Support features that can be present multiple times on the same cluster (such as database instances)
+
+== Proposals
+
+=== Proposal 1: Leveraging `appuio-reporting`
+
+A Prometheus metric is present on each cluster, indicating the presence of particular features.
+A label on each timeseries designates the specific feature.
+The timeseries is reporting a constant value of `1` if and only if the feature is present.
+A value of 0, or absence of the timeseries, indicate absence of the feature.
+
+It will be left up to the implementation of the feature how exactly this timeseries is constructed.
+
+If a feature has multiple mutually-exclusive variants or tiers, each variant is represented by its own dedicated label value.
+Mutual exclusivity of the corresponding timeseries must be upheld by the feature implementation.
+
+The metric is specified as follows:
+
+* The metric is named `managed_openshift_features`
+* The metric includes a label `feature`, which uniquely identifies each possible feature.
+* If the feature indicated by the `feature` label is present on the cluster, the metric must report a value of `1`.
+* Any other value, or absence of the timeseries for a given `feature` label, indicates absence of the feature.
+
+This metric is exported to a central TSDB, analogous to invoicing-relevant cluster usage metrics as described in xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[]
+
+
+==== Syn-managed constant timeseries
+
+Many features on VSHN Managed OpenShift clusters are installed and configured via Project Syn.
+The Project Syn component managing the feature in question can automatically create a Prometheus rule to add a constant timeseries with the appropriate labels when it's installed.
+The rule is installed together with the component, and if the component is removed, so is the rule.
+As a result, a timeseries with a value of `1` is only present if the component - and therefore the feature - is installed.
+
+If one component manages multiple features, the logic within the component can create one or multiple Prometheus rules as appropriate.
+
+If one component manages a single feature which has different mutually-exclusive variants, the component can create one out of multiple possible Prometheus rules as appropriate.
+
+==== Configuration for Metered Billing
+
+There are two options for how the existing Metered Billing could be leveraged to report the new timeseries:
+
+===== Option 1: No changes to `appuio-reporting`
+
+In a similar fashion to product variants of Managed OpenShift itself, each feature is queried individually.
+For this proposal, the configuration for `appuio-reporting` would look as follows:
+
+[source,yaml]
+----
+parameters:
+  prometheus_metered_usage_reporting:
+    rules:
+      openshift_features:
+        products:
+          - product_id: 'feature_1_odoo_product_id' <1>
+            params:
+              feature: feature_1_timeseries_label_value <2>
+          - product_id: 'feature_2_odoo_product_id'
+            params:
+              feature: feature_2_timeseries_label_value
+          - product_id: 'feature_3_odoo_product_id'
+            params:
+              feature: feature_3_timeseries_label_value
+        instance_id_pattern: '%(cluster_id)s'
+        item_description_pattern: 'Managed OpenShift Feature: %(feature)'
+        item_group_description_pattern: 'APPUiO Managed OpenShift - Cluster: %(cluster_id)s'
+        unit_id: '300'
+        query_pattern: 'max by (cluster_id, feature) (managed_openshift_features{feature="%(feature)"}) == 1' <3>
+----
+<1> Odoo ID of the product variant corresponding to this feature or add-on
+<2> Label value of the timeseries reported for this feature
+<3> This query is present with a value of 1 for each cluster on which the feature is installed.
+The result contains a timeseries for each cluster with the given feature.
+The resulting timeseries contain one label with the cluster ID and one label with the feature label value.
+
+====== Advantages
+
+* No changes to `appuio-reporting` required
+* A definitive list of all invoiced features is available in the configuration of `appuio-reporting`
+* If necessary, existing timeseries label values can be retroactively remapped to different Odoo product IDs with a simple config change.
+(This could be relevant if an existing feature is further subdivided into sub-features or tiers.)
+
+====== Disadvantages
+
+* Adding a new feature (which didn't exist before) involves changes in 3 places: the Syn component (to add a new timeseries), the `appuio-reporting` config (to add a query for the new label value) and Odoo (to add products or product variants for the feature).
+
+===== Option 2: Add support for wildcard product IDs to `appuio-reporting`
+
+To avoid having to repeat each individual feature in the`appuio-reporting` configuration, we could build support for using a specified label value as the Odoo Product ID.
+In this case, the configuration might look like this:
+
+[source,yaml]
+----
+parameters:
+  prometheus_metered_usage_reporting:
+    rules:
+      openshift_features:
+        products:
+          - product_id: '%(feature)' <1>
+            params: {}
+        instance_id_pattern: '%(cluster_id)s'
+        item_description_pattern: 'Managed OpenShift Feature: %(odoo_product_id)'
+        item_group_description_pattern: 'APPUiO Managed OpenShift - Cluster: %(cluster_id)s'
+        unit_id: '300'
+        query_pattern: 'max by (cluster_id, feature) (managed_openshift_features) == 1' <2>
+----
+<1> The Odoo ID of the product variant corresponding to this feature is taken directly from a timeseries label, which in turn must correspond to the Odoo Product ID.
+<2> This query is present with a value of 1 for each cluster-feature combination which exists.
+The result contains a timeseries for each cluster-feature combination where that feature is installed on that cluster.
+The resulting timeseries contain one label with the cluster ID and one label with the feature label value, which must correspond to the Odoo Product ID.
+
+====== Advantages
+
+* Adding a new feature (which didn't exist before) involves changes in only 2 places: the Syn component (to add a new timeseries) and Odoo (to add products or product variants for the feature).
+
+====== Disadvantages
+
+* `appuio-reporting` must be updated to support label value substitution in the Odoo product ID field.
+This is a fairly simple change.
+* There is no definitive list of all billable features that are part of this system.
+* The Syn component, which configures the timeseries, must be aware of (or configured with) Product ID data from Odoo.
+* A single `appuio-reporting` job will handle all features, meaning that errors while reporting one feature may potentially disrupt reporting of other features.
+
+=== Proposal 2: Event-based Billing
+
+With the new mechanism for "event based billing" it's possible to indicate presence of a service by sending a single "service created" API request to Odoo.
+The service is then considered active for the purpose of invoicing until a corresponding "service deleted" event is sent.
+This mechanism simplifies metering for services whose usage doesn't fluctuate (but rather, can only be present or absent).
+OpenShift features and add-ons fit this profile.
+
+Leveraging this mechanism requires sending API requests to Odoo whenever a feature or add-on is installed or uninstalled.
+There is no readily available mechanism by which we can run arbitrary code on these events, so a new solution would need to be built.
+
+==== A new controller for Lieutenant
+
+We could build a new controller which runs on the Lieutenant cluster and watches `Cluster` resources.
+By watching the `.status.compileMeta` fields, the controller could determine whether a Project Syn component is added or removed from a cluster, and then run configurable scripts whenever such an event is detected.
+
+==== Advantages
+
+* The mechanism runs centrally for all clusters.
+* Feature metering doesn't depend on our monitoring stack.
+
+==== Disadvantages
+
+* We'd need to implement a new controller.
+* Since the controller needs to detect changes to the Kubernetes state, it would have to duplicate the state into a persistent datastore.
+  Otherwise the controller might potentially miss events when it's restarted.
+* A single missed event could lead to enormous invoicing errors if it goes unnoticed for too long.
+
+== Decision
+
+We will leverage `appuio-reporting` and introduce a new metric to track feature presence on clusters.
+
+We won't make any changes to `appuio-reporting` and instead list each billable feature individually in its configuration.
+
+== Rationale
+
+Since there is no existing mechanism to run hooks or similar upon Syn component installation / removal, event based billing isn't a good fit for the current setup.
+`appuio-reporting`, on the other hand, is already in use for cluster resource metering, and therefore using it doesn't introduce any new dependencies to the Managed OpenShift setup.
+
+For the purpose of metering and invoicing, it's preferable to have an explicit list of all features that are invoiced, including how these features map to Odoo product IDs.
+We prefer to avoid making individual Syn components aware of such Odoo internals.
+By keeping the feature-to-Odoo-product mapping in the configuration for `appuio-reporting`, we can neatly keep these things separated.
+
+Since this solution doesn't require any code changes or new software components, the implementation should be swift and straightforward.
+
+== References
+
+* xref:oc4:ROOT:references/architecture/metering-data-flow-appuio-managed.adoc[]
+* https://docs.central.vshn.ch/metered-billing-data-flow.html[Data model and data flow for Resource Usage Reporting]

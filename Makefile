@@ -1,17 +1,11 @@
 pages   := $(shell find . -type f -name '*.adoc')
 
-# Determine whether to use podman
-#
-# podman currently fails when executing in GitHub actions on Ubuntu LTS 20.04,
-# so we never use podman if GITHUB_ACTIONS==true.
-use_podman := 1
-
-ifeq ($(use_podman),0)
-	engine_cmd  ?= podman
-	engine_opts ?= --rm --tty --userns=keep-id
-else
+ifneq "$(shell which docker 2>/dev/null)" ""
 	engine_cmd  ?= docker
 	engine_opts ?= --rm --tty --user "$$(id -u)"
+else
+	engine_cmd  ?= podman
+	engine_opts ?= --rm --tty --userns=keep-id
 endif
 
 preview_cmd ?= $(engine_cmd) run --rm --publish 35729:35729 --publish 2020:2020 --volume "${PWD}":/preview/antora ghcr.io/vshn/antora-preview:3.1.4 --antora=docs --style=vshn

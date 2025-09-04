@@ -150,7 +150,38 @@ terraform apply
 
 ifeval::["{provider}" == "cloudscale"]
 . Add the DNS records for etcd shown in output variable `dns_entries` from the previous step to the cluster's parent zone
+endif::[]
 
+. Wait for master nodes to become ready
++
+TIP: This is optional, but will make the subsequent steps less likely to run into weird timeouts.
++
+[source,bash]
+----
+kubectl wait --for condition=ready node -l node-role.kubernetes.io/master
+----
+
+. Deploy cert-manager
++
+[NOTE]
+====
+We need to deploy cert-manager early so we can use the cert-manager integration in the Cilium Helm chart.
+ifeval::["{provider}" == "cloudscale"]
+
+On cloudscale, we additionally need cert-manager in order to deploy the cloudscale-loadbalancer-controller.
+endif::[]
+====
++
+[source,bash]
+----
+kubectl apply -f ../cert-manager/00_namespace.yaml
+kubectl apply -Rf ../cert-manager/10_cert_manager
+kubectl -n syn-cert-manager patch --type=merge \
+  $(kubectl -n syn-cert-manager get deploy -oname) \
+  -p '{"spec":{"template":{"spec":{"tolerations":[{"operator":"Exists"}]}}}}'
+----
+
+ifeval::["{provider}" == "cloudscale"]
 . Apply the manifests for the cloudscale machine-api provider
 +
 [source,bash,subs="attributes+"]

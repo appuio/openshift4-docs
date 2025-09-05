@@ -52,6 +52,13 @@ include::partial$decommission-disable-syn.adoc[]
 kubectl delete svc --field-selector spec.type=LoadBalancer -A
 ----
 
+. Delete all loadbalancers
++
+[source,bash]
+----
+kubectl delete loadbalancers -A --all
+----
+
 . Delete all PVs
 +
 [source,bash]

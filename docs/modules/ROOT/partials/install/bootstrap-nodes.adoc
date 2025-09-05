@@ -124,6 +124,11 @@ kubectl patch -n cilium ciliumconfig cilium-enterprise --type=merge \
       },
       "hostPort": {
         "enabled": true
+      },
+      "hubble": {
+        "tls": {
+          "enabled": false
+        }
       }
     }
   }
@@ -179,6 +184,9 @@ kubectl apply -Rf ../cert-manager/10_cert_manager
 kubectl -n syn-cert-manager patch --type=merge \
   $(kubectl -n syn-cert-manager get deploy -oname) \
   -p '{"spec":{"template":{"spec":{"tolerations":[{"operator":"Exists"}]}}}}'
+kubectl -n syn-cert-manager wait --for condition=available \
+  deploy cert-manager-webhook
+kubectl apply -f ../cilium/20_cilium_ca.yaml
 ----
 
 ifeval::["{provider}" == "cloudscale"]

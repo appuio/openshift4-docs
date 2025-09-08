@@ -19,7 +19,7 @@ The following CLI utilities need to be available locally:
 * `jq`
 * `yq`
 * `docker`
-* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `commodore`, see https://syn.tools/commodore/how-to/installing-commodore.html[Installing Commodore]
 
 == Update Cluster Config
 

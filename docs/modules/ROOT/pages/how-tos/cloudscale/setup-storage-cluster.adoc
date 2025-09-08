@@ -17,7 +17,7 @@ Steps to deploy an https://products.docs.vshn.ch/products/appuio/managed/storage
 
 * `kubectl`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
-* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `commodore`, see https://syn.tools/commodore/how-to/installing-commodore.html[Installing Commodore]
 
 == Steps
 

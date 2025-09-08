@@ -139,8 +139,6 @@ yq -i ".parameters.openshift4_monitoring.upstreamRules.networkPlugin = \"cilium\
 ----
 yq eval -i '.parameters.networkpolicy.networkPlugin = "cilium"' \
   "${CLUSTER_ID}.yml"
-yq eval -i '.parameters.networkpolicy.ignoredNamespaces = ["openshift-oauth-apiserver"]' \
-  "${CLUSTER_ID}.yml"
 ----
 
 . Verify that the cluster's `api-int` DNS record exists

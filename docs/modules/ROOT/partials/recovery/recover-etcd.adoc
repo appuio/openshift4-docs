@@ -35,7 +35,7 @@ The following CLI utilities need to be available locally:
 * `restic` https://restic.net/[Restic Backup]
 * `kubectl`
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `commodore`, see https://syn.tools/commodore/how-to/installing-commodore.html[Installing Commodore]
 * `git`
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)

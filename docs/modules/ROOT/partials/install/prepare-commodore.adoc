@@ -79,6 +79,15 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \
 
 git commit -a -m "Configure Cloudscale metaparameters on ${CLUSTER_ID}"
 ----
+
+. Enable the cloudscale loadbalancer controller
++
+[source,bash]
+----
+yq eval -i '.applications += ["cloudscale-loadbalancer-controller"]' ${CLUSTER_ID}.yml
+
+git commit -a -m "Enable cloudscale loadbalancer controller for ${CLUSTER_ID}"
+----
 endif::[]
 
 . Add Cilium to cluster configuration
@@ -121,7 +130,6 @@ parameters:
 yq eval -i '.applications += ["cilium"]' ${CLUSTER_ID}.yml
 
 yq eval -i '.parameters.networkpolicy.networkPlugin = "cilium"' ${CLUSTER_ID}.yml
-yq eval -i '.parameters.networkpolicy.ignoredNamespaces = ["openshift-oauth-apiserver"]' ${CLUSTER_ID}.yml
 
 yq eval -i '.parameters.openshift4_monitoring.upstreamRules.networkPlugin = "cilium"' ${CLUSTER_ID}.yml
 

@@ -15,7 +15,7 @@ Steps to adopt worker nodes on https://cloudscale.ch[cloudscale] with the https:
 
 The following CLI utilities need to be available locally:
 
-* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `commodore`, see https://syn.tools/commodore/how-to/installing-commodore.html[Installing Commodore]
 * `docker`
 * `kubectl`
 * `vault`

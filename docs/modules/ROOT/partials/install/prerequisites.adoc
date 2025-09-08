@@ -6,6 +6,8 @@
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
 * `curl`
 * `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
+* `commodore`, see https://syn.tools/commodore/how-to/installing-commodore.html[Installing Commodore]
+* `kapitan` (should automatically be available in `$PATH` if `commodore` is installed with `uv` as described in the link above)
 ifeval::["{provider}" != "vsphere"]
 * `gzip`
 * `docker`

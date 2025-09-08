@@ -17,7 +17,7 @@ Steps to increase the disk of worker nodes on an OpenShift 4 cluster on https://
 
 The following CLI utilities need to be available locally:
 
-* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `commodore`, see https://syn.tools/commodore/how-to/installing-commodore.html[Installing Commodore]
 * `oc`
 
 == Increase node disk via terraform

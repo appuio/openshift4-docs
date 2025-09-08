@@ -5,7 +5,7 @@ The following CLI utilities need to be available locally:
 * `kubectl`
 * `oc`
 * `vault` https://www.vaultproject.io/docs/commands[Vault CLI]
-* `commodore`, see https://syn.tools/commodore/running-commodore.html[Running Commodore]
+* `commodore`, see https://syn.tools/commodore/how-to/installing-commodore.html[Installing Commodore]
 * `jq`
 * `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher)
 * macOS: `gdate` from GNU coreutils, `brew install coreutils`

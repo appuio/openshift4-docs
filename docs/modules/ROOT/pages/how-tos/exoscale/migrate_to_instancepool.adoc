@@ -13,6 +13,7 @@ Steps to migrate an existing OpenShift 4 cluster on https://www.exoscale.com[Exo
 
 * You already have an OpenShift 4 cluster on Exoscale
 * Your cluster doesn't use Exoscale instance pools for the worker nodes
+* Your cluster already runs the https://hub.syn.tools/exoscale-cloud-controller-manager/how-tos/deploy_ocp.html[Exoscale Cloud Controller Manager]
 * You have admin-level access to the cluster
 * Your `kubectl` context points to the cluster you're modifying
 * You want to migrate the cluster to use instance pools for all worker nodes
@@ -180,31 +181,13 @@ done
     kubectl drain --as=cluster-admin --ignore-daemonsets \
       --delete-emptydir-data --force node "$node"
 
-== Deploy Exoscale Cloud Controller Manager
+== Enable Annotation Injector
 
-. Create restricted API key for the Exoscale cloud-controller-manager
-+
-include::partial$exoscale/ccm-iam.adoc[]
-
-. Store CCM API key in Vault
-+
-[source,bash]
-----
-# Set the CCM Exoscale Credentials
-vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/ccm \
-  access_key=${CCM_ACCESSKEY} \
-  secret_key=${CCM_SECRETKEY}
-----
-
-. Deploy Exoscale CCM via Project Syn and enable default instance pool annotation injector
+. Enable default instance pool annotation injector via Project Syn
 +
 [source,bash]
 ----
 pushd "inventory/classes/${TENANT_ID}/"
-
-# Enable component
-yq eval -i ".applications += [\"exoscale-cloud-controller-manager\"]" \
-  ${CLUSTER_ID}.yml
 
 # Configure default instance pool annotation injector
 curl -fsu "${GITLAB_USER}:${GITLAB_TOKEN}" "$GITLAB_STATE_URL" |\
@@ -212,7 +195,7 @@ curl -fsu "${GITLAB_USER}:${GITLAB_TOKEN}" "$GITLAB_STATE_URL" |\
   yq ea -i 'select(fileIndex == 0) * (select(fileIndex == 1) | {"parameters": {"exoscale_cloud_controller_manager":{"serviceLoadBalancerDefaultAnnotations":{"service.beta.kubernetes.io/exoscale-loadbalancer-service-instancepool-id": .}}}}) ' \
   "$CLUSTER_ID.yml" -
 
-git commit -a -m "Deploy Exoscale CCM on cluster ${CLUSTER_ID}"
+git commit -a -m "Configure Instance Pool Annotation Injector on cluster ${CLUSTER_ID}"
 git push
 
 popd

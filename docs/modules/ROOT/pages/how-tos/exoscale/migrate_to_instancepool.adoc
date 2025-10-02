@@ -196,13 +196,15 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/exoscale/ccm \
   secret_key=${CCM_SECRETKEY}
 ----
 
-. Migrate the cluster to `platformType: External` and deploy the Exoscale cloud-controller-manager (CCM) according to the https://hub.syn.tools/exoscale-cloud-controller-manager/how-tos/deploy_ocp.html[Exoscale CCM component how-to]
-
-. Enable default instance pool annotation injector via Project Syn
+. Enable CCM via Project Syn
 +
 [source,bash]
 ----
 pushd "inventory/classes/${TENANT_ID}/"
+
+# Enable component
+yq eval -i ".applications += [\"exoscale-cloud-controller-manager\"]" \
+  ${CLUSTER_ID}.yml
 
 # Configure default instance pool annotation injector
 curl -fsu "${GITLAB_USER}:${GITLAB_TOKEN}" "$GITLAB_STATE_URL" |\
@@ -214,5 +216,51 @@ git commit -a -m "Deploy Exoscale CCM on cluster ${CLUSTER_ID}"
 git push
 
 popd
+----
+. Patch infrastructure config
++
+IMPORTANT: This step triggers node reboots to apply the Kubelet flag `--cloud-provider=external`.
++
+[source,bash]
+----
+kubectl --as cluster-admin patch infrastructure.config  cluster --type=merge -p '{"spec":{"platformSpec":{"external":{"platformName":"exoscale"},"type":"External"}}}'
+----
++
+[source,bash]
+----
+kubectl --as=cluster-admin patch infrastructure.config cluster --type=merge --subresource=status \
+  -p  '{"status":{"platform":"External","platformStatus":{"external":{"cloudControllerManager":{"state":"External"}},"type":"External"}}}'
+----
+
+. Taint nodes with `node.cloudprovider.kubernetes.io/uninitialized=true:NoSchedule`
++
+[source,bash]
+----
+kubectl --as cluster-admin taint node --all node.cloudprovider.kubernetes.io/uninitialized=true:NoSchedule
+----
+
+. Check if instance-type is applied to verify the CCM is working
++
+[source,bash]
+----
+kubectl get nodes -ocustom-columns='NAME:.metadata.name,INSTANCE_TYPE:.metadata.labels.node\.kubernetes\.io/instance-type'
+----
++
+[source,bash]
+----
+NAME                 INSTANCE_TYPE
+infra-032a           standard.extra-large
+infra-7b8b           standard.extra-large
+infra-f8e1           standard.extra-large
+infra-fa1a           standard.extra-large
+master-03b1          standard.extra-large
+master-4386          standard.extra-large
+master-a662          standard.extra-large
+storage-11b9         cpu.extra-large
+storage-2764         cpu.extra-large
+storage-5d24         cpu.extra-large
+worker-e6e75-drjgz   standard.extra-large
+worker-e6e75-ikhpr   standard.extra-large
+worker-e6e75-nypky   standard.extra-large
 ----
 

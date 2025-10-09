@@ -1,7 +1,7 @@
 = Control Plane Node Scaling
 
-The control plane node resource requirements depent on a number of different metrics.
-CPU requirements generally depend on the ammount on API write requests, while memory requirements generally depend on the amount of resource objects (most importantly Pod count) in the cluster.
+The control plane node resource requirements depend on a number of different metrics.
+CPU requirements generally depend on the amount on API write requests, while memory requirements generally depend on the amount of resource objects (most importantly Pod count) in the cluster.
 
 To avoid cascading failures during a scheduled node reboot or an unexpected node failure, it's recommended to keep the overall CPU and memory usage not significantly higher than 60%.
 
@@ -46,6 +46,17 @@ more than 500 Pods
 | Medium Cluster
 
 more than 1000 Pods
+
+
+| 8 CPU
+
+32Gi Memory
+
+| AppCat Cluster
+
+more than 1000 Pods
+
+AppCat services available
 |===
 
 

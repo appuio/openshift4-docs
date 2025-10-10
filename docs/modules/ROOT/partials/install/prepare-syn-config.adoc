@@ -51,6 +51,20 @@ yq eval -i ".parameters.openshift4_version.spec.channel = \"fast-{ocp-minor-vers
 ----
 ====
 
+. Enable AppCat if required
++
+[source,bash]
+----
+yq eval -i ".classes += \".global.apps.appcat\"" \
+  ${CLUSTER_ID}.yml
+----
++
+[NOTE]
+====
+AppCat requires extra resources on the master nodes.
+Please ensure the master sizing is at least 8 CPU / 32 GB RAM.
+====
+
 ifeval::["{provider}" == "cloudscale"]
 :is-terraform: yes
 endif::[]
@@ -78,6 +92,12 @@ You now have the option to further customize the cluster by editing `terraform_v
 Most importantly you have the option to change node sizes or add additional specialized worker nodes.
 
 Please look at the xref:oc4:ROOT:references/{provider}/config.adoc[configuration reference] for the available options.
+====
+
+[NOTE]
+====
+AppCat requires extra resources on the master nodes.
+If AppCat is enabled, please ensure the master sizing is at least 8 CPU / 32 GB RAM.
 ====
 endif::[]
 

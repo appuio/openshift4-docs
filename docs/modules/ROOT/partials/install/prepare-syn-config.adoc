@@ -1,3 +1,16 @@
+// NOTE(sg): this needs to be at the top to not break the list numbering
+// between the list in this partial and the lists in the per-provider partial
+// includes.
+ifeval::["{provider}" == "cloudscale"]
+:is-terraform: yes
+endif::[]
+ifeval::["{provider}" == "exoscale"]
+:is-terraform: yes
+endif::[]
+ifeval::["{provider}" == "stackit"]
+:is-terraform: yes
+endif::[]
+
 . Switch to the tenant repo
 +
 [source,bash]
@@ -64,16 +77,6 @@ yq eval -i ".classes += \".global.apps.appcat\"" \
 AppCat requires extra resources on the master nodes.
 Please ensure the master sizing is at least 8 CPU / 32 GB RAM.
 ====
-
-ifeval::["{provider}" == "cloudscale"]
-:is-terraform: yes
-endif::[]
-ifeval::["{provider}" == "exoscale"]
-:is-terraform: yes
-endif::[]
-ifeval::["{provider}" == "stackit"]
-:is-terraform: yes
-endif::[]
 
 ifeval::["{is-terraform}" == "yes"]
 include::partial$install/prepare-syn-config-terraform.adoc[]

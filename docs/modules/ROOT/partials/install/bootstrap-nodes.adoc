@@ -339,6 +339,8 @@ By default, PROXY protocol is enabled through the VSHN Commodore global defaults
 
 . Schedule ingress controller on infra nodes
 +
+NOTE: Skip this step for OKE clusters
++
 [source,bash]
 ----
 kubectl -n openshift-ingress-operator patch ingresscontroller default --type=json \

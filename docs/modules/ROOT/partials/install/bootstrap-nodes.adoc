@@ -212,7 +212,7 @@ kapitan refs --reveal --refs-path ../../refs -f ../cloudscale-loadbalancer-contr
 kubectl apply -Rf ../cloudscale-loadbalancer-controller/10_kustomize
 kubectl -n appuio-cloudscale-loadbalancer-controller \
   wait --for condition=available \
-  deploy cloudcale-loadbalancer-controller-controller-manager
+  deploy cloudscale-loadbalancer-controller-controller-manager
 ----
 
 . Deploy the ingress cloudscale loadbalancer

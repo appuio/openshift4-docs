@@ -22,6 +22,24 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/{provider}/ssh \
 
 ssh-add $SSH_PRIVATE_KEY
 ----
++
+[TIP]
+====
+If the private key for the cluster already exists, you can fetch it with the following commands.
+
+[source,bash]
+----
+SSH_PRIVATE_KEY="$(pwd)/ssh_$CLUSTER_ID"
+export SSH_PUBLIC_KEY="${SSH_PRIVATE_KEY}.pub"
+
+vault kv get -format=json clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale/ssh | \
+  jq -r '.data.data.private_key|@base64d' > ${SSH_PRIVATE_KEY}
+chmod 600 ${SSH_PRIVATE_KEY}
+ssh-keygen -f ${SSH_PRIVATE_KEY} -y > ${SSH_PUBLIC_KEY}
+
+ssh-add ${SSH_PRIVATE_KEY}
+----
+====
 
 . Prepare `install-config.yaml`
 +

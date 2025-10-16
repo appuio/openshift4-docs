@@ -9,6 +9,19 @@ export KUBECONFIG="em-${CLUSTER_ID}"
 kubectl cluster-info
 ----
 
+. Disable OpsGenie heartbeat
++
+[source,bash]
+----
+OPSGENIE_KEY=$(vault kv get -format=json \
+  clusters/kv/__shared__/__shared__/opsgenie/aldebaran | \
+  jq -r '.data.data["heartbeat-password"]')
+curl "https://api.opsgenie.com/v2/heartbeats/${CLUSTER_ID}" \
+  -H"Authorization: GenieKey ${OPSGENIE_KEY}" \
+  -H"Content-Type: application/json" \
+  -XPATCH --data '{"enabled":false}'
+----
+
 . Disable Syn
 +
 [source,bash]

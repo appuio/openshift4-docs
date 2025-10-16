@@ -103,6 +103,15 @@ do
 done
 ----
 
+. Delete OpsGenie heartbeat
++
+[source,bash]
+----
+curl "https://api.opsgenie.com/v2/heartbeats/${CLUSTER_ID}" \
+  -H"Authorization: GenieKey ${OPSGENIE_KEY}" \
+  -XDELETE
+----
+
 . Delete cluster from Lieutenant API (via portal)
 +
 Go to https://control.vshn.net/syn/lieutenantclusters

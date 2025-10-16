@@ -1,0 +1,279 @@
+= Guided OpenShift setup
+
+[abstract]
+--
+Architecture documentation for a guided OpenShift setup tool that provides an interactive, state-aware installation experience for OpenShift clusters on VSHN supported cloud providers.
+
+The goal is an easy-to-use, and extensible installation framework that abstracts cloud provider specifics while ensuring consistent and repeatable deployments.
+--
+
+== Overview
+
+== Problem statement
+
+Setting up OpenShift clusters on diverse cloud providers such as cloudscale and Exoscale is a complex, error-prone process requiring technical expertise, manual coordination, loads of state in environment variables (30+), ~100 steps, configuration files, Git repos, and the VSHN portal.
+
+The existing installation workflows are somewhat fragmented and hard to extend due to an array of assorted templates loosely tied together.
+A change in one template can have unforeseen consequences on other parts of the installation process.
+Every new cloud provider requires more branching paths and adds to the overall complexity.
+
+We eventually want to support a fully automated setup, without any manual steps involved.
+As we're not there quite yet and might never be, we need a solution where we can gradually automate more and more steps.
+
+.An example of the branching complexity in the installation process
+image::installation-branching.drawio.svg[alt="installation branching",width=400]
+
+== Goals
+
+* Provide an interactive, state-aware installation experience for OpenShift clusters on VSHN supported cloud providers.
+* Abstract away cloud provider specifics to ensure a consistent and repeatable deployment process.
+* Create an easy-to-use and extensible installation framework that can adapt to new requirements and cloud providers.
+* Enable gradual automation of the setup process, reducing the need for manual intervention over time.
+* Automate installation state management while still allowing the user to fix state issues manually if needed.
+* Allow static analysis if all inputs are given for every step, allowing easier iteration of the installation process.
+
+== Non-Goals
+
+* Fully automated setup without any manual steps involved (at least not initially).
+* Replacement of existing tools like `openshift-install` or `terraform`, but rather complementing them.
+
+== Architecture overview
+
+Setting up a cluster consists of multiple steps, each responsible for a specific part of the installation process.
+
+We've got plain text installation files containing the steps to perform, and a runner tool that looks up how to execute these steps while managing the installation state.
+
+=== Step definitions
+
+Steps are defined in plain text, each line representing a single step to perform.
+The format is heavily inspired by https://cucumber.io/docs#what-are-step-definitions[Gherkin] syntax used in BDD testing frameworks.
+
+. Gherkin like definition
+[source,gherkin]
+----
+Given a cloudscale organization
+Given a Lieutenant cluster ID
+I upload the OpenShift image to cloudscale
+I prepare the Terraform configuration
+I create the loadbalancer on cloudscale
+I create the DNS records in our hieradata
+I create the bootstrap VM on cloudscale
+The bootstrap VM should be reachable
+I create the master VMs on cloudscale
+I create the infra VMs on cloudscale
+----
+
+A step can be interactive ("Given a cloudscale organization"), asking the user for input, or non-interactive ("I create the bootstrap VM on cloudscale"), performing automated tasks based on the current state.
+
+Steps can depend on the output of previous steps, creating a directed acyclic graph (DAG) of dependencies which we should be able to statically analyze if all inputs are given.
+
+=== Step implementations
+
+Steps will be defined in a YAML file and the guided setup tool can load multiple step definition files.
+While YAML has well-documented issues, it's parsable by many languages and somewhat easy to read and write.
+Additionally, with a reasonable YAML linting configuration, the most egregious ambiguities can be caught before they become issues.
+The tools matches the step text using regex to find the correct implementation for each step.
+Steps can contain a script to execute, prompt for user input, and have metadata such as extended descriptions, inputs and outputs attached.
+
+All prompted user input can be provided by environment variables to allow for non-interactive execution as well.
+
+[source,yaml]
+----
+steps:
+  - match: Given a cloudscale organization <1>
+    inputs: []
+    outputs:
+      - cloudscale_rw_token
+    description: |
+      The cloudscale token might be retrieved from https://control.cloudscale.ch/service/MY_PROJECT/api-token.
+
+      The token needs to have read and write permissions.
+    interaction: <2>
+      type: prompt
+      prompt: Please enter your cloudscale read/write API token
+      into: cloudscale_rw_token
+    run: | <3>
+      echo "cloudscale_rw_token=$cloudscale_rw_token" >> $STATE <4>
+  - match: I upload the OpenShift image to cloudscale
+    inputs:
+      - cloudscale_rw_token
+      - cloudscale_zone <5>
+    run: |
+      ... upload logic ...
+    outputs:
+      - image_id
+  - match: I prepare the Terraform configuration
+    inputs:
+      - cloudscale_rw_token
+      - image_id
+    outputs:
+      - terraform_config
+  - match: I create the cloudscale loadbalancer
+    inputs:
+      - terraform_config
+    outputs:
+      - loadbalancer_id
+  - match: I create the bootstrap VM on cloudscale
+    inputs:
+      - terraform_config
+    outputs:
+      - loadbalancer_id <6>
+----
+<1> Match field containing a regex.
+Used to identify the step implementation.
+<2> Interaction metadata, text prompt, yes/no, or selection from a list of options.
+<3> Each step can execute arbitrary shell scripts.
+<4> Scripts can write outputs to a state file for later steps to consume.
+This is managed by the runner tool, $STATE is an environment variable pointing to a temporary state file.
+<5> We don't define this input anywhere, this should error out during static analysis.
+<6> Optimally we don't allow redefining outputs, and we should error out during static analysis.
+
+=== State file
+
+The state file needs to be human-readable and human-fixable.
+We use a YAML file here as well.
+
+The tool should be able to upload the state file to a S3 compatible object storage to allow for other team members to resume an interrupted installation or help debugging issues.
+As there are secrets in the state file the tool should support encrypting the state file with a user provided password before uploading it.
+It should be possible to always ask for personalized tokens instead of storing them in the state file.
+
+[source,yaml]
+----
+current_step: I upload the OpenShift image to cloudscale <1>
+
+completed_steps: <2>
+  - Given a cloudscale organization
+  - Given a Lieutenant cluster ID
+
+outputs: <3>
+  cloudscale_rw_token:
+    value: "mysecrettoken"
+  image_id:
+    value: "1234-5678-90ab-cdef"
+
+artifacts: <4>
+  terraform_config:
+    path: "/path/to/generated/terraform.tfvars"
+----
+<1> The current step or __FINAL__ if all steps are completed.
+This allows resuming an interrupted installation.
+We might also use last_step and derive the current step from that.
+This would allow us to remove the final marker, but might make user interaction with the state file harder.
+<2> A list of completed steps, technically not required, for easier debugging.
+<3> A map of all outputs from completed steps.
+<4> We might need to store files generated during the installation here as well.
+The simpler approach would be for the steps to just return paths to files, but cleanup might be tricky then.
+
+== Runner tool
+
+A runner tool will be responsible for executing the steps defined in the installation and YAML files.
+The tool has an interactive TUI showing the current step, progress, and terminal output of the current step.
+
+[source]
+----
+$ guided-setup run cloudscale.guide.txt --state ./install-state.yaml --steps ./steps/*.yaml
+
+= Step 1/34: Given a cloudscale organization
+
+  The cloudscale token might be retrieved from https://control.cloudscale.ch/service/MY_PROJECT/api-token.
+
+  The token needs to have read and write permissions.
+
+Please enter your cloudscale read/write API token:
+> ***
+----
+
+[source]
+----
+$ guided-setup run cloudscale.guide.txt --state ./install-state.yaml --steps ./steps/*.yaml
+
+= Step 3/34: I upload the OpenShift image to cloudscale
+
+  Checks for the presence of the OpenShift image in cloudscale and uploads it if not found.
+
++ mc cp vshncloudscale/openshift-vshn-4.12.6-cloudscale.qcow2.gz .
+[########################################] 100%
+
+----
+
+=== Static analysis
+
+The tools checks if all inputs for every step are satisfied by the previous steps and if no outputs are redefined.
+
+[source,bash]
+----
+guided-setup analyze cloudscale.guide.txt --state ./install-state.yaml --steps ./steps/*.yaml
+
+Error: Step "I upload the OpenShift image to cloudscale" is missing input "cloudscale_zone" at position 3
+Error: Step "I create the bootstrap VM on cloudscale" output "loadbalancer_id" is redefined at position 5
+Error: Step "I prepare the Terraform configuration" is defined multiple times at cloudscale-steps.yml:7 and exoscale-steps.yml:15
+----
+
+=== Documentation generation
+
+The tool can generate documentation for the installation process based on the step definitions, including descriptions, inputs, and outputs.
+
+[source,markdown]
+----
+# Generated by: guided-setup generate-docs cloudscale.guide.txt --steps ./steps/*.yaml
+
+= TOC
+
+* [Given a cloudscale organization](#i-have-a-cloudscale-organization)
+* [I upload the OpenShift image to cloudscale](#i-upload-the-openshift-image-to-cloudscale)
+
+= Steps
+
+== Given a cloudscale organization
+
+The cloudscale token might be retrieved from https://control.cloudscale.ch/service/MY_PROJECT/api-token.
+The token needs to have read and write permissions.
+
+=== Inputs
+
+None
+
+=== Outputs
+
+* cloudscale_rw_token
+
+=== Prompts
+
+* Please enter your cloudscale read/write API token
+
+=== Script
+
+```
+echo "cloudscale_rw_token=$cloudscale_rw_token" >> $STATE
+```
+
+== I upload the OpenShift image to cloudscale
+
+Checks for the presence of the OpenShift image in cloudscale and uploads it if not found.
+
+=== Inputs
+
+* cloudscale_rw_token
+* cloudscale_zone
+
+=== Outputs
+
+* image_id
+
+=== Script
+
+```
+... upload logic ...
+```
+----
+
+=== Tool programming language
+
+We will implement the guided setup tool in Go.
+Go provides excellent support for IO operations and building standalone binaries.
+The team has lots of experience with Go, making it easier to maintain and extend the tool in the future.
+https://github.com/charmbracelet/bubbletea[Bubble Tea] allows building rich TUIs with a nice ELM-like architecture.
+
+=== Distribution
+
+The runner tool and all required binaries to execute the steps are bundled into a single container image for easy distribution and execution.

@@ -1,0 +1,90 @@
+= Guided Setup Tool for Cluster Installations
+
+== Problem
+
+Setting up OpenShift clusters on diverse cloud providers such as cloudscale and Exoscale is a complex, error-prone process requiring technical expertise, manual coordination, loads of state in environment variables (30+), ~100 steps, configuration files, Git repos, and the VSHN portal.
+
+The existing installation workflows are somewhat fragmented and hard to extend due to an array of assorted templates loosely tied together.
+A change in one template can have unforeseen consequences on other parts of the installation process.
+Every new cloud provider requires more branching paths and adds to the overall complexity.
+
+We eventually want to support a fully automated setup, without any manual steps involved.
+As we're not there quite yet and might never be, we need a solution where we can gradually automate more and more steps.
+
+
+.An example of the branching complexity in the installation process
+image::installation-branching.drawio.svg[alt="installation branching",width=400]
+
+=== Goals
+
+* Guide users through the necessary steps, ensuring all prerequisites are met before proceeding.
+* Allow user input where necessary.
+* Abstract away cloud provider specifics to ensure a consistent and repeatable deployment process.
+* Allow error recovery and resumption of interrupted installations.
+* Enable gradual automation of the setup process, reducing the need for manual intervention over time.
+* Allow easier iteration of interconnected steps/templates without breaking the overall installation process.
+
+== Non-Goals
+
+* Fully automated setup without any manual steps involved (at least not initially).
+* Replacement of existing tools like `openshift-install` or `terraform`, but rather complementing them.
+
+== Proposals
+
+=== Proposal 1: Use config management tool (for example Ansible) to create a guided setup tool
+
+We use a configuration management tool like Ansible to create a guided setup tool that orchestrates the installation process.
+
+There is a myriad of existing config management tools (Ansible, SaltStack, Puppet, Chef, etc.).
+Some of them allow for interactive prompts and guided workflows.
+Most of them also have good support for modularization, allowing us to break down the installation process into smaller, manageable tasks or roles.
+We can create a series of playbooks or roles that represent each step of the installation process.
+
+State management and interruption handling isn't trivial with most of these tools, but can be achieved with some custom logic and careful planning.
+Most tools don't have a single state file that can be modified easily by the user, which makes it harder to resume from a specific point after fixing an issue in the state.
+
+==== Advantages
+
+* Big ecosystem
+* Mature tooling
+* Active community
+
+==== Disadvantages
+
+* Complexity in setup, configuration and maintenance
+* Not every framkework has good support for interactive prompts
+* State management can be tricky, especially when dealing with interrupted installations and resuming from a specific point.
+* Learning curve for team members unfamiliar with the chosen tool.
+
+=== Proposal 2: Write a custom guided setup tool
+
+We develop a custom tool tailored specifically for our installation process, focusing on the unique requirements and challenges we face.
+
+A big focus can be put on state management and interruption handling, allowing users to easily resume from where they left off.
+We can design a user-friendly interface that guides users through the installation steps, providing clear instructions and feedback.
+The state management can be implemented in a way that allows users to easily modify the state file to fix issues and resume the installation process.
+
+==== Advantages
+
+* Full control over the implementation and user experience
+* Ability to design the tool specifically for our use case
+* Easier integration with existing workflows and tools
+* Potential for simpler state management and interruption handling
+
+==== Disadvantages
+
+* Limited community support and resources compared to popular config management tools
+
+== Decision
+
+We will proceed with Proposal 2: Write a custom guided setup tool.
+
+== Rationale
+
+We believe that a custom tool will provide us with the flexibility and control we need to address the specific challenges of our installation process.
+By tailoring the tool to our requirements, we can create a more seamless and efficient user experience.
+
+== References
+
+* [Ansible Documentation](https://docs.ansible.com/)
+* [Chef Documentation](https://docs.chef.io/)

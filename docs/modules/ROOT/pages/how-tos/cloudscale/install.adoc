@@ -64,6 +64,12 @@ export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 
 include::partial$install/vshn-input.adoc[]
 
+.Read cloudscale region from Project Syn cluster
+[source,bash]
+----
+export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
+----
+
 [#_bootstrap_bucket]
 === Set up S3 buckets for the cluster
 
@@ -93,7 +99,6 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
 +
 [source,bash]
 ----
-export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
 mc config host add \
   "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
   $(echo $response | jq -r '.keys[0].access_key') \
@@ -121,7 +126,6 @@ mc mb --ignore-existing \
 ----
 export AWS_ACCESS_KEY_ID=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey)
 export AWS_SECRET_ACCESS_KEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
-export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
 
 aws s3api put-public-access-block \
   --endpoint-url "https://objects.${REGION}.cloudscale.ch" \

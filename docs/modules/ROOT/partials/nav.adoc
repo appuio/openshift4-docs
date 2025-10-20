@@ -45,6 +45,7 @@
 *** xref:oc4:ROOT:how-tos/cloudscale/enable-loadbalancer-service.adoc[Enable LoadBalancer Services]
 *** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd]
 *** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Decommissioning]
+*** xref:oc4:ROOT:how-tos/cloudscale/decommission-no-puppet.adoc[Decommissioning (No Puppet LBs)]
 *** xref:oc4:ROOT:how-tos/cloudscale/rotate-api-tokens.adoc[Rotate API Tokens]
 
 ** Exoscale
@@ -254,6 +255,7 @@
 
 * Decommissioning
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[cloudscale.ch]
+*** xref:oc4:ROOT:how-tos/cloudscale/decommission-no-puppet.adoc[cloudscale.ch (No Puppet LBs)]
 ** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Exoscale]
 ** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Google Compute Cloud]
 

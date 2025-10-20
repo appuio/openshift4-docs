@@ -1,3 +1,4 @@
+ifeval::["{puppet_lbs}" != "no"]
 . Decommission Puppet-managed LBs
 +
 TIP: See the https://vshnwiki.atlassian.net/wiki/spaces/VT/pages/8290422/How+To+Decommission+a+VM[VSHN documentation] (Internal link) for the full instructions.
@@ -86,6 +87,7 @@ for lb in ${LB_FQDNS[*]}; do
   ssh "$backup_server" "rm -rfI ${backup}"
 done
 ----
+endif::[]
 
 . Remove cluster DNS records from VSHN DNS zonefiles
 +

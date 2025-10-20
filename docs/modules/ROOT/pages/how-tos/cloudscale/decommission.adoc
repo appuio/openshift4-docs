@@ -1,4 +1,6 @@
+ifeval::["{puppet_lbs}" != "no"]
 = Uninstallation on cloudscale
+endif::[]
 
 :provider: cloudscale
 
@@ -105,26 +107,32 @@ kubectl get nodes
 
 . Configure Terraform secrets
 +
-[source,bash]
+[source,bash,attributes="subs+"]
 ----
 cat <<EOF > ./terraform.env
 CLOUDSCALE_API_TOKEN
+ifeval::["{puppet_lbs}" != "no"]
 HIERADATA_REPO_TOKEN
+endif::[]
 EOF
 ----
 
 include::partial$setup_terraform.adoc[]
 
+ifeval::["{puppet_lbs}" != "no"]
 include::partial$prepare-for-lb-decommission.adoc[]
+endif::[]
 
 . Delete resources from cloudscale using Terraform
 +
-[source,bash]
+[source,bash,attributes="subs+"]
 ----
 # The first time it will fail
 terraform destroy
+ifeval::["${puppet_lbs}" == "no"]
 # Destroy a second time to delete private networks
 terraform destroy
+endif::[]
 ----
 +
 [source,bash]
@@ -147,6 +155,26 @@ for server_group_uuid in $(curl -H"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}
     -XDELETE
 done
 ----
+
+ifeval::["{puppet_lbs}" == "no"]
+. Delete the cloudscale subnet and private network
++
+[source,bash]
+----
+SUBNET_UUID=$(yq '.parameters.openshift.cloudscale.subnet_uuid' \
+  "inventory/classes/${TENANT_ID}/${CLUSTER_ID}.yml")
+NETWORK_UUID=$(curl -sH"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
+  "https://api.cloudscale.ch/v1/subnets/${SUBNET_UUID}" |\
+  jq -r ".network.uuid")
+
+curl -H"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
+  "https://api.cloudscale.ch/v1/subnets/${SUBNET_UUID}" \
+  -XDELETE
+curl -H"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
+  "https://api.cloudscale.ch/v1/networks/${NETWORK_UUID}" \
+  -XDELETE
+----
+endif::[]
 
 . After all resources are deleted we need to remove the buckets
 +

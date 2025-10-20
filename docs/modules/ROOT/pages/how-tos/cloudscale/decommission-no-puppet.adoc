@@ -1,0 +1,6 @@
+:puppet_lbs: no
+:needs_hieradata_edit: no
+
+= Uninstallation on cloudscale (no Puppet-managed LBs)
+
+include::page$how-tos/cloudscale/decommission.adoc[]

@@ -132,6 +132,22 @@ terraform destroy
 popd
 ----
 
+. Delete cloudscale server groups
++
+TIP: This may not fully clean up server groups for cloudscale clusters which were created earlier than 2025-10-21.
++
+[source,bash]
+----
+for server_group_uuid in $(curl -H"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
+  https://api.cloudscale.ch/v1/server-groups | \
+  jq --arg cluster_id "${CLUSTER_ID}" \
+  '.[]|select(.name|startswith($cluster_id))|.uuid'); do
+  curl -H"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
+    "https://api.cloudscale.ch/v1/server-groups/${server_group_uuid}" \
+    -XDELETE
+done
+----
+
 . After all resources are deleted we need to remove the buckets
 +
 [source,bash]

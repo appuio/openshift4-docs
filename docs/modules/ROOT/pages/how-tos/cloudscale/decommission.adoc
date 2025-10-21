@@ -60,6 +60,13 @@ kubectl delete svc --field-selector spec.type=LoadBalancer -A
 kubectl delete loadbalancers -A --all
 ----
 
+. Disable autoscaling
++
+[source,bash]
+----
+kubectl delete machineautoscaler -A --all
+----
+
 . Delete all PVs
 +
 [source,bash]

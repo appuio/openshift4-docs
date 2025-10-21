@@ -17,6 +17,7 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale[cloudscale.ch].
 
 include::partial$cloudscale/prerequisites.adoc[]
 * `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
+* `mc` >= `RELEASE.2021-07-27T06-46-19Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 
 == Cluster Decommission
 

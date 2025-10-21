@@ -68,7 +68,7 @@ yq eval -i ".parameters.openshift4_version.spec.channel = \"fast-{ocp-minor-vers
 +
 [source,bash]
 ----
-yq eval -i ".classes += \".global.apps.appcat\"" \
+yq eval -i ".classes += \"global.apps.appcat\"" \
   ${CLUSTER_ID}.yml
 ----
 +

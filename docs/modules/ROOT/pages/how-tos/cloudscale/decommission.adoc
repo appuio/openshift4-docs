@@ -17,7 +17,7 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale[cloudscale.ch].
 
 include::partial$cloudscale/prerequisites.adoc[]
 * `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
-* `mc` >= `RELEASE.2021-07-27T06-46-19Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
+* `mc` >= `RELEASE.2024-01-18T07-03-39Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 
 == Cluster Decommission
 
@@ -142,7 +142,7 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
   jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
 
 # configure minio client to use the bucket
-mc config host add \
+mc alias set \
   "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
   $(echo $response | jq -r '.keys[0].access_key') \
   $(echo $response | jq -r '.keys[0].secret_key')
@@ -170,7 +170,7 @@ At this point in the decommissioning process, you'll have to extract the Restic 
 [source,bash]
 ----
 # configure minio client to use the bucket
-mc config host add \
+mc alias set \
   "${CLUSTER_ID}_backup" "https://objects.${BACKUP_REGION}.cloudscale.ch" \
   $(echo $response | jq -r '.keys[0].access_key') \
   $(echo $response | jq -r '.keys[0].secret_key')

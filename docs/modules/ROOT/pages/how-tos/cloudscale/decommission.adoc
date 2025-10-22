@@ -17,6 +17,7 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale[cloudscale.ch].
 
 include::partial$cloudscale/prerequisites.adoc[]
 * `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
+* `mc` >= `RELEASE.2024-01-18T07-03-39Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 
 == Cluster Decommission
 
@@ -57,6 +58,13 @@ kubectl delete svc --field-selector spec.type=LoadBalancer -A
 [source,bash]
 ----
 kubectl delete loadbalancers -A --all
+----
+
+. Disable autoscaling
++
+[source,bash]
+----
+kubectl delete machineautoscaler -A --all
 ----
 
 . Delete all PVs
@@ -124,6 +132,22 @@ terraform destroy
 popd
 ----
 
+. Delete cloudscale server groups
++
+TIP: This may not fully clean up server groups for cloudscale clusters which were created earlier than 2025-10-21.
++
+[source,bash]
+----
+for server_group_uuid in $(curl -H"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
+  https://api.cloudscale.ch/v1/server-groups | \
+  jq --arg cluster_id "${CLUSTER_ID}" \
+  '.[]|select(.name|startswith($cluster_id))|.uuid'); do
+  curl -H"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
+    "https://api.cloudscale.ch/v1/server-groups/${server_group_uuid}" \
+    -XDELETE
+done
+----
+
 . After all resources are deleted we need to remove the buckets
 +
 [source,bash]
@@ -134,7 +158,7 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
   jq -e ".[] | select(.display_name == \"${CLUSTER_ID}\")")
 
 # configure minio client to use the bucket
-mc config host add \
+mc alias set \
   "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
   $(echo $response | jq -r '.keys[0].access_key') \
   $(echo $response | jq -r '.keys[0].secret_key')
@@ -162,7 +186,7 @@ At this point in the decommissioning process, you'll have to extract the Restic 
 [source,bash]
 ----
 # configure minio client to use the bucket
-mc config host add \
+mc alias set \
   "${CLUSTER_ID}_backup" "https://objects.${BACKUP_REGION}.cloudscale.ch" \
   $(echo $response | jq -r '.keys[0].access_key') \
   $(echo $response | jq -r '.keys[0].secret_key')

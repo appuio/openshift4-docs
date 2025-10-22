@@ -16,6 +16,7 @@
 ** xref:oc4:ROOT:references/architecture/single_sign_on.adoc[]
 ** xref:oc4:ROOT:references/architecture/espejote-in-cluster-templating-controller.adoc[]
 ** xref:oc4:ROOT:references/architecture/sli_reporting.adoc[]
+** xref:oc4:ROOT:references/architecture/guided-setup-architecture.adoc[]
 
 ** xref:oc4:ROOT:references/cloudscale/architecture.adoc[cloudscale.ch]
 
@@ -283,3 +284,4 @@
 ** xref:oc4:ROOT:explanations/decisions/prometheusrule-controller.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/customer-facing-slo.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/feature-based-metering.adoc[]
+** xref:oc4:ROOT:explanations/decisions/guided-setup-tool.adoc[]

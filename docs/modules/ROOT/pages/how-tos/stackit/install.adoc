@@ -1,7 +1,7 @@
 = Install OpenShift 4 on STACKIT
-:ocp-minor-version: 4.18
-:k8s-minor-version: 1.31
-:ocp-patch-version: {ocp-minor-version}.1
+:ocp-minor-version: 4.19
+:k8s-minor-version: 1.32
+:ocp-patch-version: {ocp-minor-version}.10
 :provider: stackit
 
 [abstract]
@@ -42,7 +42,7 @@ IMPORTANT: Don't use your personal account to login to the cluster manager for i
 == Prerequisites
 
 include::partial$install/prerequisites.adoc[]
-* `mc` >= `RELEASE.2021-07-27T06-46-19Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
+* `mc` >= `RELEASE.2024-01-18T07-03-39Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 * `stackit` >= `v0.30.0` https://github.com/stackitcloud/stackit-cli[STACKIT cli]
 
 [WARNING]
@@ -102,7 +102,7 @@ export SECRET_KEY="`echo "$credential" | jq -r .secretAccessKey`"
 ----
 export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
 
-mc config host add "${CLUSTER_ID}" "https://object.storage.${REGION}.onstackit.cloud" "$ACCESS_KEY" "$SECRET_KEY"
+mc alias set "${CLUSTER_ID}" "https://object.storage.${REGION}.onstackit.cloud" "$ACCESS_KEY" "$SECRET_KEY"
 
 mc mb --ignore-existing \
   "${CLUSTER_ID}/${CLUSTER_ID}-bootstrap-ignition"
@@ -228,8 +228,8 @@ include::partial$install/bootstrap-nodes.adoc[]
 ----
 oc create secret generic image-registry-private-configuration-user \
 --namespace openshift-image-registry \
---from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
---from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
+--from-literal=REGISTRY_STORAGE_S3_ACCESSKEY=$(mc alias list ${CLUSTER_ID} -json | jq -r .accessKey) \
+--from-literal=REGISTRY_STORAGE_S3_SECRETKEY=$(mc alias list ${CLUSTER_ID} -json | jq -r .secretKey)
 ----
 +
 include::partial$install/registry-samples-operator.adoc[]

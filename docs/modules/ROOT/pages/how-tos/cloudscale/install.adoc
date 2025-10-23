@@ -1,7 +1,7 @@
 = Install OpenShift 4 on cloudscale.ch
-:ocp-minor-version: 4.18
-:k8s-minor-version: 1.31
-:ocp-patch-version: {ocp-minor-version}.1
+:ocp-minor-version: 4.19
+:k8s-minor-version: 1.32
+:ocp-patch-version: {ocp-minor-version}.10
 :provider: cloudscale
 
 [abstract]
@@ -37,7 +37,7 @@ IMPORTANT: Don't use your personal account to login to the cluster manager for i
 == Prerequisites
 
 include::partial$install/prerequisites.adoc[]
-* `mc` >= `RELEASE.2021-07-27T06-46-19Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
+* `mc` >= `RELEASE.2024-01-18T07-03-39Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 * `aws` CLI https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html[Official install instructions].
 You can also install the Python package with your favorite package manager (we recommend https://docs.astral.sh/uv/[`uv`]: `uv tool install awscli`).
 
@@ -99,7 +99,7 @@ response=$(curl -sH "Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
 +
 [source,bash]
 ----
-mc config host add \
+mc alias set \
   "${CLUSTER_ID}" "https://objects.${REGION}.cloudscale.ch" \
   $(echo $response | jq -r '.keys[0].access_key') \
   $(echo $response | jq -r '.keys[0].secret_key')
@@ -124,8 +124,8 @@ mc mb --ignore-existing \
 +
 [source,bash]
 ----
-export AWS_ACCESS_KEY_ID=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey)
-export AWS_SECRET_ACCESS_KEY=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
+export AWS_ACCESS_KEY_ID=$(mc alias list ${CLUSTER_ID} -json | jq -r .accessKey)
+export AWS_SECRET_ACCESS_KEY=$(mc alias list ${CLUSTER_ID} -json | jq -r .secretKey)
 
 aws s3api put-public-access-block \
   --endpoint-url "https://objects.${REGION}.cloudscale.ch" \
@@ -254,8 +254,8 @@ include::partial$connect-to-vault.adoc[]
 # Set the cloudscale.ch access secrets
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
   token=${CLOUDSCALE_API_TOKEN} \
-  s3_access_key=$(mc config host ls ${CLUSTER_ID} -json | jq -r .accessKey) \
-  s3_secret_key=$(mc config host ls ${CLUSTER_ID} -json | jq -r .secretKey)
+  s3_access_key=$(mc alias list ${CLUSTER_ID} -json | jq -r .accessKey) \
+  s3_secret_key=$(mc alias list ${CLUSTER_ID} -json | jq -r .secretKey)
 
 # Put LB API key in Vault
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty \

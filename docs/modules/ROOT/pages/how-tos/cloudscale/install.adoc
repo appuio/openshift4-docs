@@ -3,6 +3,7 @@
 :k8s-minor-version: 1.32
 :ocp-patch-version: {ocp-minor-version}.10
 :provider: cloudscale
+:needs_hieradata_edit: no
 
 [abstract]
 --
@@ -40,6 +41,7 @@ include::partial$install/prerequisites.adoc[]
 * `mc` >= `RELEASE.2024-01-18T07-03-39Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 * `aws` CLI https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html[Official install instructions].
 You can also install the Python package with your favorite package manager (we recommend https://docs.astral.sh/uv/[`uv`]: `uv tool install awscli`).
+* `python3` as `python`
 
 
 [WARNING]
@@ -53,13 +55,12 @@ include::partial$install/register.adoc[]
 
 === Configure input
 
-Create 2 new cloudscale API tokens with read+write permissions and name them *`<cluster_id>`* and *`<cluster_id>_floaty`* on https://control.cloudscale.ch/service/<your-project>/api-token.
+Create a new cloudscale API token with read+write permissions and name *`<cluster_id>`* on https://control.cloudscale.ch/service/<your-project>/api-token.
 
 .Access to cloud API
 [source,bash]
 ----
 export CLOUDSCALE_API_TOKEN=<cloudscale-api-token>
-export TF_VAR_lb_cloudscale_api_secret=<cloudscale-api-token-for-Floaty>
 ----
 
 include::partial$install/vshn-input.adoc[]
@@ -68,6 +69,68 @@ include::partial$install/vshn-input.adoc[]
 [source,bash]
 ----
 export REGION=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
+----
+
+=== Create private network and subnet
+
+. Create a private network via cloudscale API
++
+[source,bash]
+----
+response=$(curl -sH"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
+  https://api.cloudscale.ch/v1/networks \
+  -F name="privnet_${CLUSTER_ID}" \
+  -F zone="${REGION}1" \
+  -F mtu=9000 \
+  -F auto_create_ipv4_subnet=false)
+export NETWORK_UUID=$(echo "$response" | jq -r '.uuid')
+----
+
+. Create a subnet in the private network via cloudscale API
++
+[TIP]
+====
+Customize `PRIVNET_CIDR` if you want to use a different CIDR for the cluster.
+
+Use a custom value for `GATEWAY_ADDR` if you don't want to use `.1` in the configured network CIDR for the default gateway.
+====
++
+[source,bash]
+----
+PRIVNET_CIDR="172.18.200.0/24"
+
+GATEWAY_ADDR=$(python -c \
+  "import ipaddress; print(next(ipaddress.ip_network(\"${PRIVNET_CIDR}\").hosts()))")
+
+response=$(curl -sH"Authorization: Bearer ${CLOUDSCALE_API_TOKEN}" \
+  https://api.cloudscale.ch/v1/subnets \
+  -F network="${NETWORK_UUID}" \
+  -F cidr="${PRIVNET_CIDR}" \
+  -F gateway_address="${GATEWAY_ADDR}")
+export SUBNET_UUID=$(echo "$response" | jq -r '.uuid')
+----
+
+. Create a floating IP to use as the NAT source IP via cloudscale API
++
+[source,bash]
+----
+TBD if actually possible
+----
+
+. Ask cloudscale to provision a NAT gateway via chat.
+Run the command and provide the output with your request.
++
+[source]
+----
+cat <<EOF
+---
+Network UUID:     ${NETWORK_UUID}
+Subnet UUID:      ${SUBNET_UUID}
+Nat Gateway Name: natgw_${CLUSTER_ID}
+Gateway IP:       ${GATEWAY_ADDR}
+NAT source IP:    TBD if possible
+---
+EOF
 ----
 
 [#_bootstrap_bucket]
@@ -257,10 +320,6 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
   s3_access_key=$(mc alias list ${CLUSTER_ID} -json | jq -r .accessKey) \
   s3_secret_key=$(mc alias list ${CLUSTER_ID} -json | jq -r .secretKey)
 
-# Put LB API key in Vault
-vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/floaty \
-  iam_secret=${TF_VAR_lb_cloudscale_api_secret}
-
 # Generate an HTTP secret for the registry
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/registry \
   httpSecret=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 128)
@@ -273,8 +332,6 @@ vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/global-backup \
 vault kv put clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cluster-backup \
   password=$(LC_ALL=C tr -cd "A-Za-z0-9" </dev/urandom | head -c 32)
 ----
-
-include::partial$get-hieradata-token-from-vault.adoc[]
 
 include::partial$install/prepare-commodore.adoc[]
 
@@ -308,53 +365,6 @@ include::partial$install/prepare-syn-config.adoc[]
 include::partial$cloudscale/configure-terraform-secrets.adoc[]
 
 include::partial$setup_terraform.adoc[]
-
-. Create LB hieradata
-+
-[source,bash]
-----
-cat > override.tf <<EOF
-module "cluster" {
-  bootstrap_count          = 0
-  master_count             = 0
-  infra_count              = 0
-  worker_count             = 0
-  additional_worker_groups = {}
-}
-EOF
-terraform apply -target "module.cluster.module.lb.module.hiera"
-----
-
-. Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and wait until the deploy pipeline after the merge is completed.
-
-. Create LBs
-+
-[source,bash]
-----
-terraform apply
-----
-
-. Setup the DNS records shown in output variable `dns_entries` from the previous step in the cluster's parent zone.
-If you use a custom apps domain, make the necessary changes to the DNS record for `*.apps`.
-
-. Make LB FQDNs available for later steps
-+
-.Store LB FQDNs in environment
-[source,bash]
-----
-declare -a LB_FQDNS
-for id in 1 2; do
-  LB_FQDNS[$id]=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[$(expr $id - 1)]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
-done
-----
-+
-.Verify FQDNs
-[source,bash]
-----
-for lb in "${LB_FQDNS[@]}"; do echo $lb; done
-----
-
-include::partial$install/bootstrap-lb.adoc[]
 
 include::partial$install/bootstrap-nodes.adoc[]
 

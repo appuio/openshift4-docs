@@ -69,7 +69,7 @@ ifeval::["{provider}" == "cloudscale"]
 +
 [source,bash,subs="attributes"]
 ----
-yq eval -i '.parameters.openshift.cloudscale.subnet_uuid = "TO_BE_DEFINED"' ${CLUSTER_ID}.yml
+yq eval -i '.parameters.openshift.cloudscale.subnet_uuid = "'"${SUBNET_UUID}"'"' ${CLUSTER_ID}.yml
 
 yq eval -i '.parameters.openshift.cloudscale.rhcos_image_slug = "rhcos-{ocp-minor-version}"' \
   ${CLUSTER_ID}.yml

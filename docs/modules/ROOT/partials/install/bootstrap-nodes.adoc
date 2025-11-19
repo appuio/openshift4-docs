@@ -1,4 +1,3 @@
-
 . Deploy bootstrap node
 +
 [source,bash,subs="attributes+"]
@@ -18,7 +17,10 @@ EOF
 terraform apply
 ----
 
-ifeval::["{provider}" != "stackit"]
+ifeval::["{provider}" == "cloudscale"]
+. Setup the DNS records shown in Terraform output `cluster_dns`
+endif::[]
+ifeval::["{provider}" == "exoscale"]
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +
 [source,bash]
@@ -37,21 +39,18 @@ ifeval::["{provider}" == "stackit"]
 --
 endif::[]
 ifeval::["{provider}" == "cloudscale"]
-. Store the subnet UUID and ingress floating IP in the cluster configuration
+. Store the ingress floating IP in the cluster configuration
 +
 [source,bash]
 ----
-export SUBNET_UUID="$(terraform output -raw subnet_uuid)"
 export INGRESS_FLOATING_IP="$(terraform output -raw router_vip)"
 
 pushd ../../../inventory/classes/${TENANT_ID}
 
-yq eval -i '.parameters.openshift.cloudscale.subnet_uuid = "'$SUBNET_UUID'"' \
-  ${CLUSTER_ID}.yml
 yq eval -i '.parameters.openshift.cloudscale.ingress_floating_ip_v4 = "'$INGRESS_FLOATING_IP'"' \
   ${CLUSTER_ID}.yml
 
-git commit -am "Configure cloudscale subnet UUID and ingress floating IP for ${CLUSTER_ID}"
+git commit -am "Configure cloudscale ingress floating IP for ${CLUSTER_ID}"
 git push
 popd
 popd # yes, twice.
@@ -147,10 +146,6 @@ endif::[]
 EOF
 terraform apply
 ----
-
-ifeval::["{provider}" == "cloudscale"]
-. Add the DNS records for etcd shown in output variable `dns_entries` from the previous step to the cluster's parent zone
-endif::[]
 
 . Wait for master nodes to become ready
 +
@@ -260,7 +255,7 @@ terraform apply
 popd
 ----
 
-ifeval::["{provider}" != "stackit"]
+ifeval::["{provider}" == "exoscale"]
 . Review and merge the LB hieradata MR (listed in Terraform output `hieradata_mr`) and run Puppet on the LBs after the deploy job has completed
 +
 [source,bash]

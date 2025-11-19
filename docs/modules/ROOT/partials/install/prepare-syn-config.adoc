@@ -56,10 +56,11 @@ yq eval -i ".parameters.openshift.appsDomain = \"${APPS_DOMAIN}\"" \
 By default, the cluster's update channel is derived from the cluster's reported OpenShift version.
 If you want to use a custom update channel, make sure to set `parameters.openshift4_version.spec.channel` accordingly.
 
-[source,bash]
+[source,bash,subs="attributes+"]
 ----
 # Configure the OpenShift update channel as `fast`
-yq eval -i ".parameters.openshift4_version.spec.channel = \"fast-{ocp-minor-version}\"" \
+yq eval -i \
+  ".parameters.openshift_upgrade_controller.cluster_version.spec.template.spec.channel = \"fast-{ocp-minor-version}\"" \
   ${CLUSTER_ID}.yml
 ----
 ====

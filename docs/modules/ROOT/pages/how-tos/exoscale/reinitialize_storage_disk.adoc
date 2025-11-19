@@ -41,9 +41,9 @@ export OSD_ID=<ID>
 +
 [source,bash]
 ----
-pvc_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+pvc_name=$(kubectl --as=system:admin -n syn-rook-ceph-cluster get deploy \
   "rook-ceph-osd-${OSD_ID}" -ojsonpath='{.metadata.labels.ceph\.rook\.io/pvc}')
-pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
+pv_name=$(kubectl --as=system:admin -n syn-rook-ceph-cluster get pvc \
   "${pvc_name}" -o jsonpath='{.spec.volumeName}')
 ----
 
@@ -51,7 +51,7 @@ pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
 +
 [source,bash]
 ----
-node_name=$(kubectl --as=cluster-admin get pv ${pv_name} \
+node_name=$(kubectl --as=system:admin get pv ${pv_name} \
   -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}')
 ----
 
@@ -70,7 +70,7 @@ include::partial$create-amtool-silence.adoc[]
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph osd set noout
 ----
 
@@ -83,7 +83,7 @@ include::partial$disable-argocd-autosync.adoc[]
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
+kubectl --as=system:admin -n syn-rook-ceph-operator scale --replicas=0 \
   deploy/rook-ceph-operator
 ----
 
@@ -91,7 +91,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph osd out "osd.${OSD_ID}"
 ----
 
@@ -99,7 +99,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
+kubectl --as=system:admin -n syn-rook-ceph-cluster delete deploy \
   "rook-ceph-osd-${OSD_ID}"
 ----
 
@@ -109,7 +109,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
 +
 [source,bash]
 ----
-diskmaker_pod=$(kubectl --as=cluster-admin -n openshift-local-storage get pods \
+diskmaker_pod=$(kubectl --as=system:admin -n openshift-local-storage get pods \
   -l "app=diskmaker-manager" --field-selector="spec.nodeName=${node_name}" \
   -o jsonpath='{.items[0].metadata.name}')
 ----
@@ -118,10 +118,10 @@ diskmaker_pod=$(kubectl --as=cluster-admin -n openshift-local-storage get pods \
 +
 [source,bash]
 ----
-ceph_image=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get job \
+ceph_image=$(kubectl --as=system:admin -n syn-rook-ceph-cluster get job \
   -l "ceph.rook.io/pvc=${pvc_name}" \
   -o jsonpath='{.items[0].spec.template.spec.containers[0].image}')
-kubectl --as=cluster-admin run -n syn-rook-ceph-cluster \
+kubectl --as=system:admin run -n syn-rook-ceph-cluster \
   "cryptclose-${node_name}-$(date +%s)" --restart=Never -it --rm --image overridden \
   --overrides '{
   "spec": {
@@ -174,8 +174,8 @@ If you get errors in the new OSD prepare job, increase `count` of the `dd` comma
 +
 [source,bash]
 ----
-disk_path=$(kubectl --as=cluster-admin get pv "${pv_name}" -o jsonpath='{.spec.local.path}')
-kubectl --as=cluster-admin -n openshift-local-storage exec -it "${diskmaker_pod}" -- \
+disk_path=$(kubectl --as=system:admin get pv "${pv_name}" -o jsonpath='{.spec.local.path}')
+kubectl --as=system:admin -n openshift-local-storage exec -it "${diskmaker_pod}" -- \
  dd if=/dev/zero of="${disk_path}" bs=1M count=512
 ----
 
@@ -185,7 +185,7 @@ kubectl --as=cluster-admin -n openshift-local-storage exec -it "${diskmaker_pod}
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=1 \
+kubectl --as=system:admin -n syn-rook-ceph-operator scale --replicas=1 \
   deploy/rook-ceph-operator
 ----
 
@@ -193,14 +193,14 @@ kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=1 \
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
+kubectl --as=system:admin -n syn-rook-ceph-cluster get pods -w
 ----
 
 . Re-enable Ceph balancing
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph osd unset noout
 ----
 
@@ -214,7 +214,7 @@ include::partial$storage-ceph-backfilling.adoc[]
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph osd purge "osd.${OSD_ID}"
 ----
 
@@ -222,13 +222,13 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph status
 ----
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph osd tree
 ----
 

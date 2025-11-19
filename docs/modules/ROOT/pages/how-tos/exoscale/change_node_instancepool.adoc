@@ -1,7 +1,7 @@
 = Change worker node type (instance pool)
 
 :cloud_provider: exoscale
-:kubectl_extra_args: --as=cluster-admin
+:kubectl_extra_args: --as=system:admin
 :needs_hieradata_edit: no
 
 :node-delete-list: ${NODES_TO_REMOVE}

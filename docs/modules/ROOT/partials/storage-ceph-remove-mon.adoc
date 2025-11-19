@@ -16,7 +16,7 @@ endif::[]
 ----
 MON_IDS=""
 for node in $(echo -n {mon-replace-list}); do
-  mon_id=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods \
+  mon_id=$(kubectl --as=system:admin -n syn-rook-ceph-cluster get pods \
     -lapp=rook-ceph-mon --field-selector="spec.nodeName=${node}" \
     --no-headers -ocustom-columns="MON_ID:.metadata.labels.ceph_daemon_id")
   MON_IDS="$MON_IDS $mon_id"
@@ -45,7 +45,7 @@ This tells the operator to perform the MON failover after less time than the def
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
+kubectl --as=system:admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
   -p '[{
     "op": "replace",
     "path": "/spec/healthCheck/daemonHealth/mon",
@@ -62,7 +62,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --
 [source,bash,subs="attributes+"]
 ----
 for node in $(echo -n {mon-replace-list}); do
-  kubectl --as=cluster-admin cordon "${node}"
+  kubectl --as=system:admin cordon "${node}"
 done
 ----
 +
@@ -71,14 +71,14 @@ done
 [source,bash]
 ----
 mon_id=<MON_ID>
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pod \
+kubectl --as=system:admin -n syn-rook-ceph-cluster delete pod \
   -l app=rook-ceph-mon,ceph_daemon_id="${mon_id}"
 
 # Wait until new MON is scheduled
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
+kubectl --as=system:admin -n syn-rook-ceph-cluster get pods -w
 
 # Wait until the cluster has regained full quorum
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph status
 
 # Repeat for all other $MON_IDS
@@ -88,7 +88,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-to
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy -l app=rook-ceph-mon
+kubectl --as=system:admin -n syn-rook-ceph-cluster get deploy -l app=rook-ceph-mon
 ----
 
 ifeval::["{mon-argocd-autosync-already-disabled}" != "yes"]

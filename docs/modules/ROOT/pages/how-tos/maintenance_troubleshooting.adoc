@@ -8,7 +8,7 @@ Get some more detailed information about the current state of the upgrade:
 
 [source,console]
 ----
-kubectl --as cluster-admin get clusterversions.config.openshift.io version -o jsonpath={.status.conditions}  | jq .
+kubectl --as=system:admin get clusterversions.config.openshift.io version -o jsonpath={.status.conditions}  | jq .
 ----
 
 [NOTE]
@@ -21,8 +21,8 @@ Follow the log of an operator or controller:
 
 [source,console]
 ----
-kubectl --as cluster-admin -n openshift-machine-config-operator logs deployment/machine-config-operator -f
-kubectl --as cluster-admin -n openshift-machine-config-operator logs deployment/machine-config-controller -f
+kubectl --as=system:admin -n openshift-machine-config-operator logs deployment/machine-config-operator -f
+kubectl --as=system:admin -n openshift-machine-config-operator logs deployment/machine-config-controller -f
 ----
 
 === Check all operator states
@@ -31,7 +31,7 @@ Get all `clusteroperator` objects to receive an overview of the cluster operator
 
 [source,console]
 ----
-$ oc --as cluster-admin get co
+$ oc --as=system:admin get co
 NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE
 authentication                             4.8.2     True        False         False      20h
 baremetal                                  4.8.2     True        False         False      147d
@@ -73,7 +73,7 @@ In particular, this can be helpful to check whether an upgrade contains a CoreOS
 
 [source,console]
 ----
-$ oc --as=cluster-admin adm release info 4.8.28
+$ oc --as=system:admin adm release info 4.8.28
 Name:      4.8.28
 Digest:    sha256:ba1299680b542e46744307afc7effc15957a20592d88de4651610b52ed8be9a8
 Created:   2022-01-19T10:15:29Z
@@ -109,8 +109,8 @@ This is the image we set in component `openshift4-version`.
 +
 [source,console]
 ----
-POOL_COUNT=$(kubectl --as=cluster-admin -n openshift-machine-config-operator get machineconfigpool --no-headers | wc -l)
-kubectl --as=cluster-admin -n openshift-machine-config-operator get machineconfig \
+POOL_COUNT=$(kubectl --as=system:admin -n openshift-machine-config-operator get machineconfigpool --no-headers | wc -l)
+kubectl --as=system:admin -n openshift-machine-config-operator get machineconfig \
   --sort-by=".metadata.creationTimestamp" | grep "^rendered-" | tail -n "${POOL_COUNT}"
 ----
 
@@ -118,7 +118,7 @@ kubectl --as=cluster-admin -n openshift-machine-config-operator get machineconfi
 +
 [source,console]
 ----
-kubectl --as=cluster-admin get nodes -ocustom-columns="NAME:.metadata.name,Current Config:.metadata.annotations.machineconfiguration\.openshift\.io/currentConfig,Desired Config:.metadata.annotations.machineconfiguration\.openshift\.io/desiredConfig"
+kubectl --as=system:admin get nodes -ocustom-columns="NAME:.metadata.name,Current Config:.metadata.annotations.machineconfiguration\.openshift\.io/currentConfig,Desired Config:.metadata.annotations.machineconfiguration\.openshift\.io/desiredConfig"
 ----
 
 * Check `machine-config-daemon` pod logs on the node(s) for which current and desired `MachineConfig` objects don't match.
@@ -128,10 +128,10 @@ The `machine-config-daemon` logs contain the `kubectl drain` logs for the node a
 [source,console]
 ----
 NODE=<node-name>
-POD=$(kubectl --as=cluster-admin -o jsonpath='{.items[0].metadata.name}' \
+POD=$(kubectl --as=system:admin -o jsonpath='{.items[0].metadata.name}' \
   -n openshift-machine-config-operator get pods \
   --field-selector="spec.nodeName=${NODE}" -l k8s-app=machine-config-daemon)
-kubectl --as=cluster-admin -n openshift-machine-config-operator \
+kubectl --as=system:admin -n openshift-machine-config-operator \
   logs -c machine-config-daemon -f "${POD}"
 ----
 
@@ -139,7 +139,7 @@ kubectl --as=cluster-admin -n openshift-machine-config-operator \
 +
 [source,console]
 ----
-oc --as=cluster-admin adm drain <node-name> --delete-emptydir-data --ignore-daemonsets --force --grace-period=0
+oc --as=system:admin adm drain <node-name> --delete-emptydir-data --ignore-daemonsets --force --grace-period=0
 ----
 +
 If manually force-draining the node isn't successful, check which pods are still running on the node with `oc describe node <node-name>` or `oc get pods --all-namespaces --field-selector spec.nodeName=<node-name>` and force delete any non-daemonset pods shown in the output.

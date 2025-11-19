@@ -16,7 +16,7 @@ For all resources from https://github.com/operator-framework/operator-lifecycle-
 
 [source,bash]
 ----
-kubectl --as=cluster-admin get \
+kubectl --as=system:admin get \
 deployment, \
 service, \
 namespace, \
@@ -38,21 +38,21 @@ For each object, check if it's still required (the case if another `operators.co
 
 [source,bash]
 ----
-kubectl --as=cluster-admin -n openshift-logging get sa --show-labels
+kubectl --as=system:admin -n openshift-logging get sa --show-labels
 ----
 
 If an object is still required, unlabel it. Otherwise delete it:
 
 [source,bash]
 ----
-kubectl --as=cluster-admin -n openshift-logging delete sa elasticsearch-operator
+kubectl --as=system:admin -n openshift-logging delete sa elasticsearch-operator
 ----
 
 Finally, delete the operator object:
 
 [source,bash]
 ----
-kubectl --as=cluster-admin scale deployment -n openshift-operator-lifecycle-manager olm-operator --replicas=0
-kubectl --as=cluster-admin delete operators.operators.coreos.com elasticsearch-operator.openshift-logging
-kubectl --as=cluster-admin scale deployment -n openshift-operator-lifecycle-manager olm-operator --replicas=1
+kubectl --as=system:admin scale deployment -n openshift-operator-lifecycle-manager olm-operator --replicas=0
+kubectl --as=system:admin delete operators.operators.coreos.com elasticsearch-operator.openshift-logging
+kubectl --as=system:admin scale deployment -n openshift-operator-lifecycle-manager olm-operator --replicas=1
 ----

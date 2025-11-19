@@ -10,11 +10,11 @@ In order to ensure that the debug pod is scheduled correctly, use the following 
 [source,bash]
 ----
 nodename=<NODE> <1>
-oc --as=cluster-admin -n syn-debug-nodes debug "node/${nodename}" <2>
+oc --as=system:admin -n syn-debug-nodes debug "node/${nodename}" <2>
 ----
 <1> The name of the node to debug.
 Use the names shown in `oc get nodes`.
-<2> Impersonating `cluster-admin` with `--as=cluster-admin` ensures that you have sufficient permissions to schedule the debug pod.
+<2> Impersonating `system:admin` with `--as=system:admin` ensures that you have sufficient permissions to schedule the debug pod.
 Selecting namespace `syn-debug-nodes` with `-n syn-debug-nodes` ensures that the debug pod can be scheduled on any node in the cluster.
 
 == Unhealthy nodes

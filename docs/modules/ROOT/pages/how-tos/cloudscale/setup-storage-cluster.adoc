@@ -327,9 +327,9 @@ kubectl -n syn-rook-ceph-cluster get pods -w
 [source,bash]
 ----
 # Check overall Ceph health
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools \
   ceph status
 # Check CephFS health
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools \
   ceph fs status
 ----

@@ -1,7 +1,7 @@
 [source,bash,subs="attributes"]
 ----
-kubectl --as=cluster-admin -n syn patch apps root --type=json \
+kubectl --as=system:admin -n syn patch apps root --type=json \
   -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
-kubectl --as=cluster-admin -n syn patch apps {argo_app} --type=json \
+kubectl --as=system:admin -n syn patch apps {argo_app} --type=json \
   -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
 ----

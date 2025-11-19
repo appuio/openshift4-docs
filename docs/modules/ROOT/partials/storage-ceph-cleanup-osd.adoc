@@ -7,13 +7,13 @@ NOTE: We also extract the name of the PV(s) here, but we'll only delete the PV(s
 old_pvc_names=""
 {delete-pvs}=""
 for node in $(echo -n {osd-replace-list}); do
-  osd_id=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+  osd_id=$(kubectl --as=system:admin -n syn-rook-ceph-cluster get deploy \
     -l failure-domain="${node}" --no-headers \
     -o custom-columns="NAME:.metadata.name" | cut -d- -f4)
 
-  pvc_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+  pvc_name=$(kubectl --as=system:admin -n syn-rook-ceph-cluster get deploy \
     "rook-ceph-osd-${osd_id}" -ojsonpath='{.metadata.labels.ceph\.rook\.io/pvc}')
-  pv_name=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pvc \
+  pv_name=$(kubectl --as=system:admin -n syn-rook-ceph-cluster get pvc \
     "${pvc_name}" -o jsonpath='{.spec.volumeName}')
 
   old_pvc_names="$old_pvc_names $pvc_name"
@@ -28,7 +28,7 @@ echo ${delete-pvs}
 [source,bash,subs="attributes+"]
 ----
 for node in $(echo -n {osd-replace-list}); do
-  kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete deploy \
+  kubectl --as=system:admin -n syn-rook-ceph-cluster delete deploy \
     -l failure-domain="${node}"
 done
 ----
@@ -38,9 +38,9 @@ done
 [source,bash]
 ----
 for pvc_name in $(echo -n $old_pvc_names); do
-  kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete job \
+  kubectl --as=system:admin -n syn-rook-ceph-cluster delete job \
     -l ceph.rook.io/pvc="${pvc_name}"
-  kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete pvc "${pvc_name}"
+  kubectl --as=system:admin -n syn-rook-ceph-cluster delete pvc "${pvc_name}"
 done
 ----
 
@@ -49,6 +49,6 @@ done
 [source,bash]
 ----
 for pvc_name in $(echo -n $old_pvc_names); do
-  kubectl --as=cluster-admin -n syn-rook-ceph-cluster delete secret -l pvc_name="${pvc_name}"
+  kubectl --as=system:admin -n syn-rook-ceph-cluster delete secret -l pvc_name="${pvc_name}"
 done
 ----

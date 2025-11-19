@@ -1,7 +1,7 @@
 = Remove a worker node (no instance pool)
 
 :cloud_provider: exoscale
-:kubectl_extra_args: --as=cluster-admin
+:kubectl_extra_args: --as=system:admin
 :delabel_app_nodes: yes
 
 :node-delete-list: ${NODE_TO_REMOVE}

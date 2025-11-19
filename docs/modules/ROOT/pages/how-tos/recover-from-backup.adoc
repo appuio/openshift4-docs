@@ -27,9 +27,9 @@ They can also be obtained from the cluster catalog and Vault.
 [source,console]
 ----
 export RESTIC_REPOSITORY=$(kubectl -n syn-cluster-backup get schedule objects -o jsonpath='s3:{.spec.backend.s3.endpoint}/{.spec.backend.s3.bucket}')
-export RESTIC_PASSWORD=$(kubectl --as cluster-admin -n syn-cluster-backup get secret objects-backup-password -o jsonpath='{.data.password}' | base64 --decode)
-export AWS_ACCESS_KEY_ID=$(kubectl --as cluster-admin -n syn-cluster-backup get secret objects-backup-s3-credentials -o jsonpath='{.data.username}' | base64 --decode)
-export AWS_SECRET_ACCESS_KEY=$(kubectl --as cluster-admin -n syn-cluster-backup get secret objects-backup-s3-credentials -o jsonpath='{.data.password}' | base64 --decode)
+export RESTIC_PASSWORD=$(kubectl --as=system:admin -n syn-cluster-backup get secret objects-backup-password -o jsonpath='{.data.password}' | base64 --decode)
+export AWS_ACCESS_KEY_ID=$(kubectl --as=system:admin -n syn-cluster-backup get secret objects-backup-s3-credentials -o jsonpath='{.data.username}' | base64 --decode)
+export AWS_SECRET_ACCESS_KEY=$(kubectl --as=system:admin -n syn-cluster-backup get secret objects-backup-s3-credentials -o jsonpath='{.data.password}' | base64 --decode)
 ----
 
 === Obtaining restic configuration from catalog and vault
@@ -131,13 +131,13 @@ Apply the extracted and prepared objects to the target cluster.
 .Apply single file
 [source,console]
 ----
-kubectl --as cluster-admin apply -f <path/to/file>
+kubectl --as=system:admin apply -f <path/to/file>
 ----
 
 .Apply all files within a directory
 [source,console]
 ----
-kubectl --as cluster-admin apply -Rf <path/to/dir>
+kubectl --as=system:admin apply -Rf <path/to/dir>
 ----
 
 [WARNING]

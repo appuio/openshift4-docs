@@ -79,3 +79,18 @@ Otherwise, the installation will most likely fail.
 The final machine sets will be configured through Project Syn.
 <3> The installer will by default create a top-level folder with the vsphere infraID, but you can optionally choose an existing folder (https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/installing_on_vmware_vsphere/installer-provisioned-infrastructure#installation-installer-provisioned-vsphere-config-yaml_installing-vsphere-installer-provisioned-customizations[docs]).
 <4> (Optional) Configure non-standard pod and service network here (https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/installing_on_vmware_vsphere/installer-provisioned-infrastructure#nw-operator-cr-cno-object_installing-vsphere-installer-provisioned-network-customizations[docs]).
+
+[IMPORTANT]
+====
+If the environment has an outgoing proxy you need to patch the `install-config.yaml` file with the following:
+[source,bash]
+----
+proxy:
+  httpProxy: http://proxy.example.com
+  httpsProxy: http://proxy.example.com
+  noProxy: <NO_PROXY_VALUES>
+additionalTrustBundle: |
+  -----BEGIN CERTIFICATE-----
+  -----END CERTIFICATE-----
+----
+====

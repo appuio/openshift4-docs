@@ -22,6 +22,27 @@ endif::[]
 
 . https://kb.vshn.ch/vshnsyn/how-tos/synthesize.html[Make the cluster Project Syn enabled]
 
+[IMPORTANT]
+====
+If the environment has an outgoing proxy you need to patch the steward deployment with the following config:
+[source,bash]
+----
+env:
+- name: HTTPS_PROXY
+  value: http://proxy.example.com
+- name: HTTP_PROXY
+  value: http://proxy.example.com
+- name: NO_PROXY
+  value: <NO_PROXY_VALUES>
+- name: http_proxy
+  value: http://proxy.example.com
+- name: https_proxy
+  value: http://proxy.example.com
+- name: no_proxy
+  value: <NO_PROXY_VALUES>
+----
+====
+
 === Setup acme-dns CNAME records for the cluster
 
 NOTE: You can skip this section if you're not using Let's Encrypt for the cluster's API and default wildcard certificates.

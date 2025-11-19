@@ -47,9 +47,10 @@ export VCENTER_HOSTNAME=<vcenter hostname> <1>
 .vSphere credentials
 [source,bash]
 ----
-export VSPHERE_USERNAME=<username>
+export VSPHERE_USERNAME=<username> <1>
 export VSPHERE_PASSWORD=<password>
 ----
+<1> Needs to be in the form `username@domain` or `domain\username`, eg. `ds.example.com\openshiftadmin`
 
 .vSphere resources
 [source,bash]

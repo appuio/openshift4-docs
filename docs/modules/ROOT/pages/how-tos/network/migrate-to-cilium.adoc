@@ -2,7 +2,7 @@
 
 == Prerequisites
 
-* `cluster-admin` privileges
+* cluster-admin privileges
 * `kubectl`
 * `jq`
 * `curl`
@@ -33,11 +33,11 @@ export TENANT_ID=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" \
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn patch apps root --type=json \
+kubectl --as=system:admin -n syn patch apps root --type=json \
   -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
-kubectl --as=cluster-admin -n syn patch apps openshift4-nodes --type=json \
+kubectl --as=system:admin -n syn patch apps openshift4-nodes --type=json \
   -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
-kubectl --as=cluster-admin -n syn patch apps openshift-upgrade-controller --type=json \
+kubectl --as=system:admin -n syn patch apps openshift-upgrade-controller --type=json \
   -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]'
 ----
 
@@ -47,13 +47,13 @@ We also need to scale down the upgrade controller, so that we can patch the `Clu
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n appuio-openshift-upgrade-controller \
+kubectl --as=system:admin -n appuio-openshift-upgrade-controller \
   scale deployment openshift-upgrade-controller-controller-manager --replicas=0
 ----
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin patch clusterversion version \
+kubectl --as=system:admin patch clusterversion version \
   --type=merge \
   -p '
   {"spec":{"overrides":[
@@ -69,7 +69,7 @@ kubectl --as=cluster-admin patch clusterversion version \
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n openshift-network-operator \
+kubectl --as=system:admin -n openshift-network-operator \
   scale deploy network-operator --replicas=0
 ----
 
@@ -93,7 +93,7 @@ If the operator is still running, check the following conditions:
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n openshift-network-operator \
+kubectl --as=system:admin -n openshift-network-operator \
   delete configmap applied-cluster
 ----
 
@@ -102,7 +102,7 @@ kubectl --as=cluster-admin -n openshift-network-operator \
 [source,bash]
 ----
 for mcp in $(kubectl get mcp -o name); do
-kubectl --as=cluster-admin patch $mcp --type=merge -p '{"spec": {"paused": true}}'
+kubectl --as=system:admin patch $mcp --type=merge -p '{"spec": {"paused": true}}'
 done
 ----
 
@@ -146,7 +146,7 @@ yq eval -i '.parameters.networkpolicy.networkPlugin = "cilium"' \
 [source,bash]
 ----
 export CLUSTER_DOMAIN=$(kubectl get dns cluster -ojsonpath='{.spec.baseDomain}')
-kubectl --as=cluster-admin -n openshift-dns exec ds/node-resolver -- dig +short api-int.${CLUSTER_DOMAIN}
+kubectl --as=system:admin -n openshift-dns exec ds/node-resolver -- dig +short api-int.${CLUSTER_DOMAIN}
 ----
 +
 [NOTE]
@@ -199,9 +199,9 @@ Otherwise, nodes may reboot into a state where they're stuck in `NotReady`.
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin patch network.config cluster \
+kubectl --as=system:admin patch network.config cluster \
   --type=merge -p '{"spec":{"networkType":"Cilium"},"status":null}'
-kubectl --as=cluster-admin patch network.operator cluster \
+kubectl --as=system:admin patch network.operator cluster \
   --type=merge -p '{"spec":{"defaultNetwork":{"type":"Cilium"}},"status":null}'
 ----
 
@@ -210,12 +210,12 @@ We need to execute the `apply` twice, since the first apply will fail to create 
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin apply -n cilium -Rf catalog/manifests/cilium/
+kubectl --as=system:admin apply -n cilium -Rf catalog/manifests/cilium/
 ----
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin apply -n cilium -Rf catalog/manifests/cilium/
+kubectl --as=system:admin apply -n cilium -Rf catalog/manifests/cilium/
 ----
 
 . Wait until Cilium CNI is up and running
@@ -231,7 +231,7 @@ TIP: This should avoid issues when draining and rebooting nodes, such as pods un
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-espejo apply -f catalog/manifests/networkpolicy/10_default_networkpolicies.yaml
+kubectl --as=system:admin -n syn-espejo apply -f catalog/manifests/networkpolicy/10_default_networkpolicies.yaml
 ----
 
 == Finalize migration
@@ -247,9 +247,9 @@ As soon as you complete this step, existing pods may go into `CrashLoopBackOff` 
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n openshift-network-operator \
+kubectl --as=system:admin -n openshift-network-operator \
   scale deployment network-operator --replicas=1
-kubectl --as=cluster-admin patch clusterversion version \
+kubectl --as=system:admin patch clusterversion version \
  --type=merge -p '{"spec":{"overrides":null}}'
 ----
 
@@ -258,7 +258,7 @@ kubectl --as=cluster-admin patch clusterversion version \
 [source,bash]
 ----
 for mcp in $(kubectl get mcp -o name); do
-kubectl --as=cluster-admin patch $mcp --type=merge -p '{"spec":{"paused":false}}'
+kubectl --as=system:admin patch $mcp --type=merge -p '{"spec":{"paused":false}}'
 done
 ----
 +
@@ -273,14 +273,14 @@ You may want to restart the multus daemonset once the old CNI pods are removed.
 
 [source,bash]
 ----
-kubectl --as=cluster-admin -n openshift-multus rollout restart ds/multus
+kubectl --as=system:admin -n openshift-multus rollout restart ds/multus
 ----
 ====
 +
 [TIP]
 ====
 It may be necessary to force drain nodes manually to allow the machine-config-operator to reboot the nodes.
-Use `kubectl --as=cluster-admin drain --ignore-daemonsets --delete-emptydir-data --force --disable-eviction` to circumvent PDB violations if necessary.
+Use `kubectl --as=system:admin drain --ignore-daemonsets --delete-emptydir-data --force --disable-eviction` to circumvent PDB violations if necessary.
 
 Start with a master node, and ensure that the machine-config-operator is running on that master node after it's been drained and rebooted.
 ====

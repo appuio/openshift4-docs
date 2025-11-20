@@ -92,7 +92,7 @@ ifeval::["{cloud_provider}" == "exoscale"]
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin get pv \
+kubectl --as=system:admin get pv \
   -l storage.openshift.com/local-volume-owner-name=storagevolumes -w
 ----
 
@@ -105,7 +105,7 @@ include::partial$disable-argocd-autosync.adoc[]
 +
 [source,bash]
 ----
-orig_osd_count=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
+orig_osd_count=$(kubectl --as=system:admin -n syn-rook-ceph-cluster \
   get cephcluster cluster -o jsonpath='{.spec.storage.storageClassDeviceSets[0].count}')
 ----
 
@@ -113,7 +113,7 @@ orig_osd_count=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
+kubectl --as=system:admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
   -p "[{
     \"op\": \"replace\",
     \"path\": \"/spec/storage/storageClassDeviceSets/0/count\",
@@ -125,7 +125,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
+kubectl --as=system:admin -n syn-rook-ceph-cluster get pods -w
 ----
 // "{cloud_provider}" == "exoscale"
 endif::[]

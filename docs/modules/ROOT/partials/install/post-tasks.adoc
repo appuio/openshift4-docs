@@ -24,7 +24,7 @@ kubectl -n appuio-openshift-upgrade-controller get upgradeconfig $uc -oyaml | \
     .spec.schedule.cron = ((now+"1m")|format_datetime("4 15")) + " * * *", <3>
     .spec.pinVersionWindow = "0m" <4>
   ' | \
-  kubectl create -f - --as=cluster-admin
+  kubectl create -f - --as=system:admin
 ----
 <1> The name doesn't matter, but the `upgradeconfig/name` label in the job template must match `metadata.name` of the copied `UpgradeConfig`.
 <2> We clear the resource labels so ArgoCD doesn't delete the copied resource.
@@ -37,7 +37,7 @@ Don't forget to delete the copied `UpgradeConfig` resource after the initial mai
 
 [source,bash]
 ----
-kubectl --as=cluster-admin -n appuio-openshift-upgrade-controller \
+kubectl --as=system:admin -n appuio-openshift-upgrade-controller \
   delete upgradeconfig first
 ----
 ====

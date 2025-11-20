@@ -39,7 +39,7 @@ kubectl get nodes -l $node_selector
 [source,bash]
 ----
 for node in $(kubectl get nodes -oname -l $node_selector); do
-  oc -n syn-debug-nodes --as=cluster-admin debug $node -- chroot /host touch /run/machine-config-daemon-force
+  oc -n syn-debug-nodes --as=system:admin debug $node -- chroot /host touch /run/machine-config-daemon-force
 done
 ----
 
@@ -74,7 +74,7 @@ Don't do this for multiple nodes at the same time, all the nodes for which this 
 timeout=300s <1>
 for node in $(kubectl get node -o name -l $node_selector); do
   echo "Rebooting $node"
-  kubectl --as=cluster-admin annotate --overwrite $node \
+  kubectl --as=system:admin annotate --overwrite $node \
     machineconfiguration.openshift.io/currentConfig=$old_mc
   echo "Waiting for drain... (up to $timeout)"
   if ! oc wait --timeout=$timeout $node --for condition=ready=false; then

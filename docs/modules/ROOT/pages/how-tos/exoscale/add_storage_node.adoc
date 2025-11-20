@@ -1,6 +1,6 @@
 = Add a storage node
 
-:kubectl_extra_args: --as=cluster-admin
+:kubectl_extra_args: --as=system:admin
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
 
@@ -97,7 +97,7 @@ This might take a few minutes.
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
+kubectl --as=system:admin -n syn-rook-ceph-cluster get pods -w
 ----
 
 . Wait for the data to be redistributed ("backfilled") to the new OSD.

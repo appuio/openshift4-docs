@@ -5,11 +5,11 @@ See the xref:explanations/sudo.adoc[] for a background explanation.
 
 == CLI Usage
 
-To elevate privileges to `cluster-admin` using the `oc` or `kubectl` CLI, specify the https://kubernetes.io/docs/reference/kubectl/kubectl[`--as cluster-admin`] flag:
+To elevate privileges to cluster-admin using the `oc` or `kubectl` CLI, specify the https://kubernetes.io/docs/reference/kubectl/kubectl[`--as=system:admin`] flag:
 
 [source,console]
 ----
-oc --as cluster-admin get nodes
+oc --as=system:admin get nodes
 ----
 
 This will impersonate the stated user for this command.
@@ -23,7 +23,7 @@ The file can be found at `$HOME/.kube/config` or at the location specified by th
 [source,bash]
 ----
 # Impersonation config for current context
-yq -i '.current-context as $cc | (.contexts[] | select(.name == $cc) | .context.user) as $cu | with(.users[] | select(.name == $cu); .user.as = "cluster-admin")' ${KUBECONFIG:-$HOME/.kube/config}
+yq -i '.current-context as $cc | (.contexts[] | select(.name == $cc) | .context.user) as $cu | with(.users[] | select(.name == $cu); .user.as = "system:admin")' ${KUBECONFIG:-$HOME/.kube/config}
 oc whoami
 
 # Use your tool of choice ...
@@ -32,16 +32,6 @@ oc whoami
 yq -i '.current-context as $cc | (.contexts[] | select(.name == $cc) | .context.user) as $cu | with(.users[] | select(.name == $cu); del(.user.as))' ${KUBECONFIG:-$HOME/.kube/config}
 oc whoami
 ----
-
-== OpenShift Console
-
-To elevate privileges to `cluster-admin` using the OpenShift web console, use the https://www.openshift.com/blog/openshift-4-3-spoofing-a-user[user impersonation] feature:
-further details
-. Login to the web console with your regular user
-. Navigate to "User Management" -> "Role Binding" in the sidebar
-. Search for `impersonate-cluster-admin` in the rop right search box
-. From the menu, choose "Impersonate User cluster-admin"
-. You should now see a blue bar saying "Impersonating User" and the top right user info "cluster-admin"
 
 [WARNING]
 ====

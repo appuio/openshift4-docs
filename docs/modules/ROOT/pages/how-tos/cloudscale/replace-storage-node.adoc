@@ -1,7 +1,7 @@
 = Replace a storage node
 
 :cloud_provider: cloudscale
-:kubectl_extra_args: --as=cluster-admin
+:kubectl_extra_args: --as=system:admin
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
 

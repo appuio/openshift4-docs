@@ -1,7 +1,7 @@
 = Replace a storage node
 
 :cloud_provider: exoscale
-:kubectl_extra_args: --as=cluster-admin
+:kubectl_extra_args: --as=system:admin
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
 
@@ -72,7 +72,7 @@ include::partial$storage-ceph-remove-osd.adoc[]
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
+kubectl --as=system:admin -n syn-rook-ceph-operator scale --replicas=0 \
   deploy/rook-ceph-operator
 ----
 
@@ -80,7 +80,7 @@ kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=0 \
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
+kubectl --as=system:admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
   -p "[{
     \"op\": \"replace\",
     \"path\": \"/spec/storage/storageClassDeviceSets/0/count\",
@@ -94,7 +94,7 @@ include::partial$storage-ceph-cleanup-osd.adoc[]
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=1 \
+kubectl --as=system:admin -n syn-rook-ceph-operator scale --replicas=1 \
   deploy/rook-ceph-operator
 ----
 

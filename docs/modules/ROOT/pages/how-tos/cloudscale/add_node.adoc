@@ -50,7 +50,7 @@ git push -u origin add-worker-node
 
 == Approve CertificateSigningRequests
 
-:kubectl_extra_args: --as=cluster-admin
+:kubectl_extra_args: --as=system:admin
 include::partial$install/approve-node-csrs.adoc[]
 
 == Label Node
@@ -66,12 +66,12 @@ kubectl get node
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin label node worker-XXXX node-role.kubernetes.io/app=""
+kubectl --as=system:admin label node worker-XXXX node-role.kubernetes.io/app=""
 ----
 
 . [APPUiO Cloud only] Add node-class label (flex or plus)
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin label node worker-XXXX appuio.io/node-class=xxxx
+kubectl --as=system:admin label node worker-XXXX appuio.io/node-class=xxxx
 ----

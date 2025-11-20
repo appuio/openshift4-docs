@@ -48,7 +48,7 @@ vault kv patch clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale \
 +
 [source,bash]
 ----
-kubectl --as cluster-admin -n syn-csi-cloudscale \
+kubectl --as=system:admin -n syn-csi-cloudscale \
   get secrets cloudscale -oyaml |\
   yq '.data.access-token' | base64 -d
 ----
@@ -57,7 +57,7 @@ kubectl --as cluster-admin -n syn-csi-cloudscale \
 +
 [source,bash]
 ----
-kubectl --as cluster-admin -n syn-csi-cloudscale rollout restart \
+kubectl --as=system:admin -n syn-csi-cloudscale rollout restart \
   sts csi-cloudscale-controller
 ----
 
@@ -66,7 +66,7 @@ kubectl --as cluster-admin -n syn-csi-cloudscale rollout restart \
 +
 [source,bash]
 ----
-cat <<EOF | kubectl --as cluster-admin apply -f -
+cat <<EOF | kubectl --as=system:admin apply -f -
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -111,7 +111,7 @@ EOF
 +
 [source,bash]
 ----
-kubectl --as cluster-admin delete ns vshn-rotate-tokens
+kubectl --as=system:admin delete ns vshn-rotate-tokens
 ----
 
 . Update the `CLOUDSCALE_TOKEN_RW` CI/CD variable in the the cluster-catalog repository.

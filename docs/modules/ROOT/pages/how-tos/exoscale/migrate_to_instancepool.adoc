@@ -1,7 +1,7 @@
 = Migrate worker nodes to instance pools
 
 :cloud_provider: exoscale
-:kubectl_extra_args: --as=cluster-admin
+:kubectl_extra_args: --as=system:admin
 :needs_hieradata_edit: no
 
 [abstract]
@@ -129,7 +129,7 @@ kubectl get node -ojson | \
     | select(.metadata.name | test("app|infra|master|storage-")|not)
     | select(.metadata.labels["node-role.kubernetes.io/app"] == null)
     .metadata.name' | \
-  xargs -I {} kubectl label --as=cluster-admin \
+  xargs -I {} kubectl label --as=system:admin \
     node {} node-role.kubernetes.io/app=
 ----
 
@@ -145,7 +145,7 @@ for node in $(
          | .instances[].attributes.hex' \
     state.json
 ); do
-  kubectl drain --as=cluster-admin --ignore-daemonsets \
+  kubectl drain --as=system:admin --ignore-daemonsets \
     --delete-emptydir-data --force node "$node"
 done
 ----
@@ -177,7 +177,7 @@ for name in $(
   done
 done
 ----
-    kubectl drain --as=cluster-admin --ignore-daemonsets \
+    kubectl drain --as=system:admin --ignore-daemonsets \
       --delete-emptydir-data --force node "$node"
 
 == Deploy Exoscale Cloud Controller Manager
@@ -223,12 +223,12 @@ IMPORTANT: This step triggers node reboots to apply the Kubelet flag `--cloud-pr
 +
 [source,bash]
 ----
-kubectl --as cluster-admin patch infrastructure.config  cluster --type=merge -p '{"spec":{"platformSpec":{"external":{"platformName":"exoscale"},"type":"External"}}}'
+kubectl --as=system:admin patch infrastructure.config  cluster --type=merge -p '{"spec":{"platformSpec":{"external":{"platformName":"exoscale"},"type":"External"}}}'
 ----
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin patch infrastructure.config cluster --type=merge --subresource=status \
+kubectl --as=system:admin patch infrastructure.config cluster --type=merge --subresource=status \
   -p  '{"status":{"platform":"External","platformStatus":{"external":{"cloudControllerManager":{"state":"External"}},"type":"External"}}}'
 ----
 
@@ -236,7 +236,7 @@ kubectl --as=cluster-admin patch infrastructure.config cluster --type=merge --su
 +
 [source,bash]
 ----
-kubectl --as cluster-admin taint node --all node.cloudprovider.kubernetes.io/uninitialized=true:NoSchedule
+kubectl --as=system:admin taint node --all node.cloudprovider.kubernetes.io/uninitialized=true:NoSchedule
 ----
 
 . Check if instance-type is applied to verify the CCM is working

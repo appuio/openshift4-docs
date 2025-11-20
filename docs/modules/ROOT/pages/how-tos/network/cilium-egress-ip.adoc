@@ -2,7 +2,7 @@
 
 == Prerequisites
 
-* `cluster-admin` privileges
+* cluster-admin privileges
 * Cluster is running Cilium.
 See the xref:how-tos/network/migrate-to-cilium.adoc[migrating to Cilium] how-to for a guide to migrate a cluster to Cilium.
 * `kubectl`
@@ -69,8 +69,8 @@ commodore catalog compile "$CLUSTER_ID" --push -i
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n cilium rollout restart ds/cilium
-kubectl --as=cluster-admin -n cilium rollout restart deploy/cilium-operator
+kubectl --as=system:admin -n cilium rollout restart ds/cilium
+kubectl --as=system:admin -n cilium rollout restart deploy/cilium-operator
 ----
 
 == Configure egress IPs

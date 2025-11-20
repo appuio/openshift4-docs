@@ -35,8 +35,8 @@ On the cluster, remove any `oauthaccesstokens` of the user:
 ----
 export username=<username> <1>
 export KUBECONFIG=/path/to/cluster/kubeconfig <2>
-oc --as=cluster-admin get oauthaccesstokens | grep ${username} | cut -d' ' -f1 | \
-  xargs oc --as=cluster-admin delete oauthaccesstokens
+oc --as=system:admin get oauthaccesstokens | grep ${username} | cut -d' ' -f1 | \
+  xargs oc --as=system:admin delete oauthaccesstokens
 ----
 <1> The username of the user to remove
 <2> Point `kubectl` to the cluster on which the user's access should be revoked
@@ -46,8 +46,8 @@ Additionally, you can also delete the user's `user` and associated `identity` ob
 [source,bash]
 ----
 export KUBECONFIG=/path/to/cluster/kubeconfig <1>
-oc --as=cluster-admin delete identity --field-selector=user.name="<username>"
-oc --as=cluster-admin delete user "<username>"
+oc --as=system:admin delete identity --field-selector=user.name="<username>"
+oc --as=system:admin delete user "<username>"
 ----
 <1> Point `kubectl` to the cluster on which the user's access should be revoked
 

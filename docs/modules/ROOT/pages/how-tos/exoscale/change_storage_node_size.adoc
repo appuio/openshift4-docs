@@ -1,6 +1,6 @@
 = Change Storage Node Size
 
-:kubectl_extra_args: --as=cluster-admin
+:kubectl_extra_args: --as=system:admin
 :delabel_app_nodes: yes
 :argo_app: rook-ceph
 
@@ -133,7 +133,7 @@ include::partial$label-taint-storage-nodes.adoc[]
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin get pv \
+kubectl --as=system:admin get pv \
   -l storage.openshift.com/local-volume-owner-name=storagevolumes -w
 ----
 
@@ -146,7 +146,7 @@ include::partial$disable-argocd-autosync.adoc[]
 +
 [source,bash]
 ----
-orig_osd_count=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster \
+orig_osd_count=$(kubectl --as=system:admin -n syn-rook-ceph-cluster \
   get cephcluster cluster -o jsonpath='{.spec.storage.storageClassDeviceSets[0].count}')
 echo $orig_osd_count
 ----
@@ -155,7 +155,7 @@ echo $orig_osd_count
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
+kubectl --as=system:admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
   -p "[{
     \"op\": \"replace\",
     \"path\": \"/spec/storage/storageClassDeviceSets/0/count\",
@@ -169,10 +169,10 @@ Adjust accordingly, if you are changing the storage node count as well as the  s
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster get pods -w
+kubectl --as=system:admin -n syn-rook-ceph-cluster get pods -w
 
 # Wait for all PGs to reach `active+clean` state
-watch kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+watch kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph status
 ----
 
@@ -184,7 +184,7 @@ include::partial$storage-ceph-remove-osd.adoc[]
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
+kubectl --as=system:admin -n syn-rook-ceph-cluster patch cephcluster cluster --type=json \
   -p "[{
     \"op\": \"replace\",
     \"path\": \"/spec/storage/storageClassDeviceSets/0/count\",
@@ -198,7 +198,7 @@ include::partial$storage-ceph-cleanup-osd.adoc[]
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-operator scale --replicas=1 \
+kubectl --as=system:admin -n syn-rook-ceph-operator scale --replicas=1 \
   deploy/rook-ceph-operator
 ----
 

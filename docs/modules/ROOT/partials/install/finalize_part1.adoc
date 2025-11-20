@@ -169,16 +169,16 @@ kubectl -n openshift-config patch cm admin-kubeconfig-client-ca --type=merge -p 
 +
 [source,bash]
 ----
-oc --as cluster-admin -n openshift-monitoring create job --from=cronjob/silence silence-manual
+oc --as=system:admin -n openshift-monitoring create job --from=cronjob/silence silence-manual
 oc wait -n openshift-monitoring --for=condition=complete job/silence-manual
-oc --as cluster-admin -n openshift-monitoring delete job/silence-manual
+oc --as=system:admin -n openshift-monitoring delete job/silence-manual
 ----
 
 . Check the remaining active alerts and address them where neccessary
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n openshift-monitoring exec sts/alertmanager-main -- \
+kubectl --as=system:admin -n openshift-monitoring exec sts/alertmanager-main -- \
     amtool --alertmanager.url=http://localhost:9093 alert --active
 ----
 

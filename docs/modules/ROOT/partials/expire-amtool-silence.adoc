@@ -3,6 +3,6 @@
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n openshift-monitoring exec sts/alertmanager-main --\
+kubectl --as=system:admin -n openshift-monitoring exec sts/alertmanager-main --\
     amtool --alertmanager.url=http://localhost:9093 silence expire $silence_id
 ----

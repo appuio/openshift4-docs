@@ -6,10 +6,10 @@
 echo {osd-replace-list}
 # Reweight OSDs on those nodes to 0
 for node in $(echo -n {osd-replace-list}); do
-  osd_id=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+  osd_id=$(kubectl --as=system:admin -n syn-rook-ceph-cluster get deploy \
     -l failure-domain="${node}" --no-headers \
     -o custom-columns="OSD_ID:.metadata.labels.ceph_daemon_id")
-  kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
     ceph osd crush reweight "osd.${osd_id}" 0
 done
 ----
@@ -23,16 +23,16 @@ include::partial$storage-ceph-backfilling.adoc[]
 [source,bash,subs="attributes+"]
 ----
 for node in $(echo -n {osd-replace-list}); do
-  osd_id=$(kubectl --as=cluster-admin -n syn-rook-ceph-cluster get deploy \
+  osd_id=$(kubectl --as=system:admin -n syn-rook-ceph-cluster get deploy \
     -l failure-domain="${node}" --no-headers \
     -o custom-columns="OSD_ID:.metadata.labels.ceph_daemon_id")
-  kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
     ceph osd out "${osd_id}"
-  kubectl --as=cluster-admin -n syn-rook-ceph-cluster scale --replicas=0 \
+  kubectl --as=system:admin -n syn-rook-ceph-cluster scale --replicas=0 \
     "deploy/rook-ceph-osd-${osd_id}"
-  kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
     ceph osd purge "${osd_id}"
-  kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+  kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
     ceph osd crush remove "${node}"
 done
 ----
@@ -41,6 +41,6 @@ done
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
+kubectl --as=system:admin -n syn-rook-ceph-cluster exec -it deploy/rook-ceph-tools -- \
   ceph osd tree
 ----

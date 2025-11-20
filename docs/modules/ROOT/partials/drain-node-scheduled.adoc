@@ -88,6 +88,6 @@ popd
 [source,bash,subs="attributes+"]
 ----
 for node in $(echo -n {node-delete-list}); do
-  kubectl --as=cluster-admin delete node "${node}"
+  kubectl --as=system:admin delete node "${node}"
 done
 ----

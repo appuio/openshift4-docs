@@ -2,7 +2,7 @@
 
 == Prerequisites
 
-* `cluster-admin` privileges
+* cluster-admin privileges
 * Cluster is running Cilium.
 See the xref:how-tos/network/migrate-to-cilium.adoc[migrating to Cilium] how-to for a guide to migrate a cluster to Cilium.
 * `kubectl`
@@ -97,6 +97,6 @@ commodore catalog compile "${CLUSTER_ID}" --push -i
 +
 [source,bash]
 ----
-kubectl --as=cluster-admin patch networks.operator.openshift.io cluster \
+kubectl --as=system:admin patch networks.operator.openshift.io cluster \
  --type=merge -p '{"spec":{"deployKubeProxy":false}}'
 ----

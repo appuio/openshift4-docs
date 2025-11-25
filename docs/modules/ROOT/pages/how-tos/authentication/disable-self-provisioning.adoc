@@ -4,25 +4,83 @@
 This guide describes how to remove permission for users to self-provision projects on OpenShift 4 clusters.
 It's based on https://docs.openshift.com/container-platform/4.13/applications/projects/configuring-project-creation.html#disabling-project-self-provisioning_configuring-project-creation[this OpenShift documentation].
 
+[NOTE]
+====
+The self-provisioners can also be managed by the https://hub.syn.tools/openshift4-authentication/references/parameters.html[openshift4-authentication] component.
+====
+
 == Prerequisites
 
 * Access to the respective cluster's tenant repository.
 
 == Procedure
 
-To disable self-provisioning, patch the `self-provisioners` CRB with the following `Patch` (for example via adhoc-configurations):
+To disable self-provisioning, patch the `self-provisioners` CRB with the following `ManagedResource` (for example via adhoc-configurations):
 
 [source,yaml]
 ----
-kind: Patch
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  name: self-provisioning
+  name: remove-self-provisioning
+  namespace: syn-espejote
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: remove-self-provisioning
+rules:
+  - apiGroups:
+      - ""
+      - project.openshift.io
+    resources:
+      - projectrequests
+    verbs:
+      - create
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resourceNames:
+      - self-provisioners
+    resources:
+      - clusterrolebindings
+    verbs:
+      - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: remove-self-provisioning
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: remove-self-provisioning
+subjects:
+  - kind: ServiceAccount
+    name: remove-self-provisioning
+    namespace: syn-espejote
+---
+apiVersion: espejote.io/v1alpha1
+kind: ManagedResource
+metadata:
+  name: remove-self-provisioning
+  namespace: syn-espejote
 spec:
-  patches:
-    self-provisioning-patch:
-      patchTemplate: '[{"op": "replace", "path": "/subjects", "value": null}]'
-      patchType: application/json-patch+json
-      targetObjectRef:
+  applyOptions:
+    force: true
+  serviceAccountRef:
+    name: remove-self-provisioning
+  template: |-
+    {
+        "apiVersion": "rbac.authorization.k8s.io/v1",
+        "kind": "ClusterRoleBinding",
+        "metadata": {
+            "name": "self-provisioners"
+        },
+        "subjects": []
+    }
+  triggers:
+    - name: clusterrolebinding
+      watchResource:
         apiVersion: rbac.authorization.k8s.io/v1
         kind: ClusterRoleBinding
         name: self-provisioners

@@ -12,7 +12,7 @@ The https://www.redhat.com/en/blog/red-hat-openshift-42-what-you-need-to-know[Re
 
 Custom Identity Providers are becoming Generally Available::
 OpenShift 4.20 now enables direct integration with external OIDC identity providers for issuing auth tokens.
-This gives more control over the authentication system to the cluster administrators and enables more simplified user management.
+This gives more control over the authentication system to the cluster administrators and can simplify user management.
 +
 For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/authentication_and_authorization/index#external-auth[the official documentation].
 
@@ -46,9 +46,10 @@ Support for Docker v2 registries will be removed in a future release.
 At that point, all mirroring operations will require a registry that supports the OCI specification.
 
 Red Hat Marketplace becomes Deprecated::
+The Red Hat Marketplace index for OLM-based cluster operators is being sunset.
 Customers using software from the Marketplace should reach out to the software vendor to find out how to migrate away from the Marketplace Operator.
 +
-For further information, see https://access.redhat.com/articles/7130828[Sunset of the Red Hat Marketplace].
+For further information, including a list of affected operators, see https://access.redhat.com/articles/7130828[Sunset of the Red Hat Marketplace].
 
 Removal of deprecated APIs in Kubernetes 1.33::
 The following APIs are no longer available in Kubernetes 1.32 and need to be migrated:

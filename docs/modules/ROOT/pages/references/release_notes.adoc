@@ -2,6 +2,64 @@
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 
+== OpenShift 4.20
+
+OpenShift version 4.20 is available since 2025-11-11.
+This version is based on Kubernetes 1.33 and CRI-O 1.33.
+The RHCOS image still uses RHEL 9.6 packages.
+Find the release notes in the upstream documentation at https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/release_notes/ocp-4-20-release-notes[OpenShift Container Platform 4.20 release notes].
+The https://www.redhat.com/en/blog/red-hat-openshift-42-what-you-need-to-know[Red Hat unveils OpenShift 4.20] blog post is also a valuable resource.
+
+Custom Identity Providers are becoming Generally Available::
+OpenShift 4.20 now enables direct integration with external OIDC identity providers for issuing auth tokens.
+This gives more control over the authentication system to the cluster administrators and can simplify user management.
++
+For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/authentication_and_authorization/index#external-auth[the official documentation].
+
+External Secrets Operator becomes Generally Available::
+The External Secrets Operator is a cluster service that provides lifecycle management for secrets fetched from external secret management systems (such as AWS Secrets Manager, HashiCorp Vault, and Azure Key Vault).
+The operator provisions, fetches and refreshes the secret within the cluster, ensuring a secure and efficient secrets flow without direct application involvement.
++
+For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/security_and_compliance/external-secrets-operator-for-red-hat-openshift[the official documentation].
+
+OpenShift AI gains new capabilities::
+OpenShift Container Platform 4.20 brings several new capabilities to OpenShift AI that improve the scalability of AI workflows, such as simplified deployments of distributed AI workloads (leveraging the LeaderWorkerSet resource), and improved load balancing for distributed inference with llm-d (leveraging the Kubernetes Gateway API Inference Extensions).
++
+For more information, see https://gateway-api-inference-extension.sigs.k8s.io/[the official documentation].
+
+Multiple network interface controllers on vSphere clusters becomes Generally Available::
+For clusters on VMware vSphere, it has been possible since OpenShift 4.18 to set up the cluster with multiple network interface controllers for one node.
+This feature is now becoming Generally Available.
++
+For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/installing_on_vmware_vsphere/index#installation-vsphere-multiple-nics_installing-vsphere-installer-provisioned-customizations[the official documentation].
+
+Linux User Namespace Support becomes Generally Available::
+Support for deploying pods into Linux user namespaces is now generally available and enabled by default.
+This feature improves isolation, mitigating security vulnerabilities that one compromised container can pose to other pods and the node itself.
++
+This change includes two new security context constraints, `restricted-v3` and `nested-container`, which are designed for use with user namespaces.
++
+For further information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/nodes/index#nodes-pods-user-namespaces[the official documentation].
+
+Docker v2 registries become Deprecated::
+Support for Docker v2 registries will be removed in a future release.
+At that point, all mirroring operations will require a registry that supports the OCI specification.
+
+Red Hat Marketplace becomes Deprecated::
+The Red Hat Marketplace index for OLM-based cluster operators is being sunset.
+Customers using software from the Marketplace should reach out to the software vendor to find out how to migrate away from the Marketplace Operator.
++
+For further information, including a list of affected operators, see https://access.redhat.com/articles/7130828[Sunset of the Red Hat Marketplace].
+
+Removal of deprecated APIs in Kubernetes 1.33::
+The following APIs are no longer available in Kubernetes 1.32 and need to be migrated:
+* `MutatingWebhookConfiguration` needs to be migrated from `admissionregistration.k8s.io/v1beta1` to `admissionregistration.k8s.io/v1`.
+* `ValidatingAdmissionPolicy` needs to be migrated from `admissionregistration.k8s.io/v1beta1` to `admissionregistration.k8s.io/v1`.
+* `ValidatingAdmissionPolicyBinding` needs to be migrated from `admissionregistration.k8s.io/v1beta1` to `admissionregistration.k8s.io/v1`.
+* `ValidatingWebhookConfiguration` needs to be migrated from `admissionregistration.k8s.io/v1beta1` to `admissionregistration.k8s.io/v1`.
++
+For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/release_notes/ocp-4-20-release-notes#ocp-4-20-removed-kube-apis_release-notes[APIs removed from Kubernetes 1.33].
+
 == OpenShift 4.19
 
 OpenShift version 4.19 is available since 2025-06-17.
@@ -56,61 +114,3 @@ The following APIs are no longer available in Kubernetes 1.32 and need to be mig
 This migration includes one notable change in the `spec.limited.nominalConcurrencyShares` field, which now only defaults to `30` when unspecified - an explicit value of `0` is left unchanged.
 +
 For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/release_notes/ocp-4-19-release-notes#ocp-4-19-removed-kube-1-32-apis_release-notes[APIs removed from Kubernetes 1.32].
-
-
-== OpenShift 4.18
-
-OpenShift version 4.18 is available since 2025-02-25.
-This version is based on Kubernetes 1.31 and CRI-O 1.31.
-The RHCOS image still uses RHEL 9.4 packages.
-Find the release notes in the upstream documentation at https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/release_notes/ocp-4-18-release-notes[OpenShift Container Platform 4.18 release notes].
-The https://www.redhat.com/en/blog/what-you-need-to-know-red-hat-openshift-418[Red Hat unveils OpenShift 4.18] blog post is also a valuable resource.
-
-Improved OLM v1 now Generally Available::
-The original OLM is now renamed to `OLM (Classic)`.
-Starting with OpenShift 4.18, the new OLM v1 is enabled by default, alongside the old OLM (Classic).
-OLM (Classic) remains fully supported.
-+
-OLM v1 provides a better declarative workflow with a simplified API compared to OLM (Classic), and introduces some new features like continuous reconciliation and rollbacks, granular update control, and user-provided service accounts.
-+
-At the moment, OLM v1 only supports installing certain cluster extensions.
-See https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/release_notes/ocp-4-18-release-notes#ocp-4-18-extensions-supported-extensions_release-notes[OLM v1 supported extensions].
-+
-[NOTE]
-====
-Although the acronym "OLM" still stands for "Operator Lifecycle Manager," Red Hat is now using the term "Extensions" or "Cluster Extensions" to refer to OLM-managed Operators.
-====
-+
-[NOTE]
-====
-See https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/extensions/index#extensions-overview[Red Hat documentation on Extensions] for further information on this feature.
-====
-
-Secret Store CSI Driver Operator is becoming Generally Available::
-The Secret Store CSI Driver Operator allows OCP to mount secrets, keys or certificates stored in external secret stores directly into pods.
-Supported secret store providers include AWS Secrets Manager, Azure Key Vault, Google Secret Manager, and HashiCorp Vault.
-+
-[NOTE]
-====
-See https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/storage/index#persistent-storage-csi-secrets-store[Secrets Store CSI Driver] for further information on this feature.
-====
-
-Deploy OpenShift across multiple vSphere vCenters now Generally Available::
-Deploying OCP across multiple vCenter clusters can be helpful for high availability.
-This feature has to be configured during installation and can't be enabled after the fact on an already running cluster.
-There is no support for shared storage between multiple vCenters using this feature.
-
-User workload monitoring improvements::
-OpenShift 4.18 brings multiple improvements in the user-workload monitoring stack:
-+
-* User workload alerting and recording rules can query multiple projects (namespaces) at the same time
-* Scrape and rule evaluation intervals are configurable
-
-Route annotation updates::
-OpenShift 4.18 deprecates the `haproxy.router.openshift.io/ip_whitelist` and `haproxy.router.openshift.io/ip_blacklist` annotations in favor of `haproxy.router.openshift.io/ip_allowlist` and `haproxy.router.openshift.io/ip_denylist`.
-+
-TIP: These annotations can also be used on `Ingress` objects.
-
-`crun` is the default container runtime for new clusters::
-New clusters setup with OpenShift 4.18 use `crun` as the container runtime by default.
-`runC` is still supported, and upgrading existing clusters from OpenShift 4.17 to 4.18 doesn't change the container runtime.

@@ -21,7 +21,7 @@ parent_zone=$(grep "ParentZone = " ${LB_FQDNS[1]}.info | cut -d = -f2 | tr -d '"
 if [ "$parent_zone" != "master" ]; then
   icinga_host="$parent_zone"
 else
-  icinga_host="master2.prod.monitoring.vshn.net"
+  icinga_host="master3.prod.monitoring.vshn.net"
 fi
 
 prompt="Clean up LBs in Icinga ${icinga_host}? "
@@ -37,7 +37,7 @@ if [[ $REPLY =~ ^[Yy] ]]; then
   if [ "$parent_zone" != "master" ]; then
     ssh "${icinga_host}" sudo puppetctl run
   fi
-  ssh master2.prod.monitoring.vshn.net sudo puppetctl run
+  ssh master3.prod.monitoring.vshn.net sudo puppetctl run
 fi
 ----
 

@@ -66,9 +66,10 @@ Application users don't need to know or care about the fact that the application
 
 The architecture documentation for the supported infrastructure providers can give more details on how the architecture is adapted to work within the constraints imposed by the respective provider.
 
-* cloudscale.ch (coming soon)
-* Exoscale (coming soon)
+* xref:references/cloudscale/architecture.adoc[cloudscale.ch]
+* xref:references/exoscale/architecture.adoc[Exoscale]
 * xref:references/vsphere/architecture.adoc[VMWare vSphere]
+* xref:references/openstack/architecture.adoc[OpenStack]
 
 Additionally, the https://products.vshn.ch/appuio/managed/ocp4.html[APPUiO Managed OpenShift 4 product documentation] provides more details on the minimum required resources, supported Red Hat OpenShift 4 features and components as well as optionally supported features and add-ons for each supported infrastructure provider.
 

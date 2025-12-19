@@ -1,0 +1,18 @@
+The {infra-type} infrastructure operator must provide some form of ingress and egress gateway for the cluster.
+The ingress gateway must expose two public IPs:
+
+1. A public IP for the API.
+Traffic to port `6443/tcp` on this IP must be forwarded to the "API VIP" in the machine network.
+The forwarding of this traffic must happen transparently.
+In particular, no TLS interception can be performed as the Kubernetes API depends on mutual TLS authentication.
+VSHN will manage a DNS record pointing to this IP.
+2. A public IP for HTTP(s) ingress.
+Traffic to ports `80/tcp` and `443/tcp` on this IP must be forwarded to the "Ingress VIP" in the machine network.
+The PROXY protocol should be enabled to preserve source IPs.
+Forwarding should happen transparently in TCP mode.
+VSHN will manage a wildcard DNS record pointing to this IP.
+Additional DNS records can be pointed to this IP by the customer.
+
+ifeval::["{infra-type}" == "OpenStack"]
+NOTE: The ingress gateway isn't required if the OpenShift cluster's API and ingress are exposed directly on OpenStack floating IPs which are public IPs.
+endif::[]

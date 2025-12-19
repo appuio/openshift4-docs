@@ -27,6 +27,7 @@
 *** xref:oc4:ROOT:explanations/gcp/name_lengths.adoc[Name Lengths]
 
 ** xref:oc4:ROOT:references/vsphere/architecture.adoc[VMWare vSphere]
+** xref:oc4:ROOT:references/openstack/architecture.adoc[OpenStack]
 
 * Supported Infrastructures
 
@@ -78,6 +79,7 @@
 *** xref:oc4:ROOT:how-tos/vsphere/change-vsphere-params.adoc[vSphere Parameters]
 
 ** OpenStack
+*** xref:oc4:ROOT:references/openstack/architecture.adoc[Architecture]
 *** xref:oc4:ROOT:how-tos/openstack/install.adoc[Install]
 
 ** Google Cloud Platform

@@ -17,6 +17,7 @@ APPUiO Managed OpenShift 4 needs credentials to access the {infra-type} API for 
 1. The OpenShift 4 installer needs access to {infra-type} to setup the OpenShift 4 cluster
 2. OpenShift 4 manages the VMs making up the cluster from within the cluster.
 3. The {infra-type} CSI driver manages additional block devices that can be used by applications
+4. The {infra-type} OpenShift 4 install process creates the {infra-type} network, subnet and vRouter for the OpenShift 4 cluster, and must be able to allocate 3 {infra-type} floating IPs.
 
 
 
@@ -24,7 +25,7 @@ APPUiO Managed OpenShift 4 needs credentials to access the {infra-type} API for 
 
 === Bastion host
 
-To deploy an APPUiO Managed OpenShift 4 cluster on {infra-type}, a bastion host inside the customer's premise is required.
+To deploy an APPUiO Managed OpenShift 4 cluster on {infra-type}, a bastion host inside the customer's premise is required unless both the {infra-type} API and  the cluster API and ingress are accessible from the internet.
 The bastion host:
 
 * must be accessible via SSH from a management system operated by VSHN
@@ -32,7 +33,7 @@ The bastion host:
 * must have unrestricted network access to the cluster's machine network
 * must run a recent Ubuntu version
 
-The bastion host is used to run the installer from, and for troubleshooting access to both the cluster and the vCenter.
+The bastion host is used to run the installer from, and for troubleshooting access to both the cluster and {infra-type}.
 The bastion host must be provided by the {infra-type} infrastructure operator, but VSHN can handle management and maintenance.
 
 === Machine network
@@ -46,10 +47,11 @@ To expose applications and the Kubernetes API outside the cluster, APPUiO Manage
 1. The "API VIP" for the Kubernetes and OpenShift API.
 2. The "Ingress VIP" for the OpenShift Ingress Router.
 
+NOTE: During the {infra-type} installation process, a third floating IP for the OpenShift bootstrap node is required.
+
 APPUiO Managed OpenShift 4 runs two `keepalived` instances to manage the API and ingress VIPs through VRRP.
 
-If applications should be exposed for non-HTTP(S) traffic (via `LoadBalancer` services), additional IPs in the machine network must be reserved to be used as VIPs.
-These additional VIPs will be managed by `keepalived` instances on the cluster.
+If applications should be exposed for non-HTTP(S) traffic (via `LoadBalancer` services), additional floating IPs need to be available on the {infra-type} environment.
 
 === Pod and service networks
 
@@ -77,6 +79,7 @@ include::partial$architecture/storage.adoc[]
 
 |Bastion host
 a|A simple Ubuntu VM which is used by VSHN to bootstrap the cluster(s) and for emergency administrative access.
+Only required in environments where the OpenStack API, the cluster API or the cluster ingress aren't accessible from the internet.
 *Requirements*
 
 * CPU: 2
@@ -102,21 +105,36 @@ a|An internal subnet, usually a `/24`, in which the OpenShift 4 cluster will be 
 The terms "cluster machine network," "cluster network" and "machine network" are used interchangeably.
 Only one network is required.
 
-VMs in this network must be assigned an IP address via DHCP.
+By default, the {infra-type} OpenShift install process will provision this network.
+
+If the machine network is provisioned by the {infra-type} operator, there are the following additional requirements:
+
+* VMs in this network must be assigned an IP address via DHCP.
 DHCP replies must include a DNS server which is reachable from the network.
-
-Some IPs must be reserved and will be used as Virtual / Floating IPs.
-OpenShift manages the floating IPs with VRRP.
-
-At minimum two IPs must be allocated as floating IPs.
+* At minimum two IPs must be allocated as floating IPs.
 These two IPs are used for the Kubernetes API and the ingress router.
+OpenShift manages the floating IPs with VRRP.
+These two IPs are used for the Kubernetes API and the ingress router.
+
+|{infra-type} OpenShift install process or {infra-type} infrastructure operator
+
+|{infra-type} floating IPs
+a|The {infra-type} OpenShift install process requires three {infra-type} floating IPs.
+
+Two of these IPs are used to expose the OpenShift API and ingress outside the machine network.
+
+The third IP is used for the OpenShift bootstrap node during the install process.
+
+If additional TCP services on the cluster should be exposed outside the machine network, we recommend provisioning additional {infra-type} floating IPs which the {infra-type} cloud controller manager (CCM) can then assign to Kubernetes services with type `LoadBalancer`.
 
 |{infra-type} infrastructure operator
 
 |S3 compatible storage
 a|Various OpenShift components require S3 compatible storage.
 This storage must be provided by the customer.
-On OpenStack, S3 compatible storage is enabled by Swift.
+On OpenStack, S3 compatible storage can be provided through Swift.
+
+If the target OpenStack doesn't have Swift enabled, the infrastructure provider or the customer must provide an alternative S3 compatible storage target.
 
 The main APPUiO Managed OpenShift 4 components that use object storage are
 
@@ -130,7 +148,9 @@ The main APPUiO Managed OpenShift 4 components that use object storage are
 The following forwarding is required:
 
 * For the ingress public IP, ports `80/tcp` and `443/tcp` must be forwarded to the "Ingress VIP" in the machine network.
-* For the API public IP, port `6443/tcp` must be forwarded to the "API VIP" in the machine network.
+* For the API public IP, port `6443/tcp` must be forwarded to the "API VIP" in the machine network. 
+
+These forwardings are only required if the OpenStack floating IPs (see above) aren't public IPs themselves.
 
 |Customer / {infra-type} infrastructure provider
 

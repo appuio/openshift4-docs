@@ -12,3 +12,7 @@ The PROXY protocol should be enabled to preserve source IPs.
 Forwarding should happen transparently in TCP mode.
 VSHN will manage a wildcard DNS record pointing to this IP.
 Additional DNS records can be pointed to this IP by the customer.
+
+ifeval::["{infra-type}" == "OpenStack"]
+NOTE: The ingress gateway isn't required if the OpenShift cluster's API and ingress are exposed directly on OpenStack floating IPs which are public IPs.
+endif::[]

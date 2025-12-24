@@ -130,4 +130,16 @@ Go to https://control.vshn.net/vshn/services
 +
 - Delete cluster entry service using the delete button
 
+. Remove the cluster from https://git.vshn.net/vshn/openshift4-clusters[openshift4-clusters (internal)].
++
+[source,bash]
+----
+git clone git@git.vshn.net:vshn/openshift4-clusters.git
+pushd openshift4-clusters
+git rm -rf "${CLUSTER_ID}"
+git commit -am "Remove cluster ${CLUSTER_ID}"
+git push origin master
+popd
+----
+
 . Update any related documentation

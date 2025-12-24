@@ -42,6 +42,67 @@ kubectl --as=system:admin -n appuio-openshift-upgrade-controller \
 ----
 ====
 
+. Add cluster in https://git.vshn.net/vshn/openshift4-clusters[openshift4-clusters (internal)].
+
+.. Setup basic config for the cluster
++
+[source,bash]
+----
+git clone git@git.vshn.net:vshn/openshift4-clusters.git
+pushd openshift4-clusters
+mkdir "${CLUSTER_ID}"
+pushd "${CLUSTER_ID}"
+ln -s ../base_envrc .envrc
+cat >.connection_facts <<EOF
+API=${API_URL}
+EOF
+popd
+----
++
+.. (Optional) Configure SOCKS5 SSH proxy jumphost
++
+[source,bash,sub="attributes+"]
+----
+SOCKS5_PORT=120xy <1>
+cat >> "${CLUSTER_ID}/.connection_facts <<EOF
+JUMPHOST=${JUMPHOST_FQDN}
+SOCKS5_PORT=${SOCKS5_PORT}
+ifeval::["{provider}"=="vsphere"]
+VCENTER=https://${VCENTER_HOSTNAME}
+endif::[]
+EOF
+python foxyproxy_generate.py <2>
+----
+<1> Make sure to pick a new SOCKS5 proxy port if the cluster you're setting up requires a proxy jumphost that's not yet used by any other cluster.
+Correspondingly, copy the port from an existing cluster, if there's existing clusters that use the same proxy jumphost.
+<2> Regenerate the FoxyProxy config after setting up the new cluster's SOCKS5 proxy jumphost.
+
+.. (Optional) Adjust the `.connection_facts` for special setups, if necessary.
+For example, configure the VPN connection to use to access the cluster.
+
+.. Test the config
++
+NOTE: This assumes that you've already configured `direnv` for the `openshift4-clusters` repo.
++
+NOTE: If you've regenerated the FoxyProxy config, import it in your browser before testing the config.
++
+[source,bash]
+----
+pushd "${CLUSTER_ID}"
+direnv reload
+oc whoami
+kubectl get nodes
+popd
+----
+
+.. Commit and push the changes
++
+[source,bash]
+----
+git commit -am "Add cluster ${CLUSTER_ID}"
+git push
+popd
+----
 
 ==== Generic
 

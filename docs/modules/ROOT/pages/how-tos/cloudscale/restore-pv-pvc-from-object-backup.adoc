@@ -1,0 +1,64 @@
+= Restore Persistent Volumes (PVs) and Persistent Volume Claims (PVCs) from an Object Backup
+
+== Starting situation
+
+* You want to restore Persistent Volumes (PVs) and Persistent Volume Claims (PVCs)
+** The cluster manifests were deleted or corrupted
+** The underlying storage is a Cloudscale volume
+** The underlying volume still exists in the Cloudscale project
+
+== Prerequisites
+
+* You have extracted the manifest files according to xref:how-tos/recover-from-backup.adoc[]
+* `yq` https://mikefarah.gitbook.io/yq[yq YAML processor] (version 4 or higher - use the go version by mikefarah, not the jq wrapper by kislyuk)
+* `kubectl` set up to access the target cluster
+
+== PV and PVC recovery
+
+. Identify the PVC in the backup and put it in a file called `pvc.yaml`
+
+. Extract the PV name from the PVC
++
+[source,bash]
+----
+PV_NAME=$(yq e '.spec.volumeName' pvc.yaml)
+echo "$PV_NAME"
+----
+
+. Put the PV manifest in a file called `pv.yaml`
+
+. Edit `pv.yaml` and remove the `claimRef` section to make the PV unbound
++
+[source,bash]
+----
+yq -i '.spec.persistentVolumeReclaimPolicy = "Retain"' pv.yaml
+yq -i 'del(.spec.claimRef)' pv.yaml
+----
+
+. Apply the modified PV manifest to the cluster
++
+[source,bash]
+----
+kubectl apply -f pv.yaml
+----
+
+. Strip annotations from the PVC manifest so that the controller rebinds it to the existing PV
++
+[source,bash]
+----
+yq -i 'del(.metadata.annotations)' pvc.yaml
+----
+
+. Apply the modified PVC manifest to the cluster
++
+[source,bash]
+----
+kubectl apply -f pvc.yaml
+----
+
+. Verify that the PV is now bound to the PVC
++
+[source,bash]
+----
+kubectl get pv "$PV_NAME" -oyaml | yq .status.phase
+----

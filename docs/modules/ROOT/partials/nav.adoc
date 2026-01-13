@@ -45,6 +45,7 @@
 
 *** xref:oc4:ROOT:how-tos/cloudscale/enable-loadbalancer-service.adoc[Enable LoadBalancer Services]
 *** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd]
+*** xref:oc4:ROOT:how-tos/cloudscale/restore-pv-pvc-from-object-backup.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Decommissioning]
 *** xref:oc4:ROOT:how-tos/cloudscale/rotate-api-tokens.adoc[Rotate API Tokens]
 

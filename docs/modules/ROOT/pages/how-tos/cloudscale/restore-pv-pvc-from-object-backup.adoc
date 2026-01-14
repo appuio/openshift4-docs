@@ -27,6 +27,12 @@ echo "$PV_NAME"
 
 . Put the PV manifest in a file called `pv.yaml`
 
+. Check the Cloudscale volume in the Cloudscale web interface to ensure it's intact and available
+
+. Detach the Cloudscale volume from any existing Kubernetes nodes if it's still attached
++
+image:cloudscale-volume-detach.png[]
+
 . Edit `pv.yaml` and remove the `claimRef` section to make the PV unbound
 +
 [source,bash]

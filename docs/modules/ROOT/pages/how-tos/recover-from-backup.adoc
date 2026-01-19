@@ -147,3 +147,8 @@ Restoring objects that are managed by ArgoCD will prevent most ArgoCD-managed ap
 These objects would then need to be replaced manually.
 Try to limit the objects being restored to the necessary minimum.
 ====
+
+[NOTE]
+====
+To restore Persistent Volumes (PVs) and Persistent Volume Claims (PVCs) on Cloudscale, follow the instructions in xref:how-tos/cloudscale/restore-pv-pvc-from-object-backup.adoc[].
+====

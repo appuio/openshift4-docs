@@ -90,46 +90,6 @@ while ! curl --connect-timeout 1 "${API_URL}/healthz" -k &>/dev/null; do
 done && echo -e "\nAPI is up"
 ----
 
-. Patch Cilium config to allow control plane bootstrap to succeed
-+
-[NOTE]
-====
-We need to temporarily adjust the Cilium config to not use full kube-proxy replacement, since we currently don't have a way to disable the initial OpenShift-managed kube-proxy deployment.
-Additionally, because the {provider} Cloud Controller Manager accesses the K8s API via service IP, we need to configure Cilium to provide partial kube-proxy replacement so that the CCM can start and untaint the control plane nodes so that other pods can be scheduled.
-====
-+
-[source,bash]
-----
-export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
-
-while ! kubectl get ciliumconfig -A &>/dev/null; do
-  echo -n "."
-  sleep 2
-done && echo -e "\nCiliumConfig CR is present"
-
-kubectl patch -n cilium ciliumconfig cilium-enterprise --type=merge \
- -p '{
-  "spec": {
-    "cilium": {
-      "kubeProxyReplacement": "false",
-      "nodePort": {
-        "enabled": true
-      },
-      "socketLB": {
-        "enabled": true
-      },
-      "sessionAffinity": true,
-      "externalIPs": {
-        "enabled": true
-      },
-      "hostPort": {
-        "enabled": true
-      }
-    }
-  }
- }'
-----
-
 . Deploy control plane nodes
 +
 [source,bash,subs="attributes+"]
@@ -158,6 +118,8 @@ TIP: This is optional, but will make the subsequent steps less likely to run int
 +
 [source,bash]
 ----
+export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
+
 kubectl wait --for condition=ready node -l node-role.kubernetes.io/master
 ----
 
@@ -270,20 +232,6 @@ for fqdn in "${LB_FQDNS[@]}"; do
 done
 ----
 endif::[]
-
-. Disable OpenShift kube-proxy deployment and revert Cilium patch
-+
-[source,bash]
-----
-kubectl patch network.operator cluster --type=merge \
-  -p '{"spec":{"deployKubeProxy":false}}'
-kubectl -n cilium replace -f catalog/manifests/cilium/olm/cluster-network-07-cilium-ciliumconfig.yaml
-while ! kubectl -n cilium get cm cilium-config -oyaml | grep 'kube-proxy-replacement: "true"' &>/dev/null; do
-  echo -n "."
-  sleep 2
-done && echo -e "\nCilium config updated"
-kubectl -n cilium rollout restart ds/cilium
-----
 
 ifeval::["{provider}" != "cloudscale"]
 . Approve node certs

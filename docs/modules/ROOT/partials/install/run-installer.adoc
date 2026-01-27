@@ -74,7 +74,9 @@ endif::[]
 +
 [source,bash]
 ----
-cp catalog/manifests/cilium/olm/* ${INSTALLER_DIR}/manifests/
+for f in catalog/manifests/cilium/olm/[a-z]*; do
+ cp $f ${INSTALLER_DIR}/manifests/cilium_$(basename $f)
+done
 ----
 
 . Verify that the generated cluster domain matches the desired cluster domain

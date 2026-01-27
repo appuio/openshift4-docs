@@ -120,7 +120,8 @@ TIP: This is optional, but will make the subsequent steps less likely to run int
 ----
 export KUBECONFIG="${INSTALLER_DIR}/auth/kubeconfig"
 
-kubectl wait --for condition=ready node -l node-role.kubernetes.io/master
++kubectl wait --for create --timeout=600s node -l node-role.kubernetes.io/master
++kubectl wait --for condition=ready --timeout=600s node -l node-role.kubernetes.io/master
 ----
 
 . Deploy cert-manager

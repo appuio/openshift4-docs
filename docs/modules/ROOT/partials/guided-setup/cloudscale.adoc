@@ -1,0 +1,1529 @@
+== Workflow
+
+* <<step-1,Given I have all prerequisites installed>>
+* &nbsp;&nbsp;<<step-2,And a lieutenant cluster>>
+* &nbsp;&nbsp;<<step-3,And a personal VSHN GitLab access token>>
+* &nbsp;&nbsp;<<step-4,And a control.vshn.net Servers API token>>
+* &nbsp;&nbsp;<<step-5,And I have the cluster's Cloudscale tokens>>
+* &nbsp;&nbsp;<<step-6,And I have emergency cluster access>>
+* <<step-7,Then I confirm cluster deletion>>
+* <<step-8,Then I disable the OpsGenie heartbeat>>
+* &nbsp;&nbsp;<<step-9,And I disable Project Syn>>
+* &nbsp;&nbsp;<<step-10,And I delete all Load Balancer services and Load Balancers>>
+* &nbsp;&nbsp;<<step-11,And I disable machine autoscaling>>
+* &nbsp;&nbsp;<<step-12,And I delete all persistent volumes>>
+* &nbsp;&nbsp;<<step-13,And I delete all machinesets>>
+* <<step-14,Then I save the loadbalancer metadata>>
+* &nbsp;&nbsp;<<step-15,And I downtime the loadbalancers in icinga>>
+* &nbsp;&nbsp;<<step-16,And I decommission Terraform resources>>
+* <<step-17,Then I delete Cloudscale server groups>>
+* &nbsp;&nbsp;<<step-18,And I delete all S3 buckets>>
+* &nbsp;&nbsp;<<step-19,And I delete the cluster backup>>
+* &nbsp;&nbsp;<<step-20,And I delete the cluster's API tokens>>
+* &nbsp;&nbsp;<<step-21,And I remove the LoadBalancers from control.vshn.net>>
+* &nbsp;&nbsp;<<step-22,And I decommission the LoadBalancers>>
+* &nbsp;&nbsp;<<step-23,And I remove the cluster's DNS entries>>
+* <<step-24,Then I delete the cluster's Vault secrets>>
+* &nbsp;&nbsp;<<step-25,And I delete the cluster's OpsGenie heartbeat>>
+* &nbsp;&nbsp;<<step-26,And I delete the cluster from Lieutenant>>
+* &nbsp;&nbsp;<<step-27,And I delete the Keycloak service>>
+* &nbsp;&nbsp;<<step-28,And I remove the cluster from openshift4-clusters>>
+
+[[step-1]]
+=== Given I have all prerequisites installed
+
+This step checks if all necessary prerequisites are installed on your system,
+including 'yq' (version 4 or higher, by Mike Farah) and 'oc' (OpenShift CLI).
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+
+set -euo pipefail
+echo "Checking prerequisites..."
+
+if which yq >/dev/null 2>&1 ; then { echo "✅ yq is installed."; } ; else { echo "❌ yq is not installed. Please install yq to proceed."; exit 1; } ; fi
+if yq --version | grep -E 'version v[4-9]\.' | grep 'mikefarah' >/dev/null 2>&1 ; then { echo "✅ yq by mikefarah version 4 or higher is installed."; } ; else { echo "❌ yq version 4 or higher is required. Please upgrade yq to proceed."; exit 1; } ; fi
+
+if which jq >/dev/null 2>&1 ; then { echo "✅ jq is installed."; } ; else { echo "❌ jq is not installed. Please install jq to proceed."; exit 1; } ; fi
+
+if which oc >/dev/null 2>&1 ; then { echo "✅ oc (OpenShift CLI) is installed."; } ; else { echo "❌ oc (OpenShift CLI) is not installed. Please install oc to proceed."; exit 1; } ; fi
+
+if which vault >/dev/null 2>&1 ; then { echo "✅ vault (HashiCorp Vault) is installed."; } ; else { echo "❌ vault (HashiCorp Vault) is not installed. Please install vault to proceed."; exit 1; } ; fi
+
+if which curl >/dev/null 2>&1 ; then { echo "✅ curl is installed."; } ; else { echo "❌ curl is not installed. Please install curl to proceed."; exit 1; } ; fi
+
+if which docker >/dev/null 2>&1 ; then { echo "✅ docker is installed."; } ; else { echo "❌ docker is not installed. Please install docker to proceed."; exit 1; } ; fi
+
+if which glab >/dev/null 2>&1 ; then { echo "✅ glab (GitLab CLI) is installed."; } ; else { echo "❌ glab (GitLab CLI) is not installed. Please install glab to proceed."; exit 1; } ; fi
+
+if which host >/dev/null 2>&1 ; then { echo "✅ host (DNS lookup utility) is installed."; } ; else { echo "❌ host (DNS lookup utility) is not installed. Please install host to proceed."; exit 1; } ; fi
+
+if which mc >/dev/null 2>&1 ; then { echo "✅ mc (MinIO Client) is installed."; } ; else { echo "❌ mc (MinIO Client) is not installed. Please install mc >= RELEASE.2024-01-18T07-03-39Z to proceed."; exit 1; } ; fi
+mc_version=$(mc --version | grep -Eo 'RELEASE[^ ]+')
+if echo "$mc_version" | grep -E 'RELEASE\.202[4-9]-' >/dev/null 2>&1 ; then { echo "✅ mc version ${mc_version} is sufficient."; } ; else { echo "❌ mc version ${mc_version} is insufficient. Please upgrade mc to >= RELEASE.2024-01-18T07-03-39Z to proceed."; exit 1; } ; fi
+
+if which aws >/dev/null 2>&1 ; then { echo "✅ aws (AWS CLI) is installed."; } ; else { echo "❌ aws (AWS CLI) is not installed. Please install aws to proceed. Our recommended installer is uv: 'uv tool install awscli'"; exit 1; } ; fi
+
+if which restic >/dev/null 2>&1 ; then { echo "✅ restic (Backup CLI) is installed."; } ; else { echo "❌ restic (Backup CLI) is not installed. Please install restic to proceed."; exit 1; } ; fi
+
+if which emergency-credentials-receive >/dev/null 2>&1 ; then { echo "✅ emergency-credentials-receive (Cluster emergency access helper) is installed."; } ; else { echo "❌ emergency-credentials-receive is not installed. Please install it from https://github.com/vshn/emergency-credentials-receive ."; exit 1; } ; fi
+
+echo "✅ All prerequisites are met."
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-2]]
+=== And a lieutenant cluster
+
+This step retrieves the Commodore tenant ID associated with the given lieutenant cluster ID.
+
+Use https://api.syn.vshn.net as the Commodore API URL for production clusters.
+You might use the WebUI at https://control.vshn.net/syn/lieutenantapiendpoints to create and manage your clusters.
+
+For customer clusters ensure the following facts are set:
+
+* sales_order: Name of the sales order to which the cluster is billed, such as S10000
+* service_level: Name of the service level agreement for this cluster, such as guaranteed-availability
+* access_policy: Access-Policy of the cluster, such as regular or swissonly
+* release_channel: Name of the syn component release channel to use, such as stable
+* maintenance_window: Pick the appropriate upgrade schedule, such as monday-1400 for test clusters, tuesday-1000 for prod or custom to not (yet) enable maintenance
+* cilium_addons: Comma-separated list of cilium addons the customer gets billed for, such as advanced_networking or tetragon. Set to NONE if no addons should be billed.
+
+
+This step checks that you have access to the Commodore API and the cluster ID is valid.
+
+==== Inputs
+
+* `commodore_api_url`: URL of the Commodore API to use for retrieving cluster information.
+
+Use https://api.syn.vshn.net as the Commodore API URL for production clusters.
+Use https://api-int.syn.vshn.net for test clusters.
+
+You might use the WebUI at https://control.vshn.net/syn/lieutenantapiendpoints to create and manage your clusters.
+
+
+* `commodore_cluster_id`: Project Syn cluster ID for the cluster to be set up.
+
+In the form of c-example-infra-prod1.
+
+You might use the WebUI at https://control.vshn.net/syn/lieutenantapiendpoints to create and manage your clusters.
+
+
+
+==== Outputs
+
+* `commodore_tenant_id`
+* `cloudscale_region`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_api_url=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+
+echo "Retrieving Commodore tenant ID for cluster ID '$INPUT_commodore_cluster_id' from API at '$INPUT_commodore_api_url'..."
+tenant_id=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${INPUT_commodore_cluster_id} | jq -r .tenant)
+if echo "$tenant_id" | grep 't-' >/dev/null 2>&1 ; then { echo "✅ Retrieved tenant ID '$tenant_id' for cluster ID '$INPUT_commodore_cluster_id'."; } else { echo "❌ Failed to retrieve valid tenant ID for cluster ID '$INPUT_commodore_cluster_id'. Got '$tenant_id'. Please check your Commodore API access and cluster ID."; exit 1; } ; fi
+env -i "commodore_tenant_id=$tenant_id" >> "$OUTPUT"
+
+region=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${INPUT_commodore_cluster_id} | jq -r .facts.region)
+if test -z "$region" && test "$region" != "null" ; then { echo "❌ Failed to retrieve cloudscale region for cluster ID '$INPUT_commodore_cluster_id'."; exit 1; } ; else { echo "✅ Retrieved cloudscale region '$region' for cluster ID '$INPUT_commodore_cluster_id'."; } ; fi
+env -i "cloudscale_region=$region" >> "$OUTPUT"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-3]]
+=== And a personal VSHN GitLab access token
+
+This step ensures that you have provided a personal access token for VSHN GitLab.
+
+Create the token at https://git.vshn.net/-/user_settings/personal_access_tokens with the "api" scope.
+
+This step currently does not validate the token's scope.
+
+==== Inputs
+
+* `gitlab_api_token`: Personal access token for VSHN GitLab with the "api" scope.
+
+Create the token at https://git.vshn.net/-/user_settings/personal_access_tokens with the "api" scope.
+
+
+
+==== Outputs
+
+* `gitlab_user_name`: Your GitLab user name.
+
+
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_gitlab_api_token=
+
+set -euo pipefail
+user="$( curl -sH "Authorization: Bearer ${INPUT_gitlab_api_token}" "https://git.vshn.net/api/v4/user" | jq -r .username )"
+if [[ "$user" == "null" ]]
+then
+  echo "Error validating GitLab token. Are you sure it is valid?"
+  exit 1
+fi
+env -i "gitlab_user_name=$user" >> "$OUTPUT"
+echo "Token is valid."
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-4]]
+=== And a control.vshn.net Servers API token
+
+This step ensures that you have provided an API token for control.vshn.net Servers API.
+
+Create the token at https://control.vshn.net/tokens/_create/servers and ensure your IP is allowlisted.
+
+==== Inputs
+
+* `control_vshn_api_token`: API token for control.vshn.net Servers API.
+
+Used to create the puppet based LBs.
+
+Be extra careful with the IP allowlist.
+
+
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_control_vshn_api_token=
+
+set -euo pipefail
+
+AUTH="X-AccessToken: ${INPUT_control_vshn_api_token}"
+
+code="$( curl -H"$AUTH" https://control.vshn.net/api/servers/1/appuio/ -o /dev/null -w"%{http_code}" )"
+
+if [[ "$code" != 200 ]]
+then
+  echo "ERROR: could not access Server API (Status $code)"
+  echo "Please ensure your token is valid and your IP is on the allowlist."
+  exit 1
+fi
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-5]]
+=== And I have the cluster's Cloudscale tokens
+
+This step fetches the cluster's Cloudscale token and Floaty token from Vault.
+
+==== Inputs
+
+* `vault_address`: Address of the Vault server associated with the Lieutenant API to store cluster secrets.
+
+https://vault-prod.syn.vshn.net/ for production clusters.
+https://vault-int.syn.vshn.net/ for test clusters.
+
+
+* `commodore_cluster_id`
+* `commodore_tenant_id`
+
+==== Outputs
+
+* `cloudscale_token`
+* `cloudscale_token_floaty`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_vault_address=
+# export INPUT_commodore_cluster_id=
+# export INPUT_commodore_tenant_id=
+
+set -euo pipefail
+export VAULT_ADDR=${INPUT_vault_address}
+vault login -method=oidc
+
+token=$(vault kv get -format=json \
+  "clusters/kv/${INPUT_commodore_tenant_id}/${INPUT_commodore_cluster_id}/cloudscale" | \
+  jq -r '.data.data["token"]')
+
+floaty=$(vault kv get -format=json \
+  "clusters/kv/${INPUT_commodore_tenant_id}/${INPUT_commodore_cluster_id}/floaty" | \
+  jq -r '.data.data["iam_secret"]')
+
+env -i "cloudscale_token=${token}" >> "$OUTPUT"
+env -i "cloudscale_token_floaty=${floaty}" >> "$OUTPUT"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-6]]
+=== And I have emergency cluster access
+
+This step ensures the emergency credentials for the cluster have been retrieved
+
+==== Inputs
+
+* `cluster_domain`: Domain of the cluster - the part after `api` or `apps`, respectively.
+
+Usually of the form `<CLUSTER_ID>.<BASE_DOMAIN>`
+
+
+* `passbolt_passphrase`: Your password for Passbolt.
+
+This is required to access the encrypted emergency credentials.
+
+
+* `commodore_cluster_id`
+
+==== Outputs
+
+* `kubeconfig_path`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cluster_domain=
+# export INPUT_passbolt_passphrase=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+export EMR_KUBERNETES_ENDPOINT=https://api.${INPUT_cluster_domain}:6443
+export EMR_PASSPHRASE="${INPUT_passbolt_passphrase}"
+emergency-credentials-receive "${INPUT_commodore_cluster_id}"
+
+export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
+kubectl get nodes
+
+env -i "kubeconfig_path=$(pwd)/em-${INPUT_commodore_cluster_id}" >> "$OUTPUT"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-7]]
+=== Then I confirm cluster deletion
+
+This step asks you to confirm with 4 eyes whether this cluster is really to be deleted.
+
+==== Inputs
+
+* `commodore_cluster_id`
+* `4_eye_confirmation`: Please confirm the commodore cluster ID of the cluster you wish to delete.
+
+Confirm this cluster ID according to the 4-eye principle. You and one colleague should agree on the cluster that is to be deleted.
+
+
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+# export INPUT_4_eye_confirmation=
+
+set -euo pipefail
+if [[ "${INPUT_commodore_cluster_id}" != "${INPUT_4_eye_confirmation}" ]]
+then
+  echo "Cluster domain and confirmation do not match."
+  exit 1
+fi
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-8]]
+=== Then I disable the OpsGenie heartbeat
+
+This step disables the OpsGenie heartbeat, so we avoid producing alerts
+during decommissioning.
+
+==== Inputs
+
+* `vault_address`
+* `commodore_cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_vault_address=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+export VAULT_ADDR=${INPUT_vault_address}
+vault login -method=oidc
+OPSGENIE_KEY=$(vault kv get -format=json \
+  clusters/kv/__shared__/__shared__/opsgenie/aldebaran | \
+  jq -r '.data.data["heartbeat-password"]')
+curl "https://api.opsgenie.com/v2/heartbeats/${INPUT_commodore_cluster_id}" \
+  -H"Authorization: GenieKey ${OPSGENIE_KEY}" \
+  -H"Content-Type: application/json" \
+  -XPATCH --data '{"enabled":false}'
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-9]]
+=== And I disable Project Syn
+
+This step disables Project Syn (ArgoCD), so that ArgoCD does not re-create
+resources we are trying to decommission.
+
+==== Inputs
+
+* `kubeconfig_path`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_kubeconfig_path=
+
+set -euo pipefail
+export KUBECONFIG="${INPUT_kubeconfig_path}"
+kubectl -n syn patch apps --type=json \
+    -p '[{"op":"replace", "path":"/spec/syncPolicy", "value": {}}]' \
+    root argocd
+kubectl -n syn-argocd-operator scale deployment \
+    syn-argocd-operator-controller-manager --replicas 0
+kubectl wait --for=delete pod -lcontrol-plane=argocd-operator --timeout=60s -nsyn-argocd-operator
+kubectl -n syn scale sts syn-argocd-application-controller --replicas 0
+kubectl wait --for=delete pod -lapp.kubernetes.io/name=syn-argocd-application-controller --timeout=60s -nsyn
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-10]]
+=== And I delete all Load Balancer services and Load Balancers
+
+This step deletes all services of type LoadBalancer from the cluster.
+It then deletes all LoadBalancer instances as well, so that the
+corresponding Cloudscale resources can be decommissioned by the controller.
+
+==== Inputs
+
+* `kubeconfig_path`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_kubeconfig_path=
+
+set -euo pipefail
+export KUBECONFIG="${INPUT_kubeconfig_path}"
+echo '#  Deleting Services ...  #'
+kubectl delete svc --field-selector spec.type=LoadBalancer -A
+echo '#  Deleted Services.  #'
+echo '#  Deleting LoadBalancers ...  #'
+kubectl delete loadbalancers -A --all
+echo '#  Deleted LoadBalancers.  #'
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-11]]
+=== And I disable machine autoscaling
+
+This step disables autoscaling of machinesets.
+
+==== Inputs
+
+* `kubeconfig_path`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_kubeconfig_path=
+
+set -euo pipefail
+export KUBECONFIG="${INPUT_kubeconfig_path}"
+kubectl delete machineautoscaler -A --all
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-12]]
+=== And I delete all persistent volumes
+
+This step deletes all persistent volumes on the cluster, so that the corresponding Cloudscale resources can be decommissioned by the controller.
+
+By cordoning all non-master nodes and deleting all their pods (except the csi driver pods) we ensure that no new PVs are created, while the existing ones can be cleaned up. Deleting all pods has the additional benefit that we don’t have to deal with PDBs when deleting the machinesets in the next step.
+
+==== Inputs
+
+* `kubeconfig_path`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_kubeconfig_path=
+
+set -euo pipefail
+export KUBECONFIG="${INPUT_kubeconfig_path}"
+kubectl cordon -l node-role.kubernetes.io/worker
+kubectl get po -A -oyaml | yq '.items = [.items[] |
+    select(.spec.nodeName | test("master-") | not) |
+    select(.metadata.namespace != "syn-csi-cloudscale")]' |\
+    kubectl delete --wait=false -f-
+kubectl delete pvc -A --all --wait=false
+kubectl wait --for=delete pv --all --timeout=120s
+
+echo '########################################################'
+echo '#                                                      #'
+echo '#  Please verify that all PVs were deleted properly.   #'
+echo '#                                                      #'
+echo '########################################################'
+echo
+echo If the cluster still has PVs, please manually run the following:
+echo "  "kubectl delete pv --all
+sleep 2
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-13]]
+=== And I delete all machinesets
+
+This step deletes all machinesets from the cluster, allowing all associated nodes to be decommissioned by the controller.
+
+==== Inputs
+
+* `kubeconfig_path`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_kubeconfig_path=
+
+set -euo pipefail
+export KUBECONFIG="${INPUT_kubeconfig_path}"
+kubectl -n openshift-machine-api delete machinesets --all
+echo '#  Waiting for machines to be deleted ...'
+kubectl -n openshift-machine-api wait --for=delete \
+    machinesets,machines --all --timeout=120s
+kubectl get nodes
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-14]]
+=== Then I save the loadbalancer metadata
+
+This step gathers metadata on the LoadBalancer instances (such as their icinga zone and backup server), such that they can be properly decommissioned down the line.
+
+==== Inputs
+
+* `cloudscale_token`
+* `cloudscale_token_floaty`
+* `control_vshn_api_token`
+* `ignition_bootstrap`
+* `hieradata_repo_token`
+* `gitlab_user_name`
+* `gitlab_api_token`
+* `commodore_cluster_id`
+* `commodore_api_url`
+
+==== Outputs
+
+* `lb_fqdn_1`
+* `lb_fqdn_2`
+* `lb_backup_1`
+* `lb_backup_2`
+* `lb_icinga_1`
+* `lb_icinga_2`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudscale_token=
+# export INPUT_cloudscale_token_floaty=
+# export INPUT_control_vshn_api_token=
+# export INPUT_ignition_bootstrap=
+# export INPUT_hieradata_repo_token=
+# export INPUT_gitlab_user_name=
+# export INPUT_gitlab_api_token=
+# export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
+
+set -euo pipefail
+
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+
+cat <<EOF > ./terraform.env
+CLOUDSCALE_API_TOKEN=${INPUT_cloudscale_token}
+TF_VAR_ignition_bootstrap=${INPUT_ignition_bootstrap}
+TF_VAR_lb_cloudscale_api_secret=${INPUT_cloudscale_token_floaty}
+TF_VAR_control_vshn_net_token=${INPUT_control_vshn_api_token}
+GIT_AUTHOR_NAME=$(git config --global user.name)
+GIT_AUTHOR_EMAIL=$(git config --global user.email)
+HIERADATA_REPO_TOKEN=${INPUT_hieradata_repo_token}
+EOF
+
+tf_image=$(\
+  yq eval ".parameters.openshift4_terraform.images.terraform.image" \
+  dependencies/openshift4-terraform/class/defaults.yml)
+tf_tag=$(\
+  yq eval ".parameters.openshift4_terraform.images.terraform.tag" \
+  dependencies/openshift4-terraform/class/defaults.yml)
+
+echo "Using Terraform image: ${tf_image}:${tf_tag}"
+
+base_dir=$(pwd)
+alias terraform='touch .terraformrc; docker run --rm -e REAL_UID=$(id -u) -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file ${base_dir}/terraform.env -w /tf -v $(pwd):/tf --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh'
+
+gitlab_repository_url=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
+gitlab_repository_name=${gitlab_repository_url##*/}
+gitlab_catalog_project_id=$(curl -sH "Authorization: Bearer ${INPUT_gitlab_api_token}" "https://git.vshn.net/api/v4/projects?simple=true&search=${gitlab_repository_name/.git}" | jq -r ".[] | select(.ssh_url_to_repo == \"${gitlab_repository_url}\") | .id")
+gitlab_state_url="https://git.vshn.net/api/v4/projects/${gitlab_catalog_project_id}/terraform/state/cluster"
+
+pushd catalog/manifests/openshift4-terraform/
+
+terraform init \
+  "-backend-config=address=${gitlab_state_url}" \
+  "-backend-config=lock_address=${gitlab_state_url}/lock" \
+  "-backend-config=unlock_address=${gitlab_state_url}/lock" \
+  "-backend-config=username=${INPUT_gitlab_user_name}" \
+  "-backend-config=password=${INPUT_gitlab_api_token}" \
+  "-backend-config=lock_method=POST" \
+  "-backend-config=unlock_method=DELETE" \
+  "-backend-config=retry_wait_min=5"
+
+cat > override.tf <<EOF
+module "cluster" {
+  bootstrap_count          = 0
+  master_count             = 0
+  infra_count              = 0
+  worker_count             = 0
+  additional_worker_groups = {}
+}
+EOF
+
+lb1=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[0]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
+lb2=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[1]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
+
+backup1=$(ssh "$lb1" "sudo grep 'server =' /etc/burp/burp.conf  | awk '{ print \$3 }'" )
+backup2=$(ssh "$lb2" "sudo grep 'server =' /etc/burp/burp.conf  | awk '{ print \$3 }'" )
+
+icinga1=$(ssh "$lb1" "sudo grep 'ParentZone' /etc/icinga2/constants.conf | awk '{  print substr(\$4, 2, length(\$4)-2) }'" )
+icinga2=$(ssh "$lb2" "sudo grep 'ParentZone' /etc/icinga2/constants.conf | awk '{  print substr(\$4, 2, length(\$4)-2) }'" )
+
+env -i "lb_fqdn_1=$lb1" >> "$OUTPUT"
+env -i "lb_fqdn_2=$lb2" >> "$OUTPUT"
+env -i "lb_backup_1=$backup1" >> "$OUTPUT"
+env -i "lb_backup_2=$backup2" >> "$OUTPUT"
+env -i "lb_icinga_1=$icinga1" >> "$OUTPUT"
+env -i "lb_icinga_2=$icinga2" >> "$OUTPUT"
+popd
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-15]]
+=== And I downtime the loadbalancers in icinga
+
+In this step you have to configure downtimes in Icinga for the cluster's load balancers.
+
+==== Inputs
+
+* `lb_fqdn_1`
+* `lb_fqdn_2`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_lb_fqdn_1=
+# export INPUT_lb_fqdn_2=
+
+set -euo pipefail
+echo '##############################################################'
+echo '#                                                            #'
+echo '#  Please configure downtimes for both hosts in Icinga UI.   #'
+echo "#  Don't forget to also enable downtime for 'All Services'.  #"
+echo '#                                                            #'
+echo '##############################################################'
+echo
+echo The direct links are:
+echo https://monitoring.vshn.net/icingadb/hosts?sort=host.state.severity%20desc#!/icingadb/host?name=${INPUT_lb_fqdn_1}
+echo https://monitoring.vshn.net/icingadb/hosts?sort=host.state.severity%20desc#!/icingadb/host?name=${INPUT_lb_fqdn_2}
+sleep 2
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-16]]
+=== And I decommission Terraform resources
+
+This step decommissions all Terraform resources for the cluster.
+
+==== Inputs
+
+* `cloudscale_token`
+* `cloudscale_token_floaty`
+* `control_vshn_api_token`
+* `ignition_bootstrap`
+* `hieradata_repo_token`
+* `gitlab_user_name`
+* `gitlab_api_token`
+* `commodore_cluster_id`
+* `commodore_api_url`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudscale_token=
+# export INPUT_cloudscale_token_floaty=
+# export INPUT_control_vshn_api_token=
+# export INPUT_ignition_bootstrap=
+# export INPUT_hieradata_repo_token=
+# export INPUT_gitlab_user_name=
+# export INPUT_gitlab_api_token=
+# export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
+
+set -euo pipefail
+
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+
+cat <<EOF > ./terraform.env
+CLOUDSCALE_API_TOKEN=${INPUT_cloudscale_token}
+TF_VAR_ignition_bootstrap=${INPUT_ignition_bootstrap}
+TF_VAR_lb_cloudscale_api_secret=${INPUT_cloudscale_token_floaty}
+TF_VAR_control_vshn_net_token=${INPUT_control_vshn_api_token}
+GIT_AUTHOR_NAME=$(git config --global user.name)
+GIT_AUTHOR_EMAIL=$(git config --global user.email)
+HIERADATA_REPO_TOKEN=${INPUT_hieradata_repo_token}
+EOF
+
+tf_image=$(\
+  yq eval ".parameters.openshift4_terraform.images.terraform.image" \
+  dependencies/openshift4-terraform/class/defaults.yml)
+tf_tag=$(\
+  yq eval ".parameters.openshift4_terraform.images.terraform.tag" \
+  dependencies/openshift4-terraform/class/defaults.yml)
+
+echo "Using Terraform image: ${tf_image}:${tf_tag}"
+
+base_dir=$(pwd)
+alias terraform='touch .terraformrc; docker run --rm -e REAL_UID=$(id -u) -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file ${base_dir}/terraform.env -w /tf -v $(pwd):/tf --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh'
+
+gitlab_repository_url=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
+gitlab_repository_name=${gitlab_repository_url##*/}
+gitlab_catalog_project_id=$(curl -sH "Authorization: Bearer ${INPUT_gitlab_api_token}" "https://git.vshn.net/api/v4/projects?simple=true&search=${gitlab_repository_name/.git}" | jq -r ".[] | select(.ssh_url_to_repo == \"${gitlab_repository_url}\") | .id")
+gitlab_state_url="https://git.vshn.net/api/v4/projects/${gitlab_catalog_project_id}/terraform/state/cluster"
+
+pushd catalog/manifests/openshift4-terraform/
+
+terraform init \
+  "-backend-config=address=${gitlab_state_url}" \
+  "-backend-config=lock_address=${gitlab_state_url}/lock" \
+  "-backend-config=unlock_address=${gitlab_state_url}/lock" \
+  "-backend-config=username=${INPUT_gitlab_user_name}" \
+  "-backend-config=password=${INPUT_gitlab_api_token}" \
+  "-backend-config=lock_method=POST" \
+  "-backend-config=unlock_method=DELETE" \
+  "-backend-config=retry_wait_min=5"
+
+terraform state rm "module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata"
+
+# Suppress errors on the first run; it is expected to fail
+terraform destroy --auto-approve || true
+
+terraform destroy --auto-approve
+popd
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-17]]
+=== Then I delete Cloudscale server groups
+
+This step cleans up server groups configured for this cluster on Cloudscale.
+
+==== Inputs
+
+* `cloudscale_token`
+* `commodore_cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudscale_token=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+for server_group_uuid in $(curl -H"Authorization: Bearer ${INPUT_cloudscale_token}" \
+  https://api.cloudscale.ch/v1/server-groups | \
+  jq -r --arg cluster_id "${INPUT_commodore_cluster_id}" \
+  '.[]|select(.name|startswith($cluster_id))|.uuid'); do
+  curl -H"Authorization: Bearer ${INPUT_cloudscale_token}" \
+    "https://api.cloudscale.ch/v1/server-groups/${server_group_uuid}" \
+    -XDELETE
+done
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-18]]
+=== And I delete all S3 buckets
+
+This step deletes the cluster's associated S3 buckets from Cloudscale.
+
+==== Inputs
+
+* `cloudscale_token`
+* `cloudscale_region`
+* `commodore_cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudscale_token=
+# export INPUT_cloudscale_region=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+# Use already exiting bucket user
+response=$(curl -sH "Authorization: Bearer ${INPUT_cloudscale_token}" \
+  https://api.cloudscale.ch/v1/objects-users | \
+  jq -e ".[] | select(.display_name == \"${INPUT_commodore_cluster_id}\")")
+
+# configure minio client to use the bucket
+mc alias set \
+  "${INPUT_commodore_cluster_id}" "https://objects.${INPUT_cloudscale_region}.cloudscale.ch" \
+  "$(echo "$response" | jq -r '.keys[0].access_key')" \
+  "$(echo "$response" | jq -r '.keys[0].secret_key')"
+
+# delete bootstrap-ignition bucket (should already be deleted after setup)
+mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition" --force
+
+# delete image-registry bucket
+mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-image-registry" --force
+
+# delete Loki logstore bucket
+mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-logstore" --force
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-19]]
+=== And I delete the cluster backup
+
+This step deletes the cluster's associated backup bucket from Cloudscale.
+
+==== Inputs
+
+* `cloudscale_token`
+* `vault_address`
+* `commodore_cluster_id`
+* `commodore_api_url`
+* `backup_deletion_confirmation`: Really delete the cluster backup?
+
+Type "YES" to delete the cluster backup. With any other value, backup deletion gets skipped.
+
+Remember to confirm backup deletion according to the 4-eye principle:
+you and a colleague should agree that the backup needs to be deleted.
+
+
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudscale_token=
+# export INPUT_vault_address=
+# export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
+# export INPUT_backup_deletion_confirmation=
+
+set -euo pipefail
+
+if [[ ${INPUT_backup_deletion_confirmation} != "YES" ]]
+then
+    echo '################################################################'
+    echo '#                                                              #'
+    echo '#  Skipping backup deletion because no confirmation was given  #'
+    echo '#                                                              #'
+    echo '################################################################'
+    exit 0
+fi
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+
+LIEUTENANT_AUTH="Authorization: Bearer $(commodore fetch-token)"
+REPO_URL="$(curl -sH "${LIEUTENANT_AUTH}" "${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id}" | jq -r .gitRepo.url)"
+
+if [ -e catalog ]
+then
+  rm -rf catalog
+fi
+
+mkdir catalog
+git archive --remote "${REPO_URL}" master | tar -xC catalog
+
+export VAULT_ADDR=${INPUT_vault_address}
+vault login -method=oidc
+
+# extract restic credentials from catalog and vault
+restic_repo=s3:$(yq -o=json 'select(.kind == "Schedule")| .spec.backend.s3 | .endpoint + "/" + .bucket' catalog/manifests/cluster-backup/10_object.yaml | tr -d '"')
+export RESTIC_REPOSITORY="$restic_repo"
+echo "$RESTIC_REPOSITORY"
+
+s3_ep=s3:$(yq -o=json 'select(.kind == "Schedule")| .spec.backend.s3 | .endpoint' catalog/manifests/cluster-backup/10_object.yaml | tr -d '"')
+export S3_ENDPOINT="$s3_ep"
+echo "$S3_ENDPOINT"
+
+PASSWORD_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-password") | .stringData.password' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
+restic_pw=$(vault kv get -format json "clusters/kv/${PASSWORD_KEY%/*}" | jq -r ".data.data.${PASSWORD_KEY##*/}")
+export RESTIC_PASSWORD="$restic_pw"
+
+ID_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.username' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
+aws_id=$(vault kv get -format json "clusters/kv/${ID_KEY%/*}" | jq -r ".data.data.${ID_KEY##*/}")
+export AWS_ACCESS_KEY_ID="$aws_id"
+
+SECRET_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.password' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
+aws_secret=$(vault kv get -format json "clusters/kv/${SECRET_KEY%/*}" | jq -r ".data.data.${SECRET_KEY##*/}")
+export AWS_SECRET_ACCESS_KEY="$aws_secret"
+
+# retrieve latest restic snapshots
+OBJECT_ID="$(restic snapshots -H syn-cluster-backup --latest 1 --json | jq -r .[-1].id)"
+ETCD_ID="$(restic snapshots -H syn-cluster-backup-etcd --latest 1 --json | jq -r .[-1].id)"
+
+mkdir -p backup-dump-${INPUT_commodore_cluster_id}
+
+if [[ "$OBJECT_ID" != "null" ]]
+then
+  restic restore "$OBJECT_ID" --target backup-dump-${INPUT_commodore_cluster_id}
+fi
+if [[ "$ETCD_ID" != "null" ]]
+then
+  restic restore "$ETCD_ID" --target backup-dump-${INPUT_commodore_cluster_id}
+fi
+
+# proceed with deleting the backup bucket
+# Use already exiting bucket user
+response=$(curl -sH "Authorization: Bearer ${INPUT_cloudscale_token}" \
+  https://api.cloudscale.ch/v1/objects-users | \
+  jq -e ".[] | select(.display_name == \"${INPUT_commodore_cluster_id}\")")
+
+# configure minio client to use the bucket
+mc alias set \
+  "${INPUT_commodore_cluster_id}_backup" "${S3_ENDPOINT##s3:}" \
+  "$(echo "$response" | jq -r '.keys[0].access_key')" \
+  "$(echo "$response" | jq -r '.keys[0].secret_key')"
+
+# Delete bucket
+mc rb "${INPUT_commodore_cluster_id}_backup/${INPUT_commodore_cluster_id}-cluster-backup" --force
+
+# Delete object user
+curl -i -H "Authorization: Bearer ${INPUT_cloudscale_token}" -X DELETE "$(echo "$response" | jq -r '.href')"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-20]]
+=== And I delete the cluster's API tokens
+
+This step deletes the cluster's associated Cloudscale API tokens from Cloudscale.
+
+==== Inputs
+
+* `cloudscale_token`
+* `cloudscale_token_floaty`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudscale_token=
+# export INPUT_cloudscale_token_floaty=
+
+set -euo pipefail
+echo '##############################################################'
+echo '#                                                            #'
+echo '#   Please delete the Cloudscale token and Floaty token      #'
+echo '#   associated with this cluster via the Cloudscale console. #'
+echo '#                                                            #'
+echo '##############################################################'
+
+echo -n "Checking for deletion of main Cloudscale token ..."
+while [[ $(curl -sH "Authorization: Bearer ${INPUT_cloudscale_token}" https://api.cloudscale.ch/v1/flavors -o /dev/null -w"%{http_code}") != 401 ]]
+do
+  echo -n .
+  sleep 3
+done
+echo " Success."
+
+echo -n "Checking for deletion of Floaty Cloudscale token ..."
+while [[ $(curl -sH "Authorization: Bearer ${INPUT_cloudscale_token_floaty}" https://api.cloudscale.ch/v1/flavors -o /dev/null -w"%{http_code}") != 401 ]]
+do
+  echo -n .
+  sleep 3
+done
+echo " Success."
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-21]]
+=== And I remove the LoadBalancers from control.vshn.net
+
+In this step you need to remove the LoadBalancer servers from control.vshn.net
+
+==== Inputs
+
+* `lb_fqdn_1`
+* `lb_fqdn_2`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_lb_fqdn_1=
+# export INPUT_lb_fqdn_2=
+
+set -euo pipefail
+echo '###################################################################################'
+echo '#                                                                                 #'
+echo "#  Please manually delete the cluster's LoadBalancer servers before proceeding.   #"
+echo '#                                                                                 #'
+echo '###################################################################################'
+echo
+echo You can go to:
+echo https://control.vshn.net/servers/definitions/appuio/${INPUT_lb_fqdn_1}/delete
+echo https://control.vshn.net/servers/definitions/appuio/${INPUT_lb_fqdn_2}/delete
+sleep 2
+# NOTE(aa): This step is currently annoying to automate, but once ticket PORTAL-253 is resolved,
+# it should be easy.
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-22]]
+=== And I decommission the LoadBalancers
+
+This step decommissions resources associated with the Puppet managed LoadBalancers.
+
+==== Inputs
+
+* `commodore_cluster_id`
+* `lb_fqdn_1`
+* `lb_fqdn_2`
+* `lb_backup_1`
+* `lb_backup_2`
+* `lb_icinga_1`
+* `lb_icinga_2`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+# export INPUT_lb_fqdn_1=
+# export INPUT_lb_fqdn_2=
+# export INPUT_lb_backup_1=
+# export INPUT_lb_backup_2=
+# export INPUT_lb_icinga_1=
+# export INPUT_lb_icinga_2=
+
+set -euo pipefail
+echo "# Clearing encdata caches ... #"
+# shellcheck disable=2029
+ssh nfs1.ch1.puppet.vshn.net "sudo rm /srv/nfs/export/puppetserver-puppetserver-enc-cache-pvc-*/${INPUT_lb_fqdn_1}.yaml" || true
+# shellcheck disable=2029
+ssh nfs1.ch1.puppet.vshn.net "sudo rm /srv/nfs/export/puppetserver-puppetserver-enc-cache-pvc-*/${INPUT_lb_fqdn_2}.yaml" || true
+echo "# Cleared encdata caches. #"
+echo
+echo "# Cleaning up LBs in icinga ... #"
+for parent_zone in $( echo "$INPUT_lb_icinga_1" "$INPUT_lb_icinga_2" | xargs -n 1 | sort -u | paste -s )
+do
+  if [ "$parent_zone" != "master" ]; then
+    icinga_host="$parent_zone"
+  else
+    icinga_host="master3.prod.monitoring.vshn.net"
+  fi
+  echo "Cleaning up LB from $icinga_host ..."
+  # shellcheck disable=2029
+  ssh "${icinga_host}" "sudo rm -rf /var/lib/icinga2/api/zones/${INPUT_lb_fqdn_1}" || true
+  # shellcheck disable=2029
+  ssh "${icinga_host}" "sudo rm -rf /var/lib/icinga2/api/zones/${INPUT_lb_fqdn_2}" || true
+  if [ "$parent_zone" != "master" ]; then
+    echo "Running puppet on ${icinga_host}"
+    ssh "${icinga_host}" sudo puppetctl run
+  fi
+  echo "Running puppet on icinga master ..."
+  ssh master3.prod.monitoring.vshn.net sudo puppetctl run
+done
+echo "# Cleaned up LBs in icinga. #"
+echo
+echo "# Removing LBs from nodes hieradata ... #"
+if [ -e nodes_hieradata ]
+then
+  rm -rf nodes_hieradata
+fi
+git clone git@git.vshn.net:vshn-puppet/nodes_hieradata.git
+pushd nodes_hieradata
+
+git rm "${INPUT_lb_fqdn_1}.yaml" || true
+git rm "${INPUT_lb_fqdn_2}.yaml" || true
+
+if not git diff-index --quiet HEAD
+then
+  git commit -m"Decommission LBs for ${INPUT_commodore_cluster_id}"
+  git push origin master
+fi || true
+
+popd
+echo "# Removed LBs from nodes hieradata. #"
+echo
+echo "# Removing cluster from Appuio hieradata ... #"
+if [ -e appuio_hieradata ]
+then
+  rm -rf appuio_hieradata
+fi
+git clone git@git.vshn.net:appuio/appuio_hieradata.git
+pushd appuio_hieradata
+
+git rm -rf "lbaas/${INPUT_commodore_cluster_id}"* || true
+
+if not git diff-index --quiet HEAD
+then
+  git commit -m"Decommission ${INPUT_commodore_cluster_id}"
+  git push origin master
+fi || true
+popd
+echo "# Removed cluster from Appuio hieradata. #"
+echo
+echo "# Deleting backups from Burp server ... #"
+for lb in "${INPUT_lb_fqdn_1}" "${INPUT_lb_fqdn_2}"
+do
+  for backup_server in "${INPUT_lb_backup_1}" "${INPUT_lb_backup_2}"
+  do
+    # shellcheck disable=2029
+    ssh "$backup_server" "sudo rm /var/lib/burp/CA/${lb}.crt" || true
+    # shellcheck disable=2029
+    ssh "$backup_server" "sudo rm /var/lib/burp/CA/${lb}.csr" || true
+    backup="/var/lib/burp/${lb}"
+    # shellcheck disable=2029
+    ssh "$backup_server" "sudo rm -rf ${backup}" || true
+  done
+done
+echo "# Deleted backups from Burp server. #"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-23]]
+=== And I remove the cluster's DNS entries
+
+In this step, you must manually remove any DNS entries associated with the cluster from https://git.vshn.net/vshn/vshn_zonefiles.
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+
+set -euo pipefail
+echo '#########################################################################'
+echo '#                                                                       #'
+echo "#  Please manually delete the cluster's DNS entries before proceeding.  #"
+echo '#                                                                       #'
+echo '#########################################################################'
+sleep 2
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-24]]
+=== Then I delete the cluster's Vault secrets
+
+This step cleans up all the cluster's Vault secrets.
+
+==== Inputs
+
+* `commodore_cluster_id`
+* `commodore_api_url`
+* `vault_address`
+* `backup_deletion_confirmation`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
+# export INPUT_vault_address=
+# export INPUT_backup_deletion_confirmation=
+
+set -euo pipefail
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+
+LIEUTENANT_AUTH="Authorization: Bearer $(commodore fetch-token)"
+REPO_URL=$(curl -sH "${LIEUTENANT_AUTH}" "${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id}" | jq -r .gitRepo.url)
+
+if [ -e catalog ]
+then
+  rm -rf catalog
+fi
+
+mkdir catalog
+git archive --remote "${REPO_URL}" master | tar -xC catalog
+
+PASSWORD_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-password") | .stringData.password' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
+ID_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.username' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
+SECRET_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.password' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
+
+export VAULT_ADDR=${INPUT_vault_address}
+vault login -method=oidc
+
+for secret in $(find catalog/refs/ -type f -printf "clusters/kv/%P\n" \
+    | sed -r 's#(.*)/.*#\1#' | grep -v '__shared__/__shared__' \
+    | sort -u);
+do
+  if [[ ${INPUT_backup_deletion_confirmation} == "YES" ]]
+  then
+    vault kv delete "$secret"
+  else
+    # exclude backup credentials because the backup still exists
+    if echo "$PASSWORD_KEY $ID_KEY $SECRET_KEY" | grep "${secret##clusters/kv/}" > /dev/null
+    then
+      echo "Skipping key '$secret' as it is required to access cluster backups."
+    else
+      vault kv delete "$secret"
+    fi
+  fi
+done
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-25]]
+=== And I delete the cluster's OpsGenie heartbeat
+
+This step deletes the cluster's OpsGenie heartbeat.
+
+==== Inputs
+
+* `vault_address`
+* `commodore_cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_vault_address=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+export VAULT_ADDR=${INPUT_vault_address}
+vault login -method=oidc
+OPSGENIE_KEY=$(vault kv get -format=json \
+  clusters/kv/__shared__/__shared__/opsgenie/aldebaran | \
+  jq -r '.data.data["heartbeat-password"]')
+
+curl "https://api.opsgenie.com/v2/heartbeats/${INPUT_commodore_cluster_id}" \
+  -H"Authorization: GenieKey ${OPSGENIE_KEY}" \
+  -XDELETE
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-26]]
+=== And I delete the cluster from Lieutenant
+
+This step deletes the cluster from Lieutenant
+
+==== Inputs
+
+* `commodore_cluster_id`
+* `commodore_api_url`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
+
+set -euo pipefail
+echo '###########################################################################'
+echo '#                                                                         #'
+echo '#  Please manually delete the cluster from Lieutenant before proceeding.  #'
+echo '#                                                                         #'
+echo '###########################################################################'
+echo
+lieutenant=vshn-lieutenant-prod
+if [[ ${INPUT_commodore_api_url} == *int* ]]
+then
+  lieutenant=vshn-lieutenant-int
+fi
+if [[ ${INPUT_commodore_api_url} == *dev* ]]
+then
+  lieutenant=vshn-lieutenant-dev
+fi
+echo You can go to https://control.vshn.net/syn/lieutenantclusters/${lieutenant}/${INPUT_commodore_cluster_id}/_delete
+sleep 2
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-27]]
+=== And I delete the Keycloak service
+
+This step deletes the cluster's keycloak service from control.vshn.net
+
+==== Inputs
+
+* `commodore_cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+echo '##############################################################################'
+echo '#                                                                            #'
+echo "#  Please manually delete the cluster's keycloak service before proceeding.  #"
+echo '#                                                                            #'
+echo '##############################################################################'
+echo
+echo You can go to https://control.vshn.net/vshn/services/${INPUT_commodore_cluster_id}/delete
+sleep 2
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-28]]
+=== And I remove the cluster from openshift4-clusters
+
+This step removes the cluster from https://git.vshn.net/vshn/openshift4-clusters
+
+==== Inputs
+
+* `commodore_cluster_id`
+* `gitlab_api_token`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+# export INPUT_gitlab_api_token=
+
+set -euo pipefail
+if [ -e openshift4-clusters ]
+then
+  rm -rf openshift4-clusters
+fi
+git clone git@git.vshn.net:vshn/openshift4-clusters.git
+pushd openshift4-clusters
+
+git rm -rf "${INPUT_commodore_cluster_id}" || true
+
+if not git diff-index --quiet HEAD
+then
+  git checkout -b "remove-${INPUT_commodore_cluster_id}"
+  git commit -m"Remove ${INPUT_commodore_cluster_id}"
+  git push origin "remove-${INPUT_commodore_cluster_id}"
+
+  auth="PRIVATE-TOKEN: ${INPUT_gitlab_api_token}"
+
+  response=$( curl -s -XPOST -H"$auth" -H"Content-Type: application/json" https://git.vshn.net/api/v4/projects/57660/merge_requests -d'{"source_branch":"'remove-${INPUT_commodore_cluster_id}'","target_branch":"main","title":"Remove cluster '${INPUT_commodore_cluster_id}'"}' )
+  echo
+  echo ">>> Please review and merge the MR at $( echo "$response" | jq -r .web_url )"
+  echo
+fi || true
+popd
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+

@@ -1,0 +1,140 @@
+== Workflow
+
+* <<step-1,Given a Cloudplosion organization>>
+* &nbsp;&nbsp;<<step-2,And a lieutenant cluster id>>
+* <<step-3,Then I upload the kubernetes "hypernetes-v4.20" image>>
+* &nbsp;&nbsp;<<step-4,And create the bootstrap node>>
+
+[[step-1]]
+=== Given a Cloudplosion organization
+
+
+
+==== Outputs
+
+* `cloudplosion_org_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+
+env -i "cloudplosion_org_id=org-1234567890abcdef" >> $OUTPUT
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-2]]
+=== And a lieutenant cluster id
+
+
+
+==== Outputs
+
+* `cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+
+env -i "cluster_id=c-smouldering-fire-2345" >> $OUTPUT
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-3]]
+=== Then I upload the kubernetes "hypernetes-v4.20" image
+
+
+
+==== Inputs
+
+* `cloudplosion_org_id`
+
+==== Outputs
+
+* `image_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudplosion_org_id=
+
+echo Uploading image "$MATCH_image_name"
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+echo
+echo Uploaded image with ID "img-1234567890abcdef"
+env -i "image_id=img-1234567890abcdef" >> $OUTPUT
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-4]]
+=== And create the bootstrap node
+
+
+
+==== Inputs
+
+* `cloudplosion_org_id`
+* `cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudplosion_org_id=
+# export INPUT_cluster_id=
+
+echo Waiting for bootstrap node to become ready
+for i in {1..50}
+do
+  sleep 0.1
+  printf .
+done
+echo "\rReady!                                  "
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+

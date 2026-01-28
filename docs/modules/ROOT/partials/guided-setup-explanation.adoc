@@ -1,0 +1,5 @@
+[NOTE]
+--
+This how-to guide is exported from the https://github.com/appuio/guided-setup[Guided Setup] automation tool.
+It's highly recommended to run these instructions using said tool, as opposed to running them manually.
+--

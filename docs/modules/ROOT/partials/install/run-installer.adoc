@@ -74,7 +74,33 @@ endif::[]
 +
 [source,bash]
 ----
-cp catalog/manifests/cilium/olm/* ${INSTALLER_DIR}/manifests/
+for f in catalog/manifests/cilium/olm/[a-z]*; do
+ cp $f ${INSTALLER_DIR}/manifests/cilium_$(basename $f)
+done
+----
+
+. Generate initial `network.operator.openshift.io` resource
++
+TIP: This ensures that the cluster is bootstrapped with `kube-proxy` disabled
++
+[source,bash]
+----
+yq '{
+"apiVersion": "operator.openshift.io/v1",
+"kind": "Network",
+"metadata": {
+  "name": "cluster"
+},
+"spec": {
+  "deployKubeProxy": false,
+  "clusterNetwork": .spec.clusterNetwork,
+  "externalIP": {
+    "policy": {}
+  },
+  "networkType": "Cilium",
+  "serviceNetwork": .spec.serviceNetwork
+}}' "${INSTALLER_DIR}/manifests/cluster-network-02-config.yml" \
+> "${INSTALLER_DIR}/manifests/cilium_cluster-network-operator.yaml"
 ----
 
 . Verify that the generated cluster domain matches the desired cluster domain

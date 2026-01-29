@@ -610,7 +610,6 @@ This step gathers metadata on the LoadBalancer instances (such as their icinga z
 * `cloudscale_token`
 * `cloudscale_token_floaty`
 * `control_vshn_api_token`
-* `ignition_bootstrap`
 * `hieradata_repo_token`
 * `gitlab_user_name`
 * `gitlab_api_token`
@@ -635,7 +634,6 @@ OUTPUT=$(mktemp)
 # export INPUT_cloudscale_token=
 # export INPUT_cloudscale_token_floaty=
 # export INPUT_control_vshn_api_token=
-# export INPUT_ignition_bootstrap=
 # export INPUT_hieradata_repo_token=
 # export INPUT_gitlab_user_name=
 # export INPUT_gitlab_api_token=
@@ -648,7 +646,6 @@ export COMMODORE_API_URL="${INPUT_commodore_api_url}"
 
 cat <<EOF > ./terraform.env
 CLOUDSCALE_API_TOKEN=${INPUT_cloudscale_token}
-TF_VAR_ignition_bootstrap=${INPUT_ignition_bootstrap}
 TF_VAR_lb_cloudscale_api_secret=${INPUT_cloudscale_token_floaty}
 TF_VAR_control_vshn_net_token=${INPUT_control_vshn_api_token}
 GIT_AUTHOR_NAME=$(git config --global user.name)
@@ -768,7 +765,6 @@ This step decommissions all Terraform resources for the cluster.
 * `cloudscale_token`
 * `cloudscale_token_floaty`
 * `control_vshn_api_token`
-* `ignition_bootstrap`
 * `hieradata_repo_token`
 * `gitlab_user_name`
 * `gitlab_api_token`
@@ -784,7 +780,6 @@ OUTPUT=$(mktemp)
 # export INPUT_cloudscale_token=
 # export INPUT_cloudscale_token_floaty=
 # export INPUT_control_vshn_api_token=
-# export INPUT_ignition_bootstrap=
 # export INPUT_hieradata_repo_token=
 # export INPUT_gitlab_user_name=
 # export INPUT_gitlab_api_token=
@@ -797,7 +792,6 @@ export COMMODORE_API_URL="${INPUT_commodore_api_url}"
 
 cat <<EOF > ./terraform.env
 CLOUDSCALE_API_TOKEN=${INPUT_cloudscale_token}
-TF_VAR_ignition_bootstrap=${INPUT_ignition_bootstrap}
 TF_VAR_lb_cloudscale_api_secret=${INPUT_cloudscale_token_floaty}
 TF_VAR_control_vshn_net_token=${INPUT_control_vshn_api_token}
 GIT_AUTHOR_NAME=$(git config --global user.name)
@@ -1335,9 +1329,10 @@ SECRET_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "object
 export VAULT_ADDR=${INPUT_vault_address}
 vault login -method=oidc
 
-for secret in $(find catalog/refs/ -type f -printf "clusters/kv/%P\n" \
-    | sed -r 's#(.*)/.*#\1#' | grep -v '__shared__/__shared__' \
-    | sort -u);
+for secret in $(find catalog/refs/ -type f \
+  | sed -r -e 's#catalog/refs#clusters/kv#' -e 's#(.*)/.*#\1#' \
+  | grep -v '__shared__/__shared__' \
+  | sort -u);
 do
   if [[ ${INPUT_backup_deletion_confirmation} == "YES" ]]
   then

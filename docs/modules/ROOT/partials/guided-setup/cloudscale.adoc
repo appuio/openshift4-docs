@@ -1689,12 +1689,9 @@ kubectl apply -f catalog/manifests/machine-api-provider-cloudscale/11_deployment
 echo '# Applied machine-api-provider. #'
 echo
 echo '# Applying machinesets ... #'
-# shellcheck disable=2046
-# we need word splitting here
 for f in catalog/manifests/openshift4-nodes/machineset-*.yaml;
   do kubectl apply -f "$f";
 done
-# We do not want to quote the $() expression because we *want* it to be word-split.
 echo '# Applied machinesets. #'
 echo
 echo '# Applying loadbalancer controller ... #'

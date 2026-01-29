@@ -20,11 +20,7 @@ The certificates created during bootstrap are only valid for 24h.
 So make sure you complete these steps within 24h.
 --
 
-[NOTE]
---
-This how-to guide is still a work in progress and will change.
-It's currently very specific to VSHN and needs further changes to be more generic.
---
+include::partial$guided-setup-explanation.adoc[]
 
 == Starting situation
 
@@ -47,4 +43,4 @@ You can also install the Python package with your favorite package manager (we r
 Make sure the minor version of `openshift-install` and the RHCOS image are the same as ignition will fail otherwise.
 ====
 
-include::partial$generated/cloudscale.adoc[]
+include::partial$guided-setup/cloudscale.adoc[]

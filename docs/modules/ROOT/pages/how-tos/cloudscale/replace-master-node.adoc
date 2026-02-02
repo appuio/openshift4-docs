@@ -1,0 +1,220 @@
+= Replace a master node
+
+:provider: cloudscale
+:kubectl_extra_args: --as=system:admin
+:needs_gitlab: yes
+:vshn_input_join: yes
+
+[abstract]
+--
+Steps to replace a master node of an OpenShift 4 cluster on https://cloudscale.ch[cloudscale].
+--
+
+== Starting situation
+
+* You already have an OpenShift 4 cluster on cloudscale
+* You have admin-level access to the cluster
+* You want to replace a master node of the cluster
+
+== Prerequisites
+
+The following CLI utilities need to be available locally:
+
+* `kubectl`
+* `oc`
+* `git`
+* `jq`
+* `yq`
+* `vault` CLI
+
+== Preparation
+
+. Update the master node `etcd-N` DNS records to have a lower TTL so the Puppet LB HAproxy backends get updated quicker
++
+[source,dns]
+----
+etcd-0    300 IN A     172.18.200.a
+etcd-1    300 IN A     172.18.200.b
+etcd-2    300 IN A     172.18.200.c
+          ^ <1>
+----
+<1> Per record TTL can be added before the record type.
+The value is in seconds.
++
+TIP: Ideally this is done at least an hour (one regular TTL for the zone) before actually starting to replace nodes, so the records with the regular TTL have time to expire.
+
+. Set downtime for the "HAProxy socket" check for the cluster's Puppet LBs in https://monitoring.vshn.net[Icinga2].
+
+== Setup Terraform credentials
+
+. Ensure your `KUBECONFIG` points to the target cluster
++
+[source,bash]
+----
+kubectl cluster-info
+kubectl get nodes
+----
+
+. Setup access to VSHN systems
++
+include::partial$vshn-input.adoc[]
+
+. Extract cloudscale token from the cluster
++
+[NOTE]
+====
+You can also fetch the token from Vault:
+
+[source,bash]
+----
+export VAULT_ADDR=https://vault-prod.syn.vshn.net
+vault login -method=oidc
+export CLOUDSCALE_API_TOKEN=$(vault kv get -format=json \
+  clusters/kv/${TENANT_ID}/${CLUSTER_ID}/cloudscale | \
+  jq -r '.data.data.token')
+----
+====
++
+[source,bash]
+----
+export CLOUDSCALE_API_TOKEN=$(kubectl --as=system:admin -n openshift-machine-api \
+  get secret cloudscale-rw-token -ogo-template='{{.data.token|base64decode}}')
+----
+
+. Compile catalog
++
+[TIP]
+====
+We use `commodore catalog compile` here to fetch the cluster catalog.
+You can also use an existing up-to-date catalog checkout.
+====
++
+[source,bash]
+----
+commodore catalog compile "${CLUSTER_ID}"
+----
+
+. Configure Terraform
++
+[source,bash]
+----
+cat >terraform.env <<EOF
+CLOUDSCALE_API_TOKEN
+GIT_AUTHOR_NAME
+GIT_AUTHOR_EMAIL
+EOF
+----
+
+include::partial$setup_terraform.adoc[]
+
+== Replace the master node
+
+TIP: You can repeat the steps in this section if you need to replace multiple master nodes.
+
+. Select the master node you want to replace
++
+[source,bash]
+----
+node=<master-XXXX>
+kubectl get node "${node}"
+----
+
+. Drain the master node
++
+[source,bash]
+----
+kubectl --as=system:admin drain --ignore-daemonsets \
+  --delete-emptydir-data --force "${node}"
+----
+
+. Stop the master node
++
+TIP: You can also stop the node via the https://control.cloudscale.ch[cloudscale control panel^].
++
+[source,bash]
+----
+oc debug "node/${node}" -n syn-debug-nodes --as=system:admin \
+  -- chroot /host shutdown -h now
+kubectl wait --for condition=ready=unknown --timeout=600s \
+  "node/${node}"
+----
+
+. Remove the master node object in the cluster
++
+[source,bash]
+----
+kubectl --as=system:admin delete node "${node}"
+----
+
+. Remove the master node from the etcd cluster
++
+IMPORTANT: As far as we know, if you don't do this step, things will go wrong later on!
++
+[source,bash]
+----
+etcd_pod=$(kubectl -n openshift-etcd get pods -l app=etcd -oname | grep -v "${node}" | head -n1)
+member_id=$(kubectl --as=system:admin -n openshift-etcd exec "${etcd_pod}" \
+  -- etcdctl member list | grep "${node}" | cut -d, -f1)
+kubectl --as=system:admin -n openshift-etcd exec "${etcd_pod}" \
+  -- etcdctl member remove "${member_id}"
+----
+
+. Delete etcd secrets for the removed node
++
+[source,bash]
+----
+kubectl --as=system:admin -n openshift-etcd \
+  delete $(kubectl -n openshift-etcd get secrets --as=system:admin -oname | grep ${node})
+----
+
+. Remove node and id from terraform state
++
+[source,bash]
+----
+terraform state pull > state.json
+state_index=$(jq --arg node "${node}" -r '.resources[]
+  | select(.module == "module.cluster.module.master" and .type == "random_id")
+  | .instances[]
+  | select(.attributes.hex==$node).index_key' \
+  state.json)
+terraform state rm "module.cluster.module.master.random_id.node[$state_index]"
+terraform state rm "module.cluster.module.master.cloudscale_server.node[$state_index]"
+rm state.json
+----
+
+. Create new node via terraform
++
+[source,bash]
+----
+terraform apply
+----
+
+. Check the output of the Terraform run and update the appropriate `etcd-N` DNS record with the IP of the new master node
+
+. Wait for the new master node to come online and approve CSRs
++
+include::partial$install/approve-node-csrs.adoc[]
+
+. Wait until the `etcd` and `kube-apiserver` cluster-operators are healthy again
++
+IMPORTANT: It's especially important to wait here when needing to replace multiple master nodes in succession to ensure we never destroy the etcd quorum!
++
+[source,bash]
+----
+kubectl wait --for condition=progressing=false --timeout=15m co etcd kube-apiserver
+----
++
+[NOTE]
+====
+If you're observing the etcd update, it's normal that the new etcd pod crashes initially before it gets added to the cluster correctly.
+====
+
+. Delete the old master node in the https://control.cloudscale.ch[cloudscale control panel^].
+
+== Finalize replacement
+
+. Once you're done with all master nodes that need to be replaced, revert the short TTL for the `etcd-N` DNS records
+
+. Double-check that you've deleted all the old nodes in the https://control.cloudscale.ch[cloudscale control panel^]
+
+. Remove downtime for the "HAProxy socket" check for the cluster's Puppet LBs in https://monitoring.vshn.net[Icinga2].

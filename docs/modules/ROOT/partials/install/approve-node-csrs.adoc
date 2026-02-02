@@ -1,7 +1,12 @@
 [source,bash,subs="attributes"]
 ----
 # Once CSRs in state Pending show up, approve them
+ifeval::["{provider}"=="cloudscale"]
+# Needs to be run three times, three CSRs for each node need to be approved
+endif::[]
+ifeval::["{provider}"!="cloudscale"]
 # Needs to be run twice, two CSRs for each node need to be approved
+endif::[]
 
 ifdef::kubectl_extra_args[]
 kubectl {kubectl_extra_args} get csr -w

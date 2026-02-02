@@ -38,6 +38,7 @@
 // Node management
 *** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
+*** xref:oc4:ROOT:how-tos/cloudscale/replace-master-node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[]
 // Storage add-on
 *** xref:oc4:ROOT:how-tos/cloudscale/setup-storage-cluster.adoc[]
@@ -177,6 +178,7 @@
 ** cloudscale.ch
 *** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
+*** xref:oc4:ROOT:how-tos/cloudscale/replace-master-node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/increase-worker-node-disk.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/provider-adopt-worker-nodes.adoc[]
@@ -235,6 +237,7 @@
 // Node management
 *** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
+*** xref:oc4:ROOT:how-tos/cloudscale/replace-master-node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/remove_node.adoc[]
 // Storage add-on
 *** xref:oc4:ROOT:how-tos/cloudscale/setup-storage-cluster.adoc[]

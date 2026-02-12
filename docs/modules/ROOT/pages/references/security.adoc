@@ -94,7 +94,7 @@ See xref:oc4:ROOT:references/architecture/upgrade_controller.adoc[].
 
 == Backup
 
-VSHN Managed OpenShift clusters include backups of all Kubernetes manifests and the raw etcd data to a secure location by default. Please note that this is a platform backup and does not include application data.
+VSHN Managed OpenShift clusters include backups of all Kubernetes manifests and the raw etcd data to a secure location by default. Please note that this is a platform backup and doesn't include application data.
 
 * xref:oc4:ROOT:explanations/disaster_recovery.adoc[]
 * xref:oc4:ROOT:how-tos/recover-from-backup.adoc[]

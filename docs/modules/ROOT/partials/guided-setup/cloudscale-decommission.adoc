@@ -72,6 +72,8 @@ if which restic >/dev/null 2>&1 ; then { echo "✅ restic (Backup CLI) is instal
 
 if which emergency-credentials-receive >/dev/null 2>&1 ; then { echo "✅ emergency-credentials-receive (Cluster emergency access helper) is installed."; } ; else { echo "❌ emergency-credentials-receive is not installed. Please install it from https://github.com/vshn/emergency-credentials-receive ."; exit 1; } ; fi
 
+if which commodore >/dev/null 2>&1 ; then { echo "✅ commodore (Project Syn) is installed."; } ; else { echo "❌ commodore (Project Syn) is not installed. Please install it with 'uv tool install syn-commodore' ."; exit 1; } ; fi
+
 echo "✅ All prerequisites are met."
 
 

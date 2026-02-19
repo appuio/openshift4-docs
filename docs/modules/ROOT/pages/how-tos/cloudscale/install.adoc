@@ -20,8 +20,6 @@ The certificates created during bootstrap are only valid for 24h.
 So make sure you complete these steps within 24h.
 --
 
-include::partial$guided-setup-explanation.adoc[]
-
 == Starting situation
 
 * You already have a Tenant and its git repository
@@ -30,17 +28,15 @@ include::partial$guided-setup-explanation.adoc[]
 IMPORTANT: Don't use your personal account to login to the cluster manager for installation.
 * You want to register a new cluster in Lieutenant and are about to install Openshift 4 on cloudscale.ch
 
+== Guided Setup
+
+include::partial$guided-setup-explanation.adoc[]
+
 == Prerequisites
 
 include::partial$install/prerequisites.adoc[]
 * `mc` >= `RELEASE.2024-01-18T07-03-39Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 * `aws` CLI https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html[Official install instructions].
 You can also install the Python package with your favorite package manager (we recommend https://docs.astral.sh/uv/[`uv`]: `uv tool install awscli`).
-
-
-[WARNING]
-====
-Make sure the minor version of `openshift-install` and the RHCOS image are the same as ignition will fail otherwise.
-====
 
 include::partial$guided-setup/cloudscale.adoc[]

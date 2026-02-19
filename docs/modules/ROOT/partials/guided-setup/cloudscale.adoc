@@ -1,7 +1,7 @@
 == Workflow
 
 * <<step-1,Given I have all prerequisites installed>>
-* &nbsp;&nbsp;<<step-2,And I have the `openshift-install` binary for version "4.20">>
+* &nbsp;&nbsp;<<step-2,And I download the `openshift-install` binary for version "4.20">>
 * &nbsp;&nbsp;<<step-3,And a lieutenant cluster>>
 * &nbsp;&nbsp;<<step-4,And a Keycloak service>>
 * &nbsp;&nbsp;<<step-5,And Cloudscale API tokens>>
@@ -80,6 +80,8 @@ if which restic >/dev/null 2>&1 ; then { echo "✅ restic (Backup CLI) is instal
 
 if which emergency-credentials-receive >/dev/null 2>&1 ; then { echo "✅ emergency-credentials-receive (Cluster emergency access helper) is installed."; } ; else { echo "❌ emergency-credentials-receive is not installed. Please install it from https://github.com/vshn/emergency-credentials-receive ."; exit 1; } ; fi
 
+if which commodore >/dev/null 2>&1 ; then { echo "✅ commodore (Project Syn) is installed."; } ; else { echo "❌ commodore (Project Syn) is not installed. Please install it with 'uv tool install syn-commodore' ."; exit 1; } ; fi
+
 echo "✅ All prerequisites are met."
 
 
@@ -90,11 +92,13 @@ echo "✅ All prerequisites are met."
 ----
 
 [[step-2]]
-=== And I have the `openshift-install` binary for version "4.20"
+=== And I download the `openshift-install` binary for version "4.20"
 
-This step checks if the `openshift-install` binary for the specified OpenShift version is available in your PATH.
+This step downloads the `openshift-install` binary for the specified OpenShift version.
 
-If not found, it provides instructions on how to download it.
+==== Outputs
+
+* `openshift_install_bin`
 
 ==== Script
 
@@ -105,20 +109,29 @@ OUTPUT=$(mktemp)
 
 set -euo pipefail
 
-if command -v openshift-install >/dev/null 2>&1; then
+shopt -s expand_aliases
+if [[ -f openshift-install ]]
+then
+  alias openshift-install='./openshift-install'
+  echo "Found existing openshift-install binary, checking version ..."
   INSTALLED_VERSION=$(openshift-install version | grep 'openshift-install' | awk '{print $2}' | sed 's/^v//' | sed -E 's/\.[0-9]{1,2}$//')
   if [ "$INSTALLED_VERSION" = "$MATCH_ocp_version" ]; then
-    echo "✅ openshift-install version ${MATCH_ocp_version}.XX is installed."
+    echo "✅ openshift-install version ${MATCH_ocp_version}.XX is present."
+    env -i "openshift_install_bin=$( pwd )/openshift-install" >> "$OUTPUT"
     exit 0
   else
-    echo "❌ openshift-install version $INSTALLED_VERSION is installed, but version $MATCH_ocp_version is required. Please download the openshift-install binary for version $MATCH_ocp_version from https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${MATCH_ocp_version}/ and add it to your PATH."
+    echo "❌ openshift-install version $INSTALLED_VERSION is present, but version $MATCH_ocp_version is required."
+    rm openshift-install
     exit 1
   fi
-else
-  echo "❌ openshift-install binary not found in PATH. Please download the openshift-install binary for version $MATCH_ocp_version"
-  echo "from https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${MATCH_ocp_version}/ and add it to your PATH."
-  exit 1
 fi
+
+rm -f openshift-install-linux.tar.gz
+echo "Downloading openshift-install for version ${MATCH_ocp_version} ..."
+curl -O https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${MATCH_ocp_version}/openshift-install-linux.tar.gz
+tar -xf openshift-install-linux.tar.gz 
+
+env -i "openshift_install_bin=$( pwd )/openshift-install" >> "$OUTPUT"
 
 
 # echo "# Outputs"

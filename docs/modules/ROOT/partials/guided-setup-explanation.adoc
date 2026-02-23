@@ -1,5 +1,24 @@
-[NOTE]
---
 This how-to guide is exported from the https://github.com/appuio/guided-setup[Guided Setup] automation tool.
 It's highly recommended to run these instructions using said tool, as opposed to running them manually.
+
+Guided Setup can be run easily in docker using the following aliases:
+
+[NOTE]
+--
+These shell scripts depend on `socat`.
+Please ensure you have `socat` installed.
+--
+
+include::partial$guided-setup/guided-setup-alias.adoc[]
+
+To run the workflows detailed below, simply source the above aliases and run:
+
+[source,bash,subs="attributes"]
+----
+guided-setup run {provider}
+----
+
+[NOTE]
+--
+It's recommended to run `guided-setup` in a new empty directory, as it creates a number of local files.
 --

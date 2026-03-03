@@ -1,0 +1,26 @@
+= Shared Responsibility Model
+
+This page details the Shared Responsibility Model (SRM) for a typical Managed OpenShift cluster provided by VSHN.
+It outlines the responsibilities of the three main parties involved in a cluster setup: the customer, VSHN, and the chosen cloud service provider (CSP).
+Each party is responsible for some of the typically involved services, components, and products.
+
+This page's aim isn't to describe in detail how the listed services, components and products work together.
+Rather, it's a reference for ownership and a basis for contractual agreements for Managed OpenShift services provided by VSHN.
+
+== Standard Cloud Setup
+
+In the standard cloud setup, VSHN provides Managed OpenShift on infrastructure provided by one of VSHN's partnered CSPs.
+
+The diagram is intended to be comprehensive.
+Depending on the agreed-upon setup, not all listed components may be present.
+
+image:explanations/shared_responsibility_model_csp.svg[]
+
+== Standard On-Prem Setup
+
+In the standard on-prem setup, VSHN provides Managed OpenShift on infrastructure provided by the customer.
+
+The diagram is intended to be comprehensive.
+Depending on the agreed-upon setup, not all listed components may be present.
+
+image:explanations/shared_responsibility_model_onprem.svg[]

@@ -1,4 +1,5 @@
 = Shared Responsibility Model
+// NOTE(aa): The SRM diagrams were created using LibreOffice Draw, and the original draw files are available in Nextcloud.
 
 This page details the Shared Responsibility Model (SRM) for a typical Managed OpenShift cluster provided by VSHN.
 It outlines the responsibilities of the three main parties involved in a cluster setup: the customer, VSHN, and the chosen cloud service provider (CSP).

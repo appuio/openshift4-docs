@@ -1,0 +1,73 @@
+= Shared Responsibility Model
+// NOTE(aa): The SRM diagrams were created using LibreOffice Draw, and the original draw files are available in Nextcloud.
+
+This page details the Shared Responsibility Model (SRM) for a typical Managed OpenShift cluster provided by VSHN.
+It outlines the responsibilities of the three main parties involved in a cluster setup: the customer, VSHN, and the chosen cloud service provider (CSP).
+Each party is responsible for some of the typically involved services, components, and products.
+
+This page's aim isn't to describe in detail how the listed services, components and products work together.
+Rather, it's a reference for ownership and a basis for contractual agreements for Managed OpenShift services provided by VSHN.
+
+The customer is free to distribute the responsibility for their part of the setup (most notably the application layer) further, such as to third party software providers, or across internal teams.
+For optimal collaboration, it's important that VSHN is made aware of the (external or internal) responsible parties, and has well-defined communication channels to each of them.
+
+[NOTE]
+--
+In some cases, if the customer wishes to procure additional solutions from VSHN, it can happen that VSHN becomes once again responsible for parts of the application layer.
+In this case, VSHN is effectively acting as a 3rd party software provider to the customer.
+--
+
+== Standard Cloud Setup
+
+In the standard cloud setup, VSHN provides Managed OpenShift on infrastructure provided by one of VSHN's partnered CSPs.
+
+In simple terms, the CSP provides the underlying infrastructure.
+VSHN provides the OpenShift platform, and the customer manages their own application layer.
+
+On the boundaries between these categories, there exist some components where responsibility is shared between two of the parties.
+In these cases, both parties must work together to set up the component, and they must clarify on a case-by-case basis who handles operation and monitoring of the component.
+Components with shared responsibility are typically those components that interface with other components belonging to a different party's responsibility area.
+For example, a custom identity provider may be managed and operated by the customer, but its integration with the OpenShift cluster is managed by VSHN, and so both parties must work together and coordinate changes to their respective parts of this component to ensure its availability.
+
+Notably, VSHN and the Customer are jointly responsible for the security of the Managed OpenShift platform.
+Providing a secure platform requires commitment and care from all involved parties.
+
+The diagram below provides a detailed overview of typical cluster components and their corresponding responsible party. 
+
+[NOTE]
+--
+The diagram is intended to be comprehensive.
+Depending on the agreed-upon setup, not all listed components may be present.
+--
+
+image:explanations/shared_responsibility_model_csp.svg[]
+
+== Standard On-Prem Setup
+
+In the standard on-prem setup, VSHN provides Managed OpenShift on infrastructure provided by the customer.
+
+In simple terms, the customer provides the underlying infrastructure.
+VSHN provides the OpenShift platform on this infrastructure, and the customer manages their own application layer.
+
+On the boundaries between these categories, there exist some components where responsibility is shared between two of the parties.
+In these cases, both parties must work together to set up the component, and they must clarify on a case-by-case basis who handles operation and monitoring of the component.
+Components with shared responsibility are typically those components that interface with other components belonging to a different party's responsibility area.
+
+The customer is responsible for ensuring their infrastructure meets the requirements for VSHN Managed OpenShift.
+At the beginning of cooperation between VSHN and the Customer, VSHN will perform an assessment of the customer's infrastructure and inform the customer about any gaps in the requirements.
+
+There are a number of services that might be available on the customer's infrastructure - in which case VSHN will utilize them to provide core cluster capabilities - or they might not be available, in which case VSHN will provide an alternative to replace the missing service.
+Depending on the specific hardware setup, the responsibilities can therefore shift around, and the exact boundaries must be defined on a case-by-case basis.
+
+Just like in the standard cloud setup, VSHN and the Customer are jointly responsible for the security of the Managed OpenShift platform.
+Providing a secure platform requires commitment and care from all involved parties.
+
+The diagram below provides a detailed overview of typical cluster components and their corresponding responsible party.
+
+[NOTE]
+--
+The diagram is intended to be comprehensive.
+Depending on the agreed-upon setup, not all listed components may be present.
+--
+
+image:explanations/shared_responsibility_model_onprem.svg[]

@@ -58,6 +58,7 @@
 *** xref:oc4:ROOT:how-tos/exoscale/install.adoc[Install]
 *** xref:oc4:ROOT:how-tos/exoscale/migrate_to_instancepool.adoc[]
 // Node management
+*** xref:oc4:ROOT:how-tos/exoscale/replace-master-node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node_instancepool.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/change_node_instancepool.adoc[]
@@ -188,6 +189,7 @@
 
 ** Exoscale
 *** xref:oc4:ROOT:how-tos/exoscale/migrate_to_instancepool.adoc[]
+*** xref:oc4:ROOT:how-tos/exoscale/replace-master-node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node_instancepool.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/change_node_instancepool.adoc[]
@@ -250,6 +252,7 @@
 
 ** Exoscale
 // Node management
+*** xref:oc4:ROOT:how-tos/exoscale/replace-master-node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/remove_node_instancepool.adoc[]
 *** xref:oc4:ROOT:how-tos/exoscale/change_node_instancepool.adoc[]

@@ -125,7 +125,6 @@ exo storage rb -r -f "${CLUSTER_ID}-cluster-backup"
 exo iam api-key delete -f ${CLUSTER_ID}_appcat-provider-exoscale
 exo iam api-key delete -f ${CLUSTER_ID}_ccm-exoscale
 exo iam api-key delete -f ${CLUSTER_ID}_csi-driver-exoscale
-exo iam api-key delete -f ${CLUSTER_ID}_floaty
 exo iam api-key delete -f ${CLUSTER_ID}_object_storage
 
 # delete decommissioning api key

@@ -1,19 +1,19 @@
 = Replace a master node
 
-:provider: cloudscale
+:provider: exoscale
 :kubectl_extra_args: --as=system:admin
 :needs_gitlab: yes
 :vshn_input_join: yes
-:provider_link: https://control.cloudscale.ch[cloudscale control panel^]
+:provider_link: https://portal.exoscale.com[Exoscale Portal^]
 
 [abstract]
 --
-Steps to replace a master node of an OpenShift 4 cluster on https://cloudscale.ch[cloudscale].
+Steps to replace a master node of an OpenShift 4 cluster on https://exoscale.com[Exoscale].
 --
 
 == Starting situation
 
-* You already have an OpenShift 4 cluster on cloudscale
+* You already have an OpenShift 4 cluster on Exoscale
 * You have admin-level access to the cluster
 * You want to replace a master node of the cluster
 

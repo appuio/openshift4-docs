@@ -92,6 +92,12 @@ If not otherwise agreed, the updates are applied weekly during the communicated 
 
 See xref:oc4:ROOT:references/architecture/upgrade_controller.adoc[].
 
+== OpenShift Compliance Operator
+
+Feedback from clusters with the https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/security_and_compliance/compliance-operator[OpenShift Compliance Operator] addon is continuously collected and generic findings are used to improve the security of all VSHN Managed OpenShift clusters.
+
+Customers can request to have the Compliance Operator addon installed in their cluster to get detailed and tailored information about the compliance status of their cluster.
+
 == Backup
 
 VSHN Managed OpenShift clusters include backups of all Kubernetes manifests and the raw etcd data to a secure location by default.

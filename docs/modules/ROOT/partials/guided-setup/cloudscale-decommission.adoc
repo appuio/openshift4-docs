@@ -124,7 +124,7 @@ You might use the WebUI at https://control.vshn.net/syn/lieutenantapiendpoints t
 ==== Outputs
 
 * `commodore_tenant_id`
-* `cloudscale_region`
+* `csp_region`
 
 ==== Script
 
@@ -144,8 +144,8 @@ if echo "$tenant_id" | grep 't-' >/dev/null 2>&1 ; then { echo "✅ Retrieved te
 env -i "commodore_tenant_id=$tenant_id" >> "$OUTPUT"
 
 region=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${INPUT_commodore_cluster_id} | jq -r .facts.region)
-if test -z "$region" && test "$region" != "null" ; then { echo "❌ Failed to retrieve cloudscale region for cluster ID '$INPUT_commodore_cluster_id'."; exit 1; } ; else { echo "✅ Retrieved cloudscale region '$region' for cluster ID '$INPUT_commodore_cluster_id'."; } ; fi
-env -i "cloudscale_region=$region" >> "$OUTPUT"
+if test -z "$region" && test "$region" != "null" ; then { echo "❌ Failed to retrieve CSP region for cluster ID '$INPUT_commodore_cluster_id'."; exit 1; } ; else { echo "✅ Retrieved CSP region '$region' for cluster ID '$INPUT_commodore_cluster_id'."; } ; fi
+env -i "csp_region=$region" >> "$OUTPUT"
 
 
 # echo "# Outputs"
@@ -889,7 +889,7 @@ This step deletes the cluster's associated S3 buckets from Cloudscale.
 ==== Inputs
 
 * `cloudscale_token`
-* `cloudscale_region`
+* `csp_region`
 * `commodore_cluster_id`
 
 ==== Script
@@ -899,7 +899,7 @@ This step deletes the cluster's associated S3 buckets from Cloudscale.
 OUTPUT=$(mktemp)
 
 # export INPUT_cloudscale_token=
-# export INPUT_cloudscale_region=
+# export INPUT_csp_region=
 # export INPUT_commodore_cluster_id=
 
 set -euo pipefail
@@ -910,7 +910,7 @@ response=$(curl -sH "Authorization: Bearer ${INPUT_cloudscale_token}" \
 
 # configure minio client to use the bucket
 mc alias set \
-  "${INPUT_commodore_cluster_id}" "https://objects.${INPUT_cloudscale_region}.cloudscale.ch" \
+  "${INPUT_commodore_cluster_id}" "https://objects.${INPUT_csp_region}.cloudscale.ch" \
   "$(echo "$response" | jq -r '.keys[0].access_key')" \
   "$(echo "$response" | jq -r '.keys[0].secret_key')"
 

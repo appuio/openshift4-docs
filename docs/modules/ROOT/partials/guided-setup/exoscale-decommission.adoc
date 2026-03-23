@@ -1,0 +1,649 @@
+== Workflow
+
+* <<step-1,Given I have all prerequisites installed>>
+* &nbsp;&nbsp;<<step-2,And a lieutenant cluster>>
+* &nbsp;&nbsp;<<step-3,And a personal VSHN GitLab access token>>
+* &nbsp;&nbsp;<<step-4,And a control.vshn.net Servers API token>>
+* &nbsp;&nbsp;<<step-5,And Exoscale API tokens>>
+* <<step-6,Then I confirm cluster deletion>>
+* &nbsp;&nbsp;<<step-7,And I delete all S3 buckets>>
+* &nbsp;&nbsp;<<step-8,And I delete the cluster's API tokens>>
+* <<step-9,Then I delete the cluster's Vault secrets>>
+* &nbsp;&nbsp;<<step-10,And I delete the cluster's OpsGenie heartbeat>>
+* &nbsp;&nbsp;<<step-11,And I delete the cluster from Lieutenant>>
+* &nbsp;&nbsp;<<step-12,And I delete the Keycloak service>>
+* &nbsp;&nbsp;<<step-13,And I remove the cluster from openshift4-clusters>>
+
+[[step-1]]
+=== Given I have all prerequisites installed
+
+This step checks if all necessary prerequisites are installed on your system,
+including 'yq' (version 4 or higher, by Mike Farah) and 'oc' (OpenShift CLI).
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+
+set -euo pipefail
+echo "Checking prerequisites..."
+
+if which yq >/dev/null 2>&1 ; then { echo "✅ yq is installed."; } ; else { echo "❌ yq is not installed. Please install yq to proceed."; exit 1; } ; fi
+if yq --version | grep -E 'version v[4-9]\.' | grep 'mikefarah' >/dev/null 2>&1 ; then { echo "✅ yq by mikefarah version 4 or higher is installed."; } ; else { echo "❌ yq version 4 or higher is required. Please upgrade yq to proceed."; exit 1; } ; fi
+
+if which jq >/dev/null 2>&1 ; then { echo "✅ jq is installed."; } ; else { echo "❌ jq is not installed. Please install jq to proceed."; exit 1; } ; fi
+
+if which oc >/dev/null 2>&1 ; then { echo "✅ oc (OpenShift CLI) is installed."; } ; else { echo "❌ oc (OpenShift CLI) is not installed. Please install oc to proceed."; exit 1; } ; fi
+
+if which vault >/dev/null 2>&1 ; then { echo "✅ vault (HashiCorp Vault) is installed."; } ; else { echo "❌ vault (HashiCorp Vault) is not installed. Please install vault to proceed."; exit 1; } ; fi
+
+if which curl >/dev/null 2>&1 ; then { echo "✅ curl is installed."; } ; else { echo "❌ curl is not installed. Please install curl to proceed."; exit 1; } ; fi
+
+if which docker >/dev/null 2>&1 ; then { echo "✅ docker is installed."; } ; else { echo "❌ docker is not installed. Please install docker to proceed."; exit 1; } ; fi
+
+if which glab >/dev/null 2>&1 ; then { echo "✅ glab (GitLab CLI) is installed."; } ; else { echo "❌ glab (GitLab CLI) is not installed. Please install glab to proceed."; exit 1; } ; fi
+
+if which host >/dev/null 2>&1 ; then { echo "✅ host (DNS lookup utility) is installed."; } ; else { echo "❌ host (DNS lookup utility) is not installed. Please install host to proceed."; exit 1; } ; fi
+
+if which mc >/dev/null 2>&1 ; then { echo "✅ mc (MinIO Client) is installed."; } ; else { echo "❌ mc (MinIO Client) is not installed. Please install mc >= RELEASE.2024-01-18T07-03-39Z to proceed."; exit 1; } ; fi
+mc_version=$(mc --version | grep -Eo 'RELEASE[^ ]+')
+if echo "$mc_version" | grep -E 'RELEASE\.202[4-9]-' >/dev/null 2>&1 ; then { echo "✅ mc version ${mc_version} is sufficient."; } ; else { echo "❌ mc version ${mc_version} is insufficient. Please upgrade mc to >= RELEASE.2024-01-18T07-03-39Z to proceed."; exit 1; } ; fi
+
+if which aws >/dev/null 2>&1 ; then { echo "✅ aws (AWS CLI) is installed."; } ; else { echo "❌ aws (AWS CLI) is not installed. Please install aws to proceed. Our recommended installer is uv: 'uv tool install awscli'"; exit 1; } ; fi
+
+if which exo >/dev/null 2>&1 ; then { echo "✅ exo (Exoscale CLI) is installed."; } ; else { echo "❌ exo (Exoscale CLI) is not installed. Please install exo to proceed. See: https://community.exoscale.com/tools/command-line-interface/"; exit 1; } ; fi
+
+if which restic >/dev/null 2>&1 ; then { echo "✅ restic (Backup CLI) is installed."; } ; else { echo "❌ restic (Backup CLI) is not installed. Please install restic to proceed."; exit 1; } ; fi
+
+if which gzip >/dev/null 2>&1 ; then { echo "✅ gzip (file compression) is installed."; } ; else { echo "❌ gzip (file compression) is not installed. Please install gzip to proceed."; exit 1; } ; fi
+
+if which md5sum >/dev/null 2>&1 ; then { echo "✅ md5sum (file checksums) is installed."; } ; else { echo "❌ md5sum (file checksums) is not installed. Please install md5sum to proceed."; exit 1; } ; fi
+
+if which virt-edit >/dev/null 2>&1 ; then { echo "✅ virt-edit (VM image editing) is installed."; } ; else { echo "❌ virt-edit (VM image editing) is not installed. Please install virt-edit to proceed."; exit 1; } ; fi
+
+if which cpio >/dev/null 2>&1 ; then { echo "✅ cpio (file archiving) is installed."; } ; else { echo "❌ cpio (file archiving) is not installed. Please install cpio to proceed."; exit 1; } ; fi
+
+if which emergency-credentials-receive >/dev/null 2>&1 ; then { echo "✅ emergency-credentials-receive (Cluster emergency access helper) is installed."; } ; else { echo "❌ emergency-credentials-receive is not installed. Please install it from https://github.com/vshn/emergency-credentials-receive ."; exit 1; } ; fi
+
+echo "✅ All prerequisites are met."
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-2]]
+=== And a lieutenant cluster
+
+This step retrieves the Commodore tenant ID associated with the given lieutenant cluster ID.
+
+Use https://api.syn.vshn.net as the Commodore API URL for production clusters.
+You might use the WebUI at https://control.vshn.net/syn/lieutenantapiendpoints to create and manage your clusters.
+
+For customer clusters ensure the following facts are set:
+
+* sales_order: Name of the sales order to which the cluster is billed, such as S10000
+* service_level: Name of the service level agreement for this cluster, such as guaranteed-availability
+* access_policy: Access-Policy of the cluster, such as regular or swissonly
+* release_channel: Name of the syn component release channel to use, such as stable
+* maintenance_window: Pick the appropriate upgrade schedule, such as monday-1400 for test clusters, tuesday-1000 for prod or custom to not (yet) enable maintenance
+* cilium_addons: Comma-separated list of cilium addons the customer gets billed for, such as advanced_networking or tetragon. Set to NONE if no addons should be billed.
+
+
+This step checks that you have access to the Commodore API and the cluster ID is valid.
+
+==== Inputs
+
+* `commodore_api_url`: URL of the Commodore API to use for retrieving cluster information.
+
+Use https://api.syn.vshn.net as the Commodore API URL for production clusters.
+Use https://api-int.syn.vshn.net for test clusters.
+
+You might use the WebUI at https://control.vshn.net/syn/lieutenantapiendpoints to create and manage your clusters.
+
+
+* `commodore_cluster_id`: Project Syn cluster ID for the cluster to be set up.
+
+In the form of c-example-infra-prod1.
+
+You might use the WebUI at https://control.vshn.net/syn/lieutenantapiendpoints to create and manage your clusters.
+
+
+
+==== Outputs
+
+* `commodore_tenant_id`
+* `csp_region`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_api_url=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+
+echo "Retrieving Commodore tenant ID for cluster ID '$INPUT_commodore_cluster_id' from API at '$INPUT_commodore_api_url'..."
+tenant_id=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${INPUT_commodore_cluster_id} | jq -r .tenant)
+if echo "$tenant_id" | grep 't-' >/dev/null 2>&1 ; then { echo "✅ Retrieved tenant ID '$tenant_id' for cluster ID '$INPUT_commodore_cluster_id'."; } else { echo "❌ Failed to retrieve valid tenant ID for cluster ID '$INPUT_commodore_cluster_id'. Got '$tenant_id'. Please check your Commodore API access and cluster ID."; exit 1; } ; fi
+env -i "commodore_tenant_id=$tenant_id" >> "$OUTPUT"
+
+region=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${INPUT_commodore_cluster_id} | jq -r .facts.region)
+if test -z "$region" && test "$region" != "null" ; then { echo "❌ Failed to retrieve CSP region for cluster ID '$INPUT_commodore_cluster_id'."; exit 1; } ; else { echo "✅ Retrieved CSP region '$region' for cluster ID '$INPUT_commodore_cluster_id'."; } ; fi
+env -i "csp_region=$region" >> "$OUTPUT"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-3]]
+=== And a personal VSHN GitLab access token
+
+This step ensures that you have provided a personal access token for VSHN GitLab.
+
+Create the token at https://git.vshn.net/-/user_settings/personal_access_tokens with the "api" scope.
+
+This step currently does not validate the token's scope.
+
+==== Inputs
+
+* `gitlab_api_token`: Personal access token for VSHN GitLab with the "api" scope.
+
+Create the token at https://git.vshn.net/-/user_settings/personal_access_tokens with the "api" scope.
+
+
+
+==== Outputs
+
+* `gitlab_user_name`: Your GitLab user name.
+
+
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_gitlab_api_token=
+
+set -euo pipefail
+user="$( curl -sH "Authorization: Bearer ${INPUT_gitlab_api_token}" "https://git.vshn.net/api/v4/user" | jq -r .username )"
+if [[ "$user" == "null" ]]
+then
+  echo "Error validating GitLab token. Are you sure it is valid?"
+  exit 1
+fi
+env -i "gitlab_user_name=$user" >> "$OUTPUT"
+echo "Token is valid."
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-4]]
+=== And a control.vshn.net Servers API token
+
+This step ensures that you have provided an API token for control.vshn.net Servers API.
+
+Create the token at https://control.vshn.net/tokens/_create/servers and ensure your IP is allowlisted.
+
+==== Inputs
+
+* `control_vshn_api_token`: API token for control.vshn.net Servers API.
+
+Used to create the puppet based LBs.
+
+Be extra careful with the IP allowlist.
+
+
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_control_vshn_api_token=
+
+set -euo pipefail
+
+AUTH="X-AccessToken: ${INPUT_control_vshn_api_token}"
+
+code="$( curl -H"$AUTH" https://control.vshn.net/api/servers/1/appuio/ -o /dev/null -w"%{http_code}" )"
+
+if [[ "$code" != 200 ]]
+then
+  echo "ERROR: could not access Server API (Status $code)"
+  echo "Please ensure your token is valid and your IP is on the allowlist."
+  exit 1
+fi
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-5]]
+=== And Exoscale API tokens
+
+Create a new Exoscale API key in the correct project, with IAMv3 role "Owner".
+
+This step currently does not validate the token's access scope.
+
+==== Inputs
+
+* `exoscale_key`: Exoscale API Key name
+
+Used for setting up or tearing down the cluster with terraform
+
+
+* `exoscale_secret`: Exoscale API secret
+
+Used for setting up or tearing down the cluster with terraform
+
+
+* `csp_region`: Name of the exoscale zone in which to set up the cluster.
+
+All lowercase. For example: ch-dk-2
+
+
+
+==== Outputs
+
+* `exoscale_s3_endpoint`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_exoscale_key=
+# export INPUT_exoscale_secret=
+# export INPUT_csp_region=
+
+set -euo pipefail
+export EXOSCALE_API_KEY="${INPUT_exoscale_key}"
+export EXOSCALE_API_SECRET="${INPUT_exoscale_secret}"
+exo limits > /dev/null || { echo "Invalid token!" ; exit 1 ; }
+echo "Token is valid"
+env -i "exoscale_s3_endpoint=sos-${INPUT_csp_region}.exo.io" >> "$OUTPUT"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-6]]
+=== Then I confirm cluster deletion
+
+This step asks you to confirm with 4 eyes whether this cluster is really to be deleted.
+
+==== Inputs
+
+* `commodore_cluster_id`
+* `4_eye_confirmation`: Please confirm the commodore cluster ID of the cluster you wish to delete.
+
+Confirm this cluster ID according to the 4-eye principle. You and one colleague should agree on the cluster that is to be deleted.
+
+
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+# export INPUT_4_eye_confirmation=
+
+set -euo pipefail
+if [[ "${INPUT_commodore_cluster_id}" != "${INPUT_4_eye_confirmation}" ]]
+then
+  echo "Cluster domain and confirmation do not match."
+  exit 1
+fi
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-7]]
+=== And I delete all S3 buckets
+
+This step deletes the cluster's associated S3 buckets from Cloudscale.
+
+==== Inputs
+
+* `exoscale_key`
+* `exoscale_secret`
+* `commodore_cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_exoscale_key=
+# export INPUT_exoscale_secret=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+export EXOSCALE_API_KEY="${INPUT_exoscale_key}"
+export EXOSCALE_API_SECRET="${INPUT_exoscale_secret}"
+
+# Bootstrap bucket
+exo storage rb -r -f "${INPUT_commodore_cluster_id}-bootstrap" || true
+# OpenShift Image Registry bucket
+exo storage rb -r -f "${INPUT_commodore_cluster_id}-image-registry" || true
+# OpenShift Loki logstore
+exo storage rb -r -f "${INPUT_commodore_cluster_id}-logstore" || true
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-8]]
+=== And I delete the cluster's API tokens
+
+This step deletes the cluster's associated Exoscale API tokens from Exoscale.
+
+==== Inputs
+
+* `exoscale_key`
+* `exoscale_secret`
+* `commodore_cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_exoscale_key=
+# export INPUT_exoscale_secret=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+export EXOSCALE_API_KEY="${INPUT_exoscale_key}"
+export EXOSCALE_API_SECRET="${INPUT_exoscale_secret}"
+
+# delete restricted api keys
+exo iam api-key delete -f "${INPUT_commodore_cluster_id}_ccm-exoscale" || true
+exo iam api-key delete -f "${INPUT_commodore_cluster_id}_csi-driver-exoscale" || true
+exo iam api-key delete -f "${INPUT_commodore_cluster_id}_floaty" || true
+exo iam api-key delete -f "${INPUT_commodore_cluster_id}_object_storage" || true
+
+# delete decommissioning api key
+exo iam api-key delete -f "${INPUT_commodore_cluster_id}" || true
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-9]]
+=== Then I delete the cluster's Vault secrets
+
+This step cleans up all the cluster's Vault secrets.
+
+==== Inputs
+
+* `commodore_cluster_id`
+* `commodore_api_url`
+* `vault_address`
+* `backup_deletion_confirmation`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
+# export INPUT_vault_address=
+# export INPUT_backup_deletion_confirmation=
+
+set -euo pipefail
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+
+LIEUTENANT_AUTH="Authorization: Bearer $(commodore fetch-token)"
+REPO_URL=$(curl -sH "${LIEUTENANT_AUTH}" "${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id}" | jq -r .gitRepo.url)
+
+if [ -e catalog ]
+then
+  rm -rf catalog
+fi
+
+mkdir catalog
+git archive --remote "${REPO_URL}" master | tar -xC catalog
+
+PASSWORD_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-password") | .stringData.password' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
+ID_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.username' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
+SECRET_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.password' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
+
+export VAULT_ADDR=${INPUT_vault_address}
+vault login -method=oidc
+
+for secret in $(find catalog/refs/ -type f \
+  | sed -r -e 's#catalog/refs#clusters/kv#' -e 's#(.*)/.*#\1#' \
+  | grep -v '__shared__/__shared__' \
+  | sort -u);
+do
+  if [[ ${INPUT_backup_deletion_confirmation} == "YES" ]]
+  then
+    vault kv delete "$secret"
+  else
+    # exclude backup credentials because the backup still exists
+    if echo "$PASSWORD_KEY $ID_KEY $SECRET_KEY" | grep "${secret##clusters/kv/}" > /dev/null
+    then
+      echo "Skipping key '$secret' as it is required to access cluster backups."
+    else
+      vault kv delete "$secret"
+    fi
+  fi
+done
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-10]]
+=== And I delete the cluster's OpsGenie heartbeat
+
+This step deletes the cluster's OpsGenie heartbeat.
+
+==== Inputs
+
+* `vault_address`
+* `commodore_cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_vault_address=
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+export VAULT_ADDR=${INPUT_vault_address}
+vault login -method=oidc
+OPSGENIE_KEY=$(vault kv get -format=json \
+  clusters/kv/__shared__/__shared__/opsgenie/aldebaran | \
+  jq -r '.data.data["heartbeat-password"]')
+
+curl "https://api.opsgenie.com/v2/heartbeats/${INPUT_commodore_cluster_id}" \
+  -H"Authorization: GenieKey ${OPSGENIE_KEY}" \
+  -XDELETE
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-11]]
+=== And I delete the cluster from Lieutenant
+
+This step deletes the cluster from Lieutenant
+
+==== Inputs
+
+* `commodore_cluster_id`
+* `commodore_api_url`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
+
+set -euo pipefail
+echo '###########################################################################'
+echo '#                                                                         #'
+echo '#  Please manually delete the cluster from Lieutenant before proceeding.  #'
+echo '#                                                                         #'
+echo '###########################################################################'
+echo
+lieutenant=vshn-lieutenant-prod
+if [[ ${INPUT_commodore_api_url} == *int* ]]
+then
+  lieutenant=vshn-lieutenant-int
+fi
+if [[ ${INPUT_commodore_api_url} == *dev* ]]
+then
+  lieutenant=vshn-lieutenant-dev
+fi
+echo You can go to https://control.vshn.net/syn/lieutenantclusters/${lieutenant}/${INPUT_commodore_cluster_id}/_delete
+sleep 2
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-12]]
+=== And I delete the Keycloak service
+
+This step deletes the cluster's keycloak service from control.vshn.net
+
+==== Inputs
+
+* `commodore_cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+
+set -euo pipefail
+echo '##############################################################################'
+echo '#                                                                            #'
+echo "#  Please manually delete the cluster's keycloak service before proceeding.  #"
+echo '#                                                                            #'
+echo '##############################################################################'
+echo
+echo You can go to https://control.vshn.net/vshn/services/${INPUT_commodore_cluster_id}/delete
+sleep 2
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-13]]
+=== And I remove the cluster from openshift4-clusters
+
+This step removes the cluster from https://git.vshn.net/vshn/openshift4-clusters
+
+==== Inputs
+
+* `commodore_cluster_id`
+* `gitlab_api_token`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_cluster_id=
+# export INPUT_gitlab_api_token=
+
+set -euo pipefail
+if [ -e openshift4-clusters ]
+then
+  rm -rf openshift4-clusters
+fi
+git clone git@git.vshn.net:vshn/openshift4-clusters.git
+pushd openshift4-clusters
+
+git rm -rf "${INPUT_commodore_cluster_id}" || true
+
+if not git diff-index --quiet HEAD
+then
+  git checkout -b "remove-${INPUT_commodore_cluster_id}"
+  git commit -m"Remove ${INPUT_commodore_cluster_id}"
+  git push origin "remove-${INPUT_commodore_cluster_id}"
+
+  auth="PRIVATE-TOKEN: ${INPUT_gitlab_api_token}"
+
+  response=$( curl -s -XPOST -H"$auth" -H"Content-Type: application/json" https://git.vshn.net/api/v4/projects/57660/merge_requests -d'{"source_branch":"'remove-${INPUT_commodore_cluster_id}'","target_branch":"main","title":"Remove cluster '${INPUT_commodore_cluster_id}'"}' )
+  echo
+  echo ">>> Please review and merge the MR at $( echo "$response" | jq -r .web_url )"
+  echo
+fi || true
+popd
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+

@@ -1,9 +1,10 @@
 [source,bash]
 ----
-
 guided-setup-base() {
-  local OPTIND opt extra_volume
+  local OPTIND opt extra_volume extra_groups docker_group docker_path sshop_volumes ecr_volume
   extra_volume=()
+  sshop_volumes=()
+  ecr_volume=()
   while getopts 'h?v:' opt; do
       case "$opt" in
       h|\?)
@@ -23,12 +24,28 @@ guided-setup-base() {
     gpg_opts=()
   fi
 
+  docker_group="$( getent group docker | cut --delimiter ':' --fields 3 )"
+  docker_path=${DOCKER_HOST:-/var/run/docker.sock}
+
+  if [[ -n "$docker_group" ]]; then
+    extra_groups=("--group-add=$( getent group docker | cut --delimiter ':' --fields 3 )")
+  fi
+
   if [[ "$OSTYPE" == "linux-gnu"* ]]; then
       open="xdg-open"
   elif [[ "$OSTYPE" == "darwin"* ]]; then
       open="open"
   fi
 
+  if [[ -e "${HOME}/.ssh/sshop_config" ]]
+  then
+    sshop_volumes=("--volume" "${HOME}/.ssh/sshop_config:/app/.ssh/sshop_config" "--volume" "${HOME}/.ssh/sshop_known_hosts:/app/.ssh/sshop_known_hosts")
+  fi
+
+  if [[ -d "${HOME}/.config/emergency-credentials-receive/" ]]
+  then
+    ecr_volume=("--volume" "${HOME}/.config/emergency-credentials-receive/:/app/.config/emergency-credentials-receive:ro")
+  fi
   socat \
     tcp-listen:8105,fork,reuseaddr,bind=127.0.0.1 \
     system:"xargs $open" &
@@ -40,7 +57,9 @@ guided-setup-base() {
     --tty \
     --rm \
     --user="$(id -u)" \
+    "${extra_groups[@]}" \
     --env SSH_AUTH_SOCK=/tmp/ssh_agent.sock \
+    --env GLAB_CONFIG_DIR="${PWD}" \
     --network host \
     --volume "${SSH_AUTH_SOCK}:/tmp/ssh_agent.sock" \
     --volume "${HOME}/.ssh/config:/app/.ssh/config:ro" \
@@ -48,13 +67,16 @@ guided-setup-base() {
     --volume "${HOME}/.gitconfig:/app/.gitconfig:ro" \
     --volume "${HOME}/.cache:/app/.cache" \
     --volume "${HOME}/.gandalf:/app/.gandalf" \
+    --volume "${docker_path}":/var/run/docker.sock \
+    "${sshop_volumes[@]}" \
+    "${ecr_volume[@]}" \
     "${extra_volume[@]}" \
     "${gpg_opts[@]}" \
     --volume "${PWD}:${PWD}" \
     --workdir "${PWD}" \
     ghcr.io/appuio/guided-setup:latest  \
     "${@}"
-  
+
   kill %socat
 }
 
@@ -77,7 +99,7 @@ guided-setup() {
   then
     guided-setup-base "${1}" "/workflows/${2}.workflow" "/workflows/${2}/*.yml" "/workflows/shared/*.yml" "${@:3}"
   else
-    guided-setup-base -v "$workflow_dir":/workflows "${1}" "/workflows/${2}.workflow" "/workflows/${2}/*.yml" "/workflows/shared/*.yml" "${@:3}"
+    guided-setup-base -v "$workflow_dir":/workflows "${1}" "/workflows/${2}.workflow" "/workflows/${2%%-*}/*.yml" "/workflows/shared/*.yml" "${@:3}"
   fi
 }
 ----

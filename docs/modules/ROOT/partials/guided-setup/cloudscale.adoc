@@ -16,26 +16,27 @@
 * &nbsp;&nbsp;<<step-14,And I prepare the cluster repository>>
 * <<step-15,Then I configure the OpenShift installer>>
 * &nbsp;&nbsp;<<step-16,And I configure Terraform for team "aldebaran">>
-* <<step-17,Then I provision the loadbalancers>>
-* &nbsp;&nbsp;<<step-18,And I provision the bootstrap node>>
-* &nbsp;&nbsp;<<step-19,And I store the subnet ID and floating IP in the Syn hierarchy>>
-* &nbsp;&nbsp;<<step-20,And I provision the control plane>>
-* <<step-21,Then I deploy initial manifests>>
-* &nbsp;&nbsp;<<step-22,And I wait for bootstrap to complete>>
-* <<step-23,Then I remove the bootstrap node>>
-* &nbsp;&nbsp;<<step-24,And I configure initial deployments>>
-* &nbsp;&nbsp;<<step-25,And I wait for installation to complete>>
-* <<step-26,Then I synthesize the cluster>>
-* <<step-27,Then I set acme-dns CNAME records>>
-* &nbsp;&nbsp;<<step-28,And I verify emergency access>>
-* &nbsp;&nbsp;<<step-29,And I configure the cluster alerts>>
-* &nbsp;&nbsp;<<step-30,And I enable Opsgenie alerting>>
-* &nbsp;&nbsp;<<step-31,And I verify the image registry config>>
-* &nbsp;&nbsp;<<step-32,And I schedule the first maintenance>>
-* <<step-33,Then I configure apt-dater groups for the LoadBalancers>>
-* &nbsp;&nbsp;<<step-34,And I remove the bootstrap bucket>>
-* &nbsp;&nbsp;<<step-35,And I add the cluster to openshift4-clusters>>
-* &nbsp;&nbsp;<<step-36,And I wait for maintenance to complete>>
+* &nbsp;&nbsp;<<step-17,And I configure Terraform for Cloudscale>>
+* <<step-18,Then I provision the loadbalancers>>
+* &nbsp;&nbsp;<<step-19,And I provision the bootstrap node>>
+* &nbsp;&nbsp;<<step-20,And I store the subnet ID and floating IP in the Syn hierarchy>>
+* &nbsp;&nbsp;<<step-21,And I provision the control plane>>
+* <<step-22,Then I deploy initial manifests>>
+* &nbsp;&nbsp;<<step-23,And I wait for bootstrap to complete>>
+* <<step-24,Then I remove the bootstrap node>>
+* &nbsp;&nbsp;<<step-25,And I configure initial deployments>>
+* &nbsp;&nbsp;<<step-26,And I wait for installation to complete>>
+* <<step-27,Then I synthesize the cluster>>
+* <<step-28,Then I set acme-dns CNAME records>>
+* &nbsp;&nbsp;<<step-29,And I verify emergency access>>
+* &nbsp;&nbsp;<<step-30,And I configure the cluster alerts>>
+* &nbsp;&nbsp;<<step-31,And I enable Opsgenie alerting>>
+* &nbsp;&nbsp;<<step-32,And I verify the image registry config>>
+* &nbsp;&nbsp;<<step-33,And I schedule the first maintenance>>
+* <<step-34,Then I configure apt-dater groups for the LoadBalancers>>
+* &nbsp;&nbsp;<<step-35,And I remove the bootstrap bucket>>
+* &nbsp;&nbsp;<<step-36,And I add the cluster to openshift4-clusters>>
+* &nbsp;&nbsp;<<step-37,And I wait for maintenance to complete>>
 
 [[step-1]]
 === Given I have all prerequisites installed
@@ -109,10 +110,12 @@ OUTPUT=$(mktemp)
 
 set -euo pipefail
 
-shopt -s expand_aliases
+openshift-install() {
+  ./openshift-install "${@}"
+}
+
 if [[ -f openshift-install ]]
 then
-  alias openshift-install='./openshift-install'
   echo "Found existing openshift-install binary, checking version ..."
   INSTALLED_VERSION=$(openshift-install version | sed -E -n '/openshift-install/s/^[^ ]+ v?//;s/\.[0-9]{1,2}$//p')
   if [ "$INSTALLED_VERSION" = "$MATCH_ocp_version" ]; then
@@ -409,6 +412,27 @@ Get a pull secret from https://cloud.redhat.com/openshift/install/pull-secret.
 
 
 
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_base_domain=
+# export INPUT_redhat_pull_secret=
+
+set -euo pipefail
+echo "Base domain set to ${INPUT_base_domain}".
+echo "${INPUT_redhat_pull_secret}" | jq > /dev/null
+echo "Pull secret appears legit."
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
 [[step-9]]
 === Then I download the OpenShift image for version "4.20.0"
 
@@ -432,11 +456,15 @@ OUTPUT=$(mktemp)
 
 set -euo pipefail
 
-. ./workflows/cloudscale/scripts/semver.sh
+# TODO(aa): this is not generic; it makes assumptions on the location of the script on the host.
+# We will need a solution where gandalf provides the workflow base dir, e.g. in an env var
+# shellcheck disable=1091
+. /workflows/shared/scripts/semver.sh
 
 MAJOR=0
 MINOR=0
 PATCH=0
+# shellcheck disable=2034
 SPECIAL=""
 semverParseInto "$MATCH_image_name" MAJOR MINOR PATCH SPECIAL
 
@@ -759,9 +787,7 @@ and setting up the necessary configuration for the specified cluster.
 * `commodore_api_url`
 * `commodore_cluster_id`
 * `commodore_tenant_id`
-* `hieradata_repo_user`
 * `cluster_domain`
-* `hieradata_repo_token`
 * `image_major`
 * `image_minor`
 
@@ -774,9 +800,7 @@ OUTPUT=$(mktemp)
 # export INPUT_commodore_api_url=
 # export INPUT_commodore_cluster_id=
 # export INPUT_commodore_tenant_id=
-# export INPUT_hieradata_repo_user=
 # export INPUT_cluster_domain=
-# export INPUT_hieradata_repo_token=
 # export INPUT_image_major=
 # export INPUT_image_minor=
 
@@ -802,7 +826,7 @@ fi
 
 yq eval -i '.parameters.openshift.cloudscale.subnet_uuid = "TO_BE_DEFINED"' ${INPUT_commodore_cluster_id}.yml
 
-yq eval -i '.parameters.openshift.cloudscale.rhcos_image_slug = "rhcos-4.19"' \
+yq eval -i '.parameters.openshift.cloudscale.rhcos_image_slug = "rhcos-'"${INPUT_image_major}.${INPUT_image_minor}"'"' \
   ${INPUT_commodore_cluster_id}.yml
 
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"TO_BE_DEFINED\"" \
@@ -862,6 +886,7 @@ the necessary installation files using Commodore.
 * `csp_region`
 * `bucket_user`
 * `cloudscale_token`
+* `openshift_install_bin`
 
 ==== Outputs
 
@@ -883,8 +908,13 @@ OUTPUT=$(mktemp)
 # export INPUT_csp_region=
 # export INPUT_bucket_user=
 # export INPUT_cloudscale_token=
+# export INPUT_openshift_install_bin=
 
 set -euo pipefail
+
+openshift-install() {
+  "${INPUT_openshift_install_bin}" "${@}"
+}
 
 export VAULT_ADDR="${INPUT_vault_address}"
 vault login -method=oidc
@@ -1086,12 +1116,6 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.base_domain = \
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ignition_ca = \"${ca_cert}\"" \
   ${INPUT_commodore_cluster_id}.yml
 
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_keys = [\"$(cat ${INPUT_ssh_public_key_path})\"]" \
-  ${INPUT_commodore_cluster_id}.yml
-
-yq eval -i ".parameters.openshift4_terraform.terraform_variables.allocate_router_vip_for_lb_controller = true" \
-  ${INPUT_commodore_cluster_id}.yml
-
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.team = \"${MATCH_team_name}\"" \
   ${INPUT_commodore_cluster_id}.yml
 
@@ -1117,6 +1141,72 @@ commodore catalog compile ${INPUT_commodore_cluster_id} --push \
 ----
 
 [[step-17]]
+=== And I configure Terraform for Cloudscale
+
+Review the file ./inventory/classes/${INPUT_commodore_tenant_id}/${INPUT_commodore_cluster_id}.yml.
+Override default parameters or add more component configurations as required for your cluster.
+
+Then press enter to commit and compile.
+
+==== Inputs
+
+* `commodore_api_url`
+* `commodore_cluster_id`
+* `commodore_tenant_id`
+* `image_major`
+* `image_minor`
+* `ssh_public_key_path`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_commodore_api_url=
+# export INPUT_commodore_cluster_id=
+# export INPUT_commodore_tenant_id=
+# export INPUT_image_major=
+# export INPUT_image_minor=
+# export INPUT_ssh_public_key_path=
+
+set -euo pipefail
+
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+export CLUSTER_ID="${INPUT_commodore_cluster_id}"
+export TENANT_ID="${INPUT_commodore_tenant_id}"
+
+pushd "inventory/classes/${TENANT_ID}/"
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.allocate_router_vip_for_lb_controller = true" \
+  ${INPUT_commodore_cluster_id}.yml
+
+yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_keys = [\"$(cat ${INPUT_ssh_public_key_path})\"]" \
+  ${INPUT_commodore_cluster_id}.yml
+
+echo "Commit changes"
+git commit -a -m "Set Exoscale specific values in cluster ${CLUSTER_ID}"
+git push
+
+popd
+
+echo "Compile and push cluster catalog"
+commodore catalog compile ${CLUSTER_ID} --push \
+  --dynamic-fact kubernetesVersion.major=1 \
+  --dynamic-fact kubernetesVersion.minor="$((INPUT_image_minor+13))" \
+  --dynamic-fact openshiftVersion.Major=${INPUT_image_major} \
+  --dynamic-fact openshiftVersion.Minor=${INPUT_image_minor}
+
+echo "✅ Changes committed and cluster catalog compiled successfully."
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-18]]
 === Then I provision the loadbalancers
 
 This step provisions the load balancers for the Cloudscale OpenShift cluster using Terraform.
@@ -1127,7 +1217,6 @@ This step provisions the load balancers for the Cloudscale OpenShift cluster usi
 * `cloudscale_token_floaty`
 * `control_vshn_api_token`
 * `ignition_bootstrap`
-* `hieradata_repo_token`
 * `gitlab_user_name`
 * `gitlab_api_token`
 * `commodore_cluster_id`
@@ -1149,7 +1238,6 @@ OUTPUT=$(mktemp)
 # export INPUT_cloudscale_token_floaty=
 # export INPUT_control_vshn_api_token=
 # export INPUT_ignition_bootstrap=
-# export INPUT_hieradata_repo_token=
 # export INPUT_gitlab_user_name=
 # export INPUT_gitlab_api_token=
 # export INPUT_commodore_cluster_id=
@@ -1167,7 +1255,7 @@ TF_VAR_lb_cloudscale_api_secret=${INPUT_cloudscale_token_floaty}
 TF_VAR_control_vshn_net_token=${INPUT_control_vshn_api_token}
 GIT_AUTHOR_NAME=$(git config --global user.name)
 GIT_AUTHOR_EMAIL=$(git config --global user.email)
-HIERADATA_REPO_TOKEN=${INPUT_hieradata_repo_token}
+HIERADATA_REPO_TOKEN=${INPUT_gitlab_api_token}
 EOF
 
 tf_image=$(\
@@ -1180,7 +1268,10 @@ tf_tag=$(\
 echo "Using Terraform image: ${tf_image}:${tf_tag}"
 
 base_dir=$(pwd)
-alias terraform='touch .terraformrc; docker run --rm -e REAL_UID=$(id -u) -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file ${base_dir}/terraform.env -w /tf -v $(pwd):/tf --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh'
+terraform() {
+  touch .terraformrc
+  docker run --rm -e REAL_UID="$(id -u)" -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file "${base_dir}/terraform.env" -w /tf -v "$(pwd):/tf" --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh "${@}"
+}
 
 gitlab_repository_url=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
 gitlab_repository_name=${gitlab_repository_url##*/}
@@ -1227,15 +1318,14 @@ do
 done
 
 terraform apply -auto-approve
-dnstmp=$(mktemp)
-terraform output -raw cluster_dns > "$dnstmp"
+terraform output -raw cluster_dns > ../../../dns.txt
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@                                                                                       @"
 echo "@  Please add the DNS records shown in the Terraform output to your DNS provider.       @"
 echo "@  Most probably in https://git.vshn.net/vshn/vshn_zonefiles                            @"
 echo "@                                                                                       @"
 echo "@  If terminal selection does not work the entries can also be copied from              @"
-echo "@    $dnstmp                                                                            @"
+echo "@    dns.txt                                                                            @"
 echo "@                                                                                       @"
 echo "@  Waiting for record to propagate...                                                   @"
 echo "@                                                                                       @"
@@ -1244,7 +1334,7 @@ while ! (host "api.${INPUT_cluster_domain}")
 do
   sleep 15
 done
-rm -f "$dnstmp"
+rm ../../../dns.txt
 
 lb1=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[0]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
 lb2=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[1]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
@@ -1264,7 +1354,7 @@ while true; do
 done
 
 echo "updating ssh config..."
-ssh management2.corp.vshn.net "sshop --output-archive /dev/stdout" | tar -C ~ -xzf -
+ssh management2.corp.vshn.net "sshop --output-archive /dev/stdout" | tar -C ~  --overwrite -xzf -
 echo "done"
 
 echo "waiting for ssh access ..."
@@ -1281,7 +1371,7 @@ env -i "lb_fqdn_2=$lb2" >> "$OUTPUT"
 
 ----
 
-[[step-18]]
+[[step-19]]
 === And I provision the bootstrap node
 
 This step provisions the bootstrap node for the Cloudscale OpenShift cluster using Terraform.
@@ -1292,7 +1382,6 @@ This step provisions the bootstrap node for the Cloudscale OpenShift cluster usi
 * `cloudscale_token_floaty`
 * `control_vshn_api_token`
 * `ignition_bootstrap`
-* `hieradata_repo_token`
 * `gitlab_user_name`
 * `gitlab_api_token`
 * `commodore_cluster_id`
@@ -1314,7 +1403,6 @@ OUTPUT=$(mktemp)
 # export INPUT_cloudscale_token_floaty=
 # export INPUT_control_vshn_api_token=
 # export INPUT_ignition_bootstrap=
-# export INPUT_hieradata_repo_token=
 # export INPUT_gitlab_user_name=
 # export INPUT_gitlab_api_token=
 # export INPUT_commodore_cluster_id=
@@ -1334,7 +1422,7 @@ TF_VAR_lb_cloudscale_api_secret=${INPUT_cloudscale_token_floaty}
 TF_VAR_control_vshn_net_token=${INPUT_control_vshn_api_token}
 GIT_AUTHOR_NAME=$(git config --global user.name)
 GIT_AUTHOR_EMAIL=$(git config --global user.email)
-HIERADATA_REPO_TOKEN=${INPUT_hieradata_repo_token}
+HIERADATA_REPO_TOKEN=${INPUT_gitlab_api_token}
 EOF
 
 tf_image=$(\
@@ -1347,7 +1435,10 @@ tf_tag=$(\
 echo "Using Terraform image: ${tf_image}:${tf_tag}"
 
 base_dir=$(pwd)
-alias terraform='touch .terraformrc; docker run --rm -e REAL_UID=$(id -u) -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file ${base_dir}/terraform.env -w /tf -v $(pwd):/tf --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh'
+terraform() {
+  touch .terraformrc
+  docker run --rm -e REAL_UID="$(id -u)" -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file "${base_dir}/terraform.env" -w /tf -v "$(pwd):/tf" --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh "${@}"
+}
 
 gitlab_repository_url=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
 gitlab_repository_name=${gitlab_repository_url##*/}
@@ -1412,7 +1503,7 @@ env -i "kubeconfig_path=${installer_dir}/auth/kubeconfig" >> "$OUTPUT"
 
 ----
 
-[[step-19]]
+[[step-20]]
 === And I store the subnet ID and floating IP in the Syn hierarchy
 
 This step retrieves the subnet ID and ingress floating IP from Terraform and
@@ -1424,7 +1515,6 @@ stores them in the Syn hierarchy.
 * `cloudscale_token_floaty`
 * `control_vshn_api_token`
 * `ignition_bootstrap`
-* `hieradata_repo_token`
 * `gitlab_user_name`
 * `gitlab_api_token`
 * `commodore_cluster_id`
@@ -1443,7 +1533,6 @@ OUTPUT=$(mktemp)
 # export INPUT_cloudscale_token_floaty=
 # export INPUT_control_vshn_api_token=
 # export INPUT_ignition_bootstrap=
-# export INPUT_hieradata_repo_token=
 # export INPUT_gitlab_user_name=
 # export INPUT_gitlab_api_token=
 # export INPUT_commodore_cluster_id=
@@ -1462,7 +1551,7 @@ TF_VAR_lb_cloudscale_api_secret=${INPUT_cloudscale_token_floaty}
 TF_VAR_control_vshn_net_token=${INPUT_control_vshn_api_token}
 GIT_AUTHOR_NAME=$(git config --global user.name)
 GIT_AUTHOR_EMAIL=$(git config --global user.email)
-HIERADATA_REPO_TOKEN=${INPUT_hieradata_repo_token}
+HIERADATA_REPO_TOKEN=${INPUT_gitlab_api_token}
 EOF
 
 tf_image=$(\
@@ -1475,7 +1564,10 @@ tf_tag=$(\
 echo "Using Terraform image: ${tf_image}:${tf_tag}"
 
 base_dir=$(pwd)
-alias terraform='touch .terraformrc; docker run --rm -e REAL_UID=$(id -u) -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file ${base_dir}/terraform.env -w /tf -v $(pwd):/tf --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh'
+terraform() {
+  touch .terraformrc
+  docker run --rm -e REAL_UID="$(id -u)" -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file "${base_dir}/terraform.env" -w /tf -v "$(pwd):/tf" --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh "${@}"
+}
 
 gitlab_repository_url=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
 gitlab_repository_name=${gitlab_repository_url##*/}
@@ -1503,8 +1595,10 @@ yq eval -i '.parameters.openshift.cloudscale.subnet_uuid = "'"$SUBNET_UUID"'"' \
 yq eval -i '.parameters.openshift.cloudscale.ingress_floating_ip_v4 = "'"$INGRESS_FLOATING_IP"'"' \
   ${INPUT_commodore_cluster_id}.yml
 
-if not git diff-index --quiet HEAD
+if git diff-index --quiet HEAD
 then
+  echo "No changes, skipping commit"
+else
   git commit -am "Configure cloudscale subnet UUID and ingress floating IP for ${INPUT_commodore_cluster_id}"
   git push origin master
 fi || true
@@ -1526,7 +1620,7 @@ commodore catalog compile ${INPUT_commodore_cluster_id} --push \
 
 ----
 
-[[step-20]]
+[[step-21]]
 === And I provision the control plane
 
 This step provisions the control plane nodes with Terraform.
@@ -1537,7 +1631,6 @@ This step provisions the control plane nodes with Terraform.
 * `cloudscale_token_floaty`
 * `control_vshn_api_token`
 * `ignition_bootstrap`
-* `hieradata_repo_token`
 * `gitlab_user_name`
 * `gitlab_api_token`
 * `commodore_cluster_id`
@@ -1555,7 +1648,6 @@ OUTPUT=$(mktemp)
 # export INPUT_cloudscale_token_floaty=
 # export INPUT_control_vshn_api_token=
 # export INPUT_ignition_bootstrap=
-# export INPUT_hieradata_repo_token=
 # export INPUT_gitlab_user_name=
 # export INPUT_gitlab_api_token=
 # export INPUT_commodore_cluster_id=
@@ -1574,7 +1666,7 @@ TF_VAR_lb_cloudscale_api_secret=${INPUT_cloudscale_token_floaty}
 TF_VAR_control_vshn_net_token=${INPUT_control_vshn_api_token}
 GIT_AUTHOR_NAME=$(git config --global user.name)
 GIT_AUTHOR_EMAIL=$(git config --global user.email)
-HIERADATA_REPO_TOKEN=${INPUT_hieradata_repo_token}
+HIERADATA_REPO_TOKEN=${INPUT_gitlab_api_token}
 EOF
 
 tf_image=$(\
@@ -1587,7 +1679,10 @@ tf_tag=$(\
 echo "Using Terraform image: ${tf_image}:${tf_tag}"
 
 base_dir=$(pwd)
-alias terraform='touch .terraformrc; docker run --rm -e REAL_UID=$(id -u) -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file ${base_dir}/terraform.env -w /tf -v $(pwd):/tf --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh'
+terraform() {
+  touch .terraformrc
+  docker run --rm -e REAL_UID="$(id -u)" -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file "${base_dir}/terraform.env" -w /tf -v "$(pwd):/tf" --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh "${@}"
+}
 
 gitlab_repository_url=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
 gitlab_repository_name=${gitlab_repository_url##*/}
@@ -1618,15 +1713,14 @@ EOF
 echo "Running Terraform ..."
 
 terraform apply -auto-approve
-dnstmp=$(mktemp)
-terraform output -raw cluster_dns > "$dnstmp"
+terraform output -raw cluster_dns > ../../../dns.txt
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@                                                                                       @"
 echo "@  Please add the etcd DNS records shown in the Terraform output to your DNS provider.  @"
 echo "@  Most probably in https://git.vshn.net/vshn/vshn_zonefiles                            @"
 echo "@                                                                                       @"
 echo "@  If terminal selection does not work the entries can also be copied from              @"
-echo "@    $dnstmp                                                                            @"
+echo "@    dns.txt                                                                            @"
 echo "@                                                                                       @"
 echo "@  Waiting for record to propagate...                                                   @"
 echo "@                                                                                       @"
@@ -1635,7 +1729,7 @@ while ! (host "etcd-0.${INPUT_cluster_domain}")
 do
   sleep 15
 done
-rm -f "$dnstmp"
+rm ../../../dns.txt
 
 export KUBECONFIG="${INPUT_kubeconfig_path}"
 
@@ -1651,7 +1745,7 @@ popd
 
 ----
 
-[[step-21]]
+[[step-22]]
 === Then I deploy initial manifests
 
 This step deploys some manifests required during bootstrap, including
@@ -1734,10 +1828,14 @@ echo
 
 ----
 
-[[step-22]]
+[[step-23]]
 === And I wait for bootstrap to complete
 
 This step waits for OpenShift bootstrap to complete successfully.
+
+==== Inputs
+
+* `openshift_install_bin`
 
 ==== Script
 
@@ -1745,8 +1843,12 @@ This step waits for OpenShift bootstrap to complete successfully.
 ----
 OUTPUT=$(mktemp)
 
+# export INPUT_openshift_install_bin=
 
 set -euo pipefail
+openshift-install() {
+  "${INPUT_openshift_install_bin}" "${@}"
+}
 installer_dir="$(pwd)/target"
 openshift-install --dir "${installer_dir}" \
   wait-for bootstrap-complete --log-level debug
@@ -1758,7 +1860,7 @@ openshift-install --dir "${installer_dir}" \
 
 ----
 
-[[step-23]]
+[[step-24]]
 === Then I remove the bootstrap node
 
 After successful bootstrapping, this step removes the bootstrap node again.
@@ -1769,7 +1871,6 @@ After successful bootstrapping, this step removes the bootstrap node again.
 * `cloudscale_token_floaty`
 * `control_vshn_api_token`
 * `ignition_bootstrap`
-* `hieradata_repo_token`
 * `gitlab_user_name`
 * `gitlab_api_token`
 * `commodore_cluster_id`
@@ -1787,7 +1888,6 @@ OUTPUT=$(mktemp)
 # export INPUT_cloudscale_token_floaty=
 # export INPUT_control_vshn_api_token=
 # export INPUT_ignition_bootstrap=
-# export INPUT_hieradata_repo_token=
 # export INPUT_gitlab_user_name=
 # export INPUT_gitlab_api_token=
 # export INPUT_commodore_cluster_id=
@@ -1806,7 +1906,7 @@ TF_VAR_lb_cloudscale_api_secret=${INPUT_cloudscale_token_floaty}
 TF_VAR_control_vshn_net_token=${INPUT_control_vshn_api_token}
 GIT_AUTHOR_NAME=$(git config --global user.name)
 GIT_AUTHOR_EMAIL=$(git config --global user.email)
-HIERADATA_REPO_TOKEN=${INPUT_hieradata_repo_token}
+HIERADATA_REPO_TOKEN=${INPUT_gitlab_api_token}
 EOF
 
 tf_image=$(\
@@ -1819,7 +1919,10 @@ tf_tag=$(\
 echo "Using Terraform image: ${tf_image}:${tf_tag}"
 
 base_dir=$(pwd)
-alias terraform='touch .terraformrc; docker run --rm -e REAL_UID=$(id -u) -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file ${base_dir}/terraform.env -w /tf -v $(pwd):/tf --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh'
+terraform() {
+  touch .terraformrc
+  docker run --rm -e REAL_UID="$(id -u)" -e TF_CLI_CONFIG_FILE=/tf/.terraformrc --env-file "${base_dir}/terraform.env" -w /tf -v "$(pwd):/tf" --ulimit memlock=-1 "${tf_image}:${tf_tag}" /tf/terraform.sh "${@}"
+}
 
 gitlab_repository_url=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${INPUT_commodore_api_url}/clusters/${INPUT_commodore_cluster_id} | jq -r '.gitRepo.url' | sed 's|ssh://||; s|/|:|')
 gitlab_repository_name=${gitlab_repository_url##*/}
@@ -1869,7 +1972,7 @@ popd
 
 ----
 
-[[step-24]]
+[[step-25]]
 === And I configure initial deployments
 
 This step configures some deployments that require manual changes after
@@ -1936,10 +2039,14 @@ echo '# Removed temporary cert-manager tolerations. #'
 
 ----
 
-[[step-25]]
+[[step-26]]
 === And I wait for installation to complete
 
 This step waits for OpenShift installation to complete successfully.
+
+==== Inputs
+
+* `openshift_install_bin`
 
 ==== Script
 
@@ -1947,8 +2054,12 @@ This step waits for OpenShift installation to complete successfully.
 ----
 OUTPUT=$(mktemp)
 
+# export INPUT_openshift_install_bin=
 
 set -euo pipefail
+openshift-install() {
+  "${INPUT_openshift_install_bin}" "${@}"
+}
 installer_dir="$(pwd)/target"
 openshift-install --dir "${installer_dir}" \
   wait-for install-complete --log-level debug
@@ -1960,7 +2071,7 @@ openshift-install --dir "${installer_dir}" \
 
 ----
 
-[[step-26]]
+[[step-27]]
 === Then I synthesize the cluster
 
 This step enables Project Syn on the cluster.
@@ -2009,6 +2120,7 @@ fi
 
 echo "# Waiting for ArgoCD resource to exist ..."
 kubectl wait --for=create crds/argocds.argoproj.io --timeout=5m
+sleep 1 # to prevent race conditions
 
 echo "# Waiting for ArgoCD instance to exist ..."
 kubectl wait --for=create argocd/syn-argocd -nsyn --timeout=90s
@@ -2025,7 +2137,7 @@ echo "Done."
 
 ----
 
-[[step-27]]
+[[step-28]]
 === Then I set acme-dns CNAME records
 
 This step ensures CNAME records exist for ACME challenges once cert-manager is properly deployed.
@@ -2046,9 +2158,9 @@ set -euo pipefail
 export KUBECONFIG="${INPUT_kubeconfig_path}"
 
 echo '# Waiting for cert-manager namespace ...'
-kubectl wait --for=create ns/syn-cert-manager
+kubectl wait --for=create ns/syn-cert-manager --timeout 3m
 echo '# Waiting for cert-manager secret ...'
-kubectl wait --for=create secret/acme-dns-client -nsyn-cert-manager
+kubectl wait --for=create secret/acme-dns-client --timeout 10m -nsyn-cert-manager
 
 fulldomain=""
 
@@ -2062,10 +2174,8 @@ do
   echo "$fulldomain"
 done
 
-dnstmp=$(mktemp)
-
-echo "_acme-challenge.api   IN CNAME $fulldomain." > "$dnstmp"
-echo "_acme-challenge.apps  IN CNAME $fulldomain." >> "$dnstmp"
+echo "_acme-challenge.api   IN CNAME $fulldomain." > dns.txt
+echo "_acme-challenge.apps  IN CNAME $fulldomain." >> dns.txt
 
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@                                                                                       @"
@@ -2073,7 +2183,7 @@ echo "@  Please add the acme DNS records below to your DNS provider.            
 echo "@  Most probably in https://git.vshn.net/vshn/vshn_zonefiles                            @"
 echo "@                                                                                       @"
 echo "@  If terminal selection does not work the entries can also be copied from              @"
-echo "@    $dnstmp                                                                            @"
+echo "@    dns.txt                                                                            @"
 echo "@                                                                                       @"
 echo "@  Waiting for record to propagate...                                                   @"
 echo "@                                                                                       @"
@@ -2098,6 +2208,7 @@ until kubectl get nodes
 do
   sleep 20
 done
+rm dns.txt
 
 
 # echo "# Outputs"
@@ -2106,7 +2217,7 @@ done
 
 ----
 
-[[step-28]]
+[[step-29]]
 === And I verify emergency access
 
 This step ensures the emergency credentials for the cluster can be retrieved.
@@ -2172,7 +2283,7 @@ kubectl -n openshift-config patch cm admin-kubeconfig-client-ca --type=merge -p 
 
 ----
 
-[[step-29]]
+[[step-30]]
 === And I configure the cluster alerts
 
 This step configures monitoring alerts on the cluster.
@@ -2192,6 +2303,7 @@ OUTPUT=$(mktemp)
 set -euo pipefail
 export KUBECONFIG="${INPUT_kubeconfig_path}"
 
+kubectl wait --for create --timeout=10m -n openshift-monitoring cronjob silence
 echo '# Installing default alert silence ...'
 oc --as=system:admin -n openshift-monitoring get job silence-manual &>/dev/null || \
   oc --as=system:admin -n openshift-monitoring create job --from=cronjob/silence silence-manual
@@ -2218,7 +2330,7 @@ sleep 2
 
 ----
 
-[[step-30]]
+[[step-31]]
 === And I enable Opsgenie alerting
 
 This step enables Opsgenie alerting for the cluster via Project Syn.
@@ -2251,7 +2363,7 @@ popd
 
 ----
 
-[[step-31]]
+[[step-32]]
 === And I verify the image registry config
 
 This step verifies that the image registry config has bootstrapped correctly.
@@ -2313,7 +2425,7 @@ fi
 
 ----
 
-[[step-32]]
+[[step-33]]
 === And I schedule the first maintenance
 
 This step verifies that the UpgradeConfig object is present on the cluster,
@@ -2355,7 +2467,7 @@ kubectl -n appuio-openshift-upgrade-controller get upgradeconfig "$uc" -oyaml | 
     .metadata.name = "first",
     .metadata.labels = {},
     .spec.jobTemplate.metadata.labels.upgradeconfig/name = "first",
-    .spec.schedule.cron = ((now+"1m")|format_datetime("4 15")) + " * * *",
+    .spec.schedule.cron = ((now+"1m")| tz("Europe/Zurich") | format_datetime("4 15")) + " * * *",
     .spec.pinVersionWindow = "0m"
   ' | \
   kubectl create -f - --as=system:admin
@@ -2367,7 +2479,7 @@ kubectl -n appuio-openshift-upgrade-controller get upgradeconfig "$uc" -oyaml | 
 
 ----
 
-[[step-33]]
+[[step-34]]
 === Then I configure apt-dater groups for the LoadBalancers
 
 This step configures the apt-dater groups for the LoadBalancers via puppet.
@@ -2419,8 +2531,10 @@ fi
 
 git add ./*.yaml
 
-if not git diff-index --quiet HEAD
+if git diff-index --quiet HEAD
 then
+  echo "No changes, skipping commit"
+else
   git commit -m"Configure apt-dater groups for LBs for OCP4 cluster ${INPUT_commodore_cluster_id}"
   git push origin master
 
@@ -2446,7 +2560,7 @@ popd
 
 ----
 
-[[step-34]]
+[[step-35]]
 === And I remove the bootstrap bucket
 
 This step deletes the S3 bucket with the bootstrap ignition config.
@@ -2454,7 +2568,8 @@ This step deletes the S3 bucket with the bootstrap ignition config.
 ==== Inputs
 
 * `commodore_cluster_id`
-* `vault_address`
+* `csp_region`
+* `bucket_user`
 
 ==== Script
 
@@ -2463,12 +2578,15 @@ This step deletes the S3 bucket with the bootstrap ignition config.
 OUTPUT=$(mktemp)
 
 # export INPUT_commodore_cluster_id=
-# export INPUT_vault_address=
+# export INPUT_csp_region=
+# export INPUT_bucket_user=
 
 set -euo pipefail
 
-export VAULT_ADDR=${INPUT_vault_address}
-vault login -method=oidc
+mc alias set \
+  "${INPUT_commodore_cluster_id}" "https://objects.${INPUT_csp_region}.cloudscale.ch" \
+  "$(echo "$INPUT_bucket_user" | jq -r '.keys[0].access_key')" \
+  "$(echo "$INPUT_bucket_user" | jq -r '.keys[0].secret_key')"
 
 mc rm -r --force "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition"
 mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition"
@@ -2480,7 +2598,7 @@ mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ign
 
 ----
 
-[[step-35]]
+[[step-36]]
 === And I add the cluster to openshift4-clusters
 
 This step adds the cluster to https://git.vshn.net/vshn/openshift4-clusters
@@ -2551,8 +2669,10 @@ EOF
   git add --force "${INPUT_commodore_cluster_id}"
   git add .
 
-  if not git diff-index --quiet HEAD
+  if git diff-index --quiet HEAD
   then
+    echo "No changes, skipping commit"
+  else
     git commit -am "Add cluster ${INPUT_commodore_cluster_id}"
   fi || true
 fi
@@ -2580,7 +2700,7 @@ sleep 2
 
 ----
 
-[[step-36]]
+[[step-37]]
 === And I wait for maintenance to complete
 
 This step waits for the first maintenance to complete, and then removes the

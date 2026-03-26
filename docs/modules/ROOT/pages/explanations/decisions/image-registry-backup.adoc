@@ -1,0 +1,63 @@
+= Image Registry Backup
+
+
+== Problem
+
+We provide backups for cluster objects, but if a customer uses the OpenShift Image Registry as only registrt for their images we need a way to backup that as well.
+
+=== Goals
+
+* Have the means to restore the OpenShift Image Registry if required.
+
+
+== Proposals
+
+=== Option 1: Use PVC backed Image Registry and K8up
+
+This option uses the possibility to run the OpenShift Image Registry on PVC rather than an S3 bucket.
+We then use K8up to backup that PVC to an S3 Bucket.
+
+It needs to be evaluated if a simple restore of the PVC can be used to restore the OpenShift Image Registry to a new cluster.
+
+Another major blocker is, that with this solution the OpenShift Image Registry is no longer highly available.
+And it's not guaranteed that a restore works out of the box.
+
+=== Option 2: Use `rclone` to mirror S3 Bucket to another S3 bucket
+
+This option uses the `rclone` tool to mirror the S3 bucket used by the OpenShift Image Registry to another S3 bucket.
+Can be implemented as a CronJob on the cluster.
+
+It needs to be evaluated if a simple mirroring of the S3 bucket can be used to restore the OpenShift Image Registry to a new cluster.
+
+Using a tool to directly mirror the S3 bucket seems to be the solution with the least friction.
+The implementation can be done with a rather simple CronJob, however it's not very elegant.
+
+=== Option 3a: Use `skopeo sync` to PVC and K8up
+
+This option is similar to Option 1, but directly pulls the images onto a PVC using `skopeo sync`.
+Challenge would be to determine the PVC size and somewhat dynamically adjust if the OpenShift Image Registry grows.
+
+The restore would then use `skopeo sync` to push the images back into the OpenShift Image Registry.
+
+Pulling images to a PVC and backing up with K8up would be very elegant.
+However; For big image registries the PVC can grow rather quickly and may cause significant additional costs.
+Further, there has to be some logic to search for all image streams in the cluster and to adjust the PVC to the actual usage.
+
+=== Option 3b: Use `skopeo sync` to another Image Registry
+
+This option does need an external image registry, where the images can be pushed to.
+
+The restore would sync the images back into the OpenShift Image Registry.
+
+Similar to Option 3a we need additional logic for various sync tasks.
+Also the need for a seperate additional registry begs the question why not use the external registry to begin with.
+
+
+== Decision
+
+We decided to use `rclone` to mirror the S3 bucket (Option 2).
+
+== Rationale
+
+Mirroring the S3 bucket is a straitforward solution that doesnt require complex logic to extract images from the OpenShift Image Registry.
+Restoring the mirrored S3 bucket is also fairly simple and flexible.

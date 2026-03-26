@@ -2346,6 +2346,7 @@ fi
 
 echo "# Waiting for ArgoCD resource to exist ..."
 kubectl wait --for=create crds/argocds.argoproj.io --timeout=5m
+kubectl api-resources --api-group=argoproj.io # to refresh local K8s API cache
 sleep 1 # to prevent race conditions
 
 echo "# Waiting for ArgoCD instance to exist ..."
@@ -2839,8 +2840,8 @@ echo '#########################################################'
 echo
 echo "Run the following:"
 echo "cd $(pwd)/openshift4-clusters/${INPUT_commodore_cluster_id}"
-echo "direnv allow"
-echo "oc whoami"
+echo "direnv allow ."
+echo "direnv exec . oc whoami"
 echo "git push origin main   # only if everything is OK"
 sleep 2
 

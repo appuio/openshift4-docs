@@ -255,7 +255,7 @@ sleep 2
 Create 2 new cloudscale API tokens with read+write permissions and name them
 <cluster_id> and <cluster_id>_floaty on control.cloudscale.ch/service/<your-project>/api-token.
 
-This step currently does not validate whether the tokens have read permission.
+This step currently does not validate whether the tokens have write permission.
 
 ==== Inputs
 
@@ -627,11 +627,20 @@ set -euo pipefail
 
 
 auth_header="Authorization: Bearer ${INPUT_cloudscale_token}"
+image_slug="rhcos-${INPUT_image_major}.${INPUT_image_minor}"
+existing_zone=
 
-slug=$(curl -sH "$auth_header" https://api.cloudscale.ch/v1/custom-images | jq -r ".[] | select(.slug == \"rhcos-${INPUT_image_major}.${INPUT_image_minor}\") | .zones[].slug")
-if [ -n "$slug" ] && [ "$slug" != "null" ]; then
-  echo "Image 'rhcos-${INPUT_image_major}.${INPUT_image_minor}' already exists in Cloudscale, skipping upload."
+# NOTE(sg): The value of zones is a space-separated list of zones where
+# the image with the given slug exists or the empty string if the image
+# doesn't exist in any zone.
+zones=$(curl -sH "$auth_header" https://api.cloudscale.ch/v1/custom-images | \
+  jq --arg slug "$image_slug" -r '.[] | select(.slug == $slug) | [.zones[]|.slug]|join(" ")')
+if [ -n "$zones" ] && [[ "$zones" == *"${INPUT_csp_region}1"* ]]; then
+  echo "Image '$image_slug' already exists in Cloudscale ${INPUT_csp_region}, skipping upload."
   exit 0
+elif [ -n "$zones" ]; then
+  echo "Image 'rhcos-${INPUT_image_major}.${INPUT_image_minor}' already exists in Cloudscale ${zones}, configuring multi-zone image upload"
+  existing_zone="-Fzones=${zones}"
 fi
 
 mc alias set \
@@ -650,7 +659,7 @@ echo "Importing image into Cloudscale..."
 curl -i -H "$auth_header" \
   -F url="$(mc share download --json "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition/rhcos-${INPUT_image_major}.${INPUT_image_minor}.qcow2" | jq -r .url)" \
   -F name="RHCOS ${INPUT_image_major}.${INPUT_image_minor}" \
-  -F zones="${INPUT_csp_region}1" \
+  -F zones="${INPUT_csp_region}1" "${existing_zone}" \
   -F slug="rhcos-${INPUT_image_major}.${INPUT_image_minor}" \
   -F source_format=qcow2 \
   -F user_data_handling=pass-through \
@@ -1185,7 +1194,7 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_keys = [\"$
   ${INPUT_commodore_cluster_id}.yml
 
 echo "Commit changes"
-git commit -a -m "Set Exoscale specific values in cluster ${CLUSTER_ID}"
+git commit -a -m "Set cloudscale specific values in cluster ${CLUSTER_ID}"
 git push
 
 popd
@@ -1811,8 +1820,11 @@ do
   sleep 20
 done
 echo "Waiting for load balancer to become available ..."
+# NOTE(sg): We need to wait for at least one app node to become ready
+# before the cloudscale LB controller can be scheduled. This can take 5+
+# minutes, depending on how quickly the worker nodes are becoming ready.
 kubectl -n appuio-cloudscale-loadbalancer-controller \
-  wait --for condition=available --timeout 3m \
+  wait --for condition=available --timeout 10m \
   deploy cloudscale-loadbalancer-controller-controller-manager
 echo '# Applied loadbalancer controller. #'
 echo
@@ -1976,9 +1988,9 @@ popd
 === And I configure initial deployments
 
 This step configures some deployments that require manual changes after
-cluster bootstrap, such as reverting the Cilium patch from earlier, enabling
-proxy protocol on the Ingress controller, and scheduling the ingress
-controller on the infrastructure nodes.
+cluster bootstrap, such as enabling proxy protocol on the Ingress
+controller, and scheduling the ingress controller on the infrastructure
+nodes.
 
 ==== Inputs
 
@@ -2120,6 +2132,7 @@ fi
 
 echo "# Waiting for ArgoCD resource to exist ..."
 kubectl wait --for=create crds/argocds.argoproj.io --timeout=5m
+kubectl api-resources --api-group=argoproj.io # to refresh local K8s API cache
 sleep 1 # to prevent race conditions
 
 echo "# Waiting for ArgoCD instance to exist ..."
@@ -2196,18 +2209,25 @@ echo "_acme-challenge.apps  IN CNAME $fulldomain."
 echo
 
 # back up kubeconfig, just in case
+cp "${INPUT_kubeconfig_path}" "${INPUT_kubeconfig_path}.bak"
+yq -i e 'del(.clusters[0].cluster.certificate-authority-data)' "${INPUT_kubeconfig_path}"
 cp "${INPUT_kubeconfig_path}" "${INPUT_kubeconfig_path}2"
 
-yq -i e 'del(.clusters[0].cluster.certificate-authority-data)' "${INPUT_kubeconfig_path}"
+# Set insecure-skip-tls-verify=true in kubeconfig2 so we can use it to
+# wait for the kube-apiserver CO
+yq -i e '.clusters[0].cluster.ignore-skip-tls-verify = true' "${INPUT_kubeconfig_path}2"
 
 echo "Waiting for cluster certificate to be issued ..."
 echo "If you need to debug things on the cluster, run:"
 echo "export KUBECONFIG=${INPUT_kubeconfig_path}2"
 echo
-until kubectl get nodes
-do
-  sleep 20
-done
+export KUBECONFIG="${INPUT_kubeconfig_path}2"
+kubectl wait --for condition=ready certificate/api-server-cluster-certificate-default
+echo "Waiting for all kube-apiserver instances to be updated ..."
+kubectl wait --for condition=progressing=false --timeout=15m co kube-apiserver
+
+export KUBECONFIG="${INPUT_kubeconfig_path}"
+kubectl get nodes
 rm dns.txt
 
 
@@ -2688,8 +2708,8 @@ echo '#########################################################'
 echo
 echo "Run the following:"
 echo "cd $(pwd)/openshift4-clusters/${INPUT_commodore_cluster_id}"
-echo "direnv allow"
-echo "oc whoami"
+echo "direnv allow ."
+echo "direnv exec . oc whoami"
 echo "git push origin main   # only if everything is OK"
 sleep 2
 

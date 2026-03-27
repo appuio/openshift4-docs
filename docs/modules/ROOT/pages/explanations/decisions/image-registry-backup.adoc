@@ -3,7 +3,7 @@
 
 == Problem
 
-We provide backups for cluster objects, but if a customer uses the OpenShift Image Registry as only registrt for their images we need a way to backup that as well.
+We provide backups for cluster objects, but if a customer uses the OpenShift Image Registry as only registry for their images we need a way to backup that as well.
 
 === Goals
 
@@ -19,15 +19,16 @@ We then use K8up to backup that PVC to an S3 Bucket.
 
 It needs to be evaluated if a simple restore of the PVC can be used to restore the OpenShift Image Registry to a new cluster.
 
-Another major blocker is, that with this solution the OpenShift Image Registry is no longer highly available.
+Another major blocker is that with this solution the OpenShift Image Registry is no longer highly available.
 And it's not guaranteed that a restore works out of the box.
 
 === Option 2: Use `rclone` to mirror S3 Bucket to another S3 bucket
 
 This option uses the `rclone` tool to mirror the S3 bucket used by the OpenShift Image Registry to another S3 bucket.
-Can be implemented as a CronJob on the cluster.
 
 It needs to be evaluated if a simple mirroring of the S3 bucket can be used to restore the OpenShift Image Registry to a new cluster.
+However, image layers are immutable after creation and `rclone` has consistency checks during its sync operation.
+In general, there's no guarantee that all recent data can be recovered during disaster recovery.
 
 Using a tool to directly mirror the S3 bucket seems to be the solution with the least friction.
 The implementation can be done with a rather simple CronJob, however it's not very elegant.
@@ -35,7 +36,8 @@ The implementation can be done with a rather simple CronJob, however it's not ve
 === Option 3a: Use `skopeo sync` to PVC and K8up
 
 This option is similar to Option 1, but directly pulls the images onto a PVC using `skopeo sync`.
-Challenge would be to determine the PVC size and somewhat dynamically adjust if the OpenShift Image Registry grows.
+The main challenge would be to determine the PVC size and somewhat dynamically adjust if the OpenShift Image Registry grows.
+An additional challenge would be that a single `skopeo sync` only syncs tags of a single image, and can't sync images that are only reachable by digest (see this https://github.com/containers/skopeo/issues/985#issuecomment-661153281[GitHub comment]).
 
 The restore would then use `skopeo sync` to push the images back into the OpenShift Image Registry.
 

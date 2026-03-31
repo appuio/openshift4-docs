@@ -296,3 +296,4 @@
 ** xref:oc4:ROOT:explanations/decisions/customer-facing-slo.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/feature-based-metering.adoc[]
 ** xref:oc4:ROOT:explanations/decisions/guided-setup-tool.adoc[]
+** xref:oc4:ROOT:explanations/decisions/image-registry-backup.adoc[]

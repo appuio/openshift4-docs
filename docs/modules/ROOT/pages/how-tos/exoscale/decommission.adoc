@@ -18,6 +18,8 @@ Steps to remove an OpenShift 4 cluster from https://exoscale.com[Exoscale].
 Always follow the https://wiki.vshn.net/display/VINT/4-eye+data+deletion[4-eye data deletion] (Internal link) principle when decommissioning productive clusters.
 --
 
+include::partial$guided-setup-explanation.adoc[]
+
 == Prerequisites
 
 * Exoscale https://community.exoscale.com/documentation/iam/quick-start/#api-keys[API key]
@@ -28,108 +30,4 @@ Always follow the https://wiki.vshn.net/display/VINT/4-eye+data+deletion[4-eye d
 * `exo` >= v1.28.0, https://community.exoscale.com/documentation/tools/exoscale-command-line-interface[Exoscale CLI]
 * `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
 
-== Cluster Decommission
-
-. Create a new API key with role `Owner` in the project of the cluster
-+
-TIP: The `Owner` role is created automatically for each Exoscale project
-
-. Setup environment variables for Exoscale, GitLab and Vault credentials
-+
-[source,bash]
-----
-export GITLAB_TOKEN=<gitlab-api-token> # From https://git.vshn.net/-/user_settings/personal_access_tokens
-export GITLAB_USER=<gitlab-user-name>
-export EXOSCALE_API_KEY=<exoscale api key>
-export EXOSCALE_API_SECRET=<exoscale api secret>
-----
-+
-include::partial$connect-to-vault.adoc[]
-
-include::partial$commodore-init.adoc[]
-
-. Setup environment variables for Exoscale credentials
-+
-[source,bash]
-----
-export EXOSCALE_ZONE=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${CLUSTER_ID} | jq -r .facts.region)
-export EXOSCALE_S3_ENDPOINT="sos-${EXOSCALE_ZONE}.exo.io"
-----
-
-include::partial$decommission-disable-syn.adoc[]
-
-. Delete all `LoadBalancer` services on the cluster
-+
-[source,bash]
-----
-kubectl delete svc --field-selector spec.type=LoadBalancer -A
-----
-+
-NOTE: This is required in order for Terraform to be able to delete the instance pool.
-
-. Configure Terraform secrets
-+
-[source,bash]
-----
-cat <<EOF > terraform.env
-EXOSCALE_API_KEY
-EXOSCALE_API_SECRET
-EOF
-----
-
-include::partial$setup_terraform.adoc[]
-
-include::partial$prepare-for-lb-decommission.adoc[]
-
-. Delete resources using Terraform
-+
-[source,bash]
-----
-terraform destroy
-
-popd
-----
-
-. Use Exoscale CLI tool to empty and remove buckets
-+
-[source,bash]
-----
-# Bootstrap bucket
-exo storage rb -r -f "${CLUSTER_ID}-bootstrap"
-# OpenShift Image Registry bucket
-exo storage rb -r -f "${CLUSTER_ID}-image-registry"
-# OpenShift Loki logstore
-exo storage rb -r -f "${CLUSTER_ID}-logstore"
-----
-
-. Delete the cluster-backup bucket
-+
-[NOTE]
-====
-Verify that the cluster backups aren't needed anymore before cleaning up the backup bucket.
-Consider extracting the most recent cluster objects and etcd backups before deleting the bucket.
-See the xref:how-tos/recover-from-backup.adoc[Recover objects from backup] how-to for instructions.
-At this point in the decommissioning process, you'll have to extract the Restic configuration from Vault instead of the cluster itself.
-====
-+
-[source,bash]
-----
-exo storage rb -r -f "${CLUSTER_ID}-cluster-backup"
-----
-
-. Delete the cluster's API keys and the API key created for decommissioning
-+
-[source,bash]
-----
-# delete restricted api keys
-exo iam api-key delete -f ${CLUSTER_ID}_appcat-provider-exoscale
-exo iam api-key delete -f ${CLUSTER_ID}_ccm-exoscale
-exo iam api-key delete -f ${CLUSTER_ID}_csi-driver-exoscale
-exo iam api-key delete -f ${CLUSTER_ID}_object_storage
-
-# delete decommissioning api key
-exo iam api-key delete -f ${CLUSTER_ID} <1>
-----
-<1> This command assumes that the decommissioning api key's name is the cluster's Project Syn ID
-
-include::partial$vshn-decommission.adoc[]
+include::partial$guided-setup/exoscale-decommission.adoc[]

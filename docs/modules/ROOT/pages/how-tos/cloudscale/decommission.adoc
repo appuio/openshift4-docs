@@ -12,7 +12,13 @@ Steps to remove an OpenShift 4 cluster from https://cloudscale[cloudscale.ch].
 The commands are idempotent and can be retried if any of the steps fail.
 --
 
+[IMPORTANT]
+--
+Always follow the https://wiki.vshn.net/display/VINT/4-eye+data+deletion[4-eye data deletion] (Internal link) principle when decommissioning productive clusters.
+--
+
 include::partial$guided-setup-explanation.adoc[]
+
 == Prerequisites
 
 include::partial$cloudscale/prerequisites.adoc[]

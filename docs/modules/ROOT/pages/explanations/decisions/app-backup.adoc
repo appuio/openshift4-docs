@@ -1,0 +1,109 @@
+= Self service backup for customer applications
+
+== Problem
+
+Currently, backing up applications on VSHN Managed OpenShift is solely the customer's responsibility, since VSHN doesn't offer any tooling except for a https://k8up.io[K8up] instance.
+In parallel, VSHN maintains a https://products.vshn.ch/openshift/backup-disaster-recovery.html[hourly backup of all Kubernetes manifests deployed on the cluster] (including all customer Kubernetes manifests).
+
+Therefore, a customer who requires a full application backup has to duplicate some work by ensuring that their applications' Kubernetes manifests are backed up alongside the applications' data.
+A notable exception is that it's sometimes sufficient to just backup application data if a customer is comfortable with the idea that restoring their application will require close collaboration with VSHN if any Kubernetes manifests need to be restored from the cluster objects backup.
+
+=== Goals
+
+* Provide a backup solution which
+** allows customers to create full application backups in self service
+** allows customers to restore a full application backup in self service
+* The solution should enable customers to create consistent application backups
+* The solution should support backup encryption at rest with customer-managed key material
+
+=== Non-Goals
+
+* Replace the current cluster wide object and etcd backups
+* Provide automatic application backups
+
+== Proposals
+
+=== Velero
+
+The first option to consider is https://velero.io/[Velero].
+In contrast to K8up, https://velero.io/[Velero] provides a simpler https://velero.io/docs/v1.18/examples/#snapshot-example-with-persistentvolumes[application backup] experience which comprises of both application data (optionally backed by persistent volume snapshots) and application Kubernetes manifests.
+With suitable safeguards (such as using https://velero.io/docs/v1.18/backup-hooks/#hook-example-with-fsfreeze[`fsfreeze`] to ensure data consistency on persistent volumes), Velero enables customers to create consistent backups of their applications.
+
+From VSHN's perspective, it would be fairly straightforward to provide a Velero instance that customers can use to orchestrate their application backups.
+
+In order to encrypt backups at rest, Velero supports backup encryption on arbitrary S3 storage that supports S3's SSE-C encryption mode.
+
+However, by default, Velero runs with full `cluster-admin` permissions, and therefore it's advisable that only users with similar levels of privilege have access to the Velero instance to create and restore backups.
+Unfortunately, there is limited documentation on how to run Velero with restricted RBAC rules.
+
+=== Red Hat OpenShift Application Data Protection
+
+The next option to consider (since the decision is targeting VSHN Managed OpenShift) is https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/backup_and_restore/index#oadp-application-backup-and-restore[OpenShift Application Data Protection (OADP)].
+OADP is based on Velero, but is delivered via OLM and brings a couple of OpenShift-specific enhancements.
+In particular, OADP enables the full feature set of the `openshift` Velero plugin, including backing up and restoring the data associated with OpenShift `ImageStream` and `ImageStreamTag` resources.
+
+Additionally, OADP provides a https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/backup_and_restore/index#oadp-self-service-1[self service layer] on top of Velero which enables namespace admins to backup and restore applications they're responsible for without requiring those admins to have any direct cluster-level admin permissions.
+This mechanism also enables namespace admins to define their own S3 credentials and buckets.
+Unfortunately, target buckets for Velero's persistent volume snapshot backup mechanism must still be configured by a cluster-admin even when the namespace admin mechanism is enabled.
+
+The drawback, as usual for Red Hat offerings, is that VSHN is limited to the options exposed by the OADP operator when it comes to customizing the Velero deployment.
+
+Finally, there's some open questions regarding backup of `ImageStream` resources and encryption at rest, since unfortunately neither the Velero nor the OADP documentation are very expansive on this topic and a cursory hands-on evaluation surfaced some unintuitive interplay of those features with the OADP namespace admin self service layer.
+
+=== Self service mechanism for extracting manifests from the existing cluster wide object backup
+
+An alternative option would be that VSHN provides a self service mechanism that allows customers to extract individual objects from the cluster wide object backup.
+This is somewhat interesting, since it doesn't require VSHN to run an additional tool on each VSHN Managed OpenShift cluster.
+
+However, there's a non-negligible amount of effort required to implement such a tool and this option doesn't allow the customer to ensure that an application's data and manifests are backed up at a single point in time.
+
+=== Veeam Kasten
+
+Veeam provides https://docs.kasten.io/latest/[Kasten] as a Kubernetes-native backup and restore solution.
+Kasten provides a management web interface that allows application administrators to configure the backups.
+
+While there's a 60 day free trial version, there doesn't seem to be a free community edition.
+
+=== Trilio for Kubernetes
+
+Trilio, who is partnered with Red Hat, provide a https://docs.trilio.io/kubernetes[cloud native backup solution] which treats OpenShift as a first class citizen.
+Trilio also provides a management web interface which allows application administrators to configure backups.
+Users can login to Trilio's web interface using their OpenShift credentials.
+
+There seems to be a free/basic and an enterprise version but the website doesn't have any pricing information, only a form to book a demo.
+
+=== K8up-based full application backup helper
+
+Another option that could be considered is to build our own helper tooling which enables customers to easily create consistent application backups with K8up.
+This option is interesting because it doesn't require running an additional tool on each VSHN Managed OpenShift cluster.
+
+However, similar to the option of enabling customers to recover objects from the cluster wide object backup, this option will require a significant amount of engineering.
+It's possible that this option would even need modifications to K8up.
+
+=== No new tooling
+
+A final option that we could consider is to provide no additional tooling since customers have all the building blocks they need with the https://k8up.io[K8up] instance already running on each cluster and the https://github.com/projectsyn/k8s-object-dumper[Kubernetes object dumper] which we use for the cluster wide object backup.
+We'd most likely need to extend the object dumper to support dumping only objects for a particular namespace.
+
+With this modification, a customer could build a K8up pre-backup pod using VSHN's object dumper helper which creates backups of their application's Kubernetes manifests.
+However, this proposal would most likely lead to a lot of duplicated effort and customers may start to ask VSHN to install additional tooling to support their home-grown application backup solutions leading to increased operational overhead.
+
+== Decision
+
+We will enable customers to backup and restore their applications by providing <<Red Hat OpenShift Application Data Protection>> on VSHN Managed OpenShift.
+
+== Rationale
+
+While it would be interesting to pursue one of the more engineering-heavy options, a quick hands-on evaluation of Red Hat OpenShift Application Data Protection (OADP) suggests that we get something that's very close to what we're looking for from OADP's non-admin backup layer.
+Also, since OADP allows configuring most aspects of Velero, including enabling custom plugins, it should be possible to fill any gaps that we discover when we implement this feature.
+
+Additionally, while it might be nice to be able to offer our customers a web interface where they can manage their backups, it's currently not realistic to introduce another paid tool (Veeam Kasten or Trilio for Kubernetes) in the default VSHN Managed OpenShift toolset.
+
+== References
+
+* https://products.vshn.ch/openshift/backup-disaster-recovery.html[VSHN Managed OpenShift Backup and Disaster Recovery]
+* https://k8up.io[K8up]
+* https://velero.io[Velero]
+* https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/backup_and_restore/index#oadp-application-backup-and-restore[OpenShift Application Data Protection]
+* https://docs.trilio.io/kubernetes[Trilio for Kubernetes]
+* https://docs.kasten.io/latest/[Veeam Kasten]

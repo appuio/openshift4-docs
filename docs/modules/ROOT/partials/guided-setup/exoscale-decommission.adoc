@@ -1267,23 +1267,10 @@ OUTPUT=$(mktemp)
 # export INPUT_commodore_api_url=
 
 set -euo pipefail
-echo '###########################################################################'
-echo '#                                                                         #'
-echo '#  Please manually delete the cluster from Lieutenant before proceeding.  #'
-echo '#                                                                         #'
-echo '###########################################################################'
-echo
-lieutenant=vshn-lieutenant-prod
-if [[ ${INPUT_commodore_api_url} == *int* ]]
-then
-  lieutenant=vshn-lieutenant-int
-fi
-if [[ ${INPUT_commodore_api_url} == *dev* ]]
-then
-  lieutenant=vshn-lieutenant-dev
-fi
-echo You can go to https://control.vshn.net/syn/lieutenantclusters/${lieutenant}/${INPUT_commodore_cluster_id}/_delete
-sleep 2
+echo "Deleting cluster on Lieutenant at ${INPUT_commodore_api_url} ..."
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+curl -H "Authorization: Bearer $(commodore fetch-token)" -XDELETE \
+  "${INPUT_commodore_api_url%/}/clusters/${INPUT_commodore_cluster_id}"
 
 
 # echo "# Outputs"

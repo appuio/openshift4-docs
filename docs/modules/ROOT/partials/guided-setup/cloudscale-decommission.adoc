@@ -484,9 +484,11 @@ set -euo pipefail
 export KUBECONFIG="${INPUT_kubeconfig_path}"
 echo '#  Deleting Services ...  #'
 kubectl delete svc --field-selector spec.type=LoadBalancer -A
+kubectl wait --for=delete svc --field-selector spec.type=LoadBalancer -A --timeout=120s
 echo '#  Deleted Services.  #'
 echo '#  Deleting LoadBalancers ...  #'
 kubectl delete loadbalancers -A --all
+kubectl wait --for=delete loadbalancers -A --all --timeout=120s
 echo '#  Deleted LoadBalancers.  #'
 
 
@@ -917,7 +919,7 @@ mc alias set \
   "$(echo "$response" | jq -r '.keys[0].secret_key')"
 
 # delete bootstrap-ignition bucket (should already be deleted after setup)
-mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition" --force
+mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition" --force || true
 
 # delete image-registry bucket
 mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-image-registry" --force
@@ -1043,6 +1045,7 @@ mc alias set \
 mc rb "${INPUT_commodore_cluster_id}_backup/${INPUT_commodore_cluster_id}-cluster-backup" --force
 
 # Delete object user
+echo "Deleting object user ..."
 curl -i -H "Authorization: Bearer ${INPUT_cloudscale_token}" -X DELETE "$(echo "$response" | jq -r '.href')"
 
 
@@ -1420,23 +1423,10 @@ OUTPUT=$(mktemp)
 # export INPUT_commodore_api_url=
 
 set -euo pipefail
-echo '###########################################################################'
-echo '#                                                                         #'
-echo '#  Please manually delete the cluster from Lieutenant before proceeding.  #'
-echo '#                                                                         #'
-echo '###########################################################################'
-echo
-lieutenant=vshn-lieutenant-prod
-if [[ ${INPUT_commodore_api_url} == *int* ]]
-then
-  lieutenant=vshn-lieutenant-int
-fi
-if [[ ${INPUT_commodore_api_url} == *dev* ]]
-then
-  lieutenant=vshn-lieutenant-dev
-fi
-echo You can go to https://control.vshn.net/syn/lieutenantclusters/${lieutenant}/${INPUT_commodore_cluster_id}/_delete
-sleep 2
+echo "Deleting cluster on Lieutenant at ${INPUT_commodore_api_url} ..."
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
+curl -H "Authorization: Bearer $(commodore fetch-token)" -XDELETE \
+  "${INPUT_commodore_api_url%/}/clusters/${INPUT_commodore_cluster_id}"
 
 
 # echo "# Outputs"

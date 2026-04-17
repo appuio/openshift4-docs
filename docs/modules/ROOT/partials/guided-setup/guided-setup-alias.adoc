@@ -1,17 +1,21 @@
 [source,bash]
 ----
 guided-setup-base() {
-  local OPTIND opt extra_volume extra_groups docker_group docker_path sshop_volumes ecr_volume
+  local OPTIND opt extra_env extra_volume extra_groups docker_group docker_path sshop_volumes ecr_volume
+  extra_env=()
   extra_volume=()
   sshop_volumes=()
   ecr_volume=()
-  while getopts 'h?v:' opt; do
+  while getopts 'h?v:e:' opt; do
       case "$opt" in
       h|\?)
-          echo "usage: $0 [-y] [-v EXTRA_VOLUME_MOUNT]"
+          echo "usage: $0 [-y] [-v EXTRA_VOLUME_MOUNT] [-e EXTRA_ENV_VAR]"
+          ;;
+      e)
+          extra_env+=(--env "$OPTARG")
           ;;
       v)
-          extra_volume=(--volume "$OPTARG")
+          extra_volume+=(--volume "$OPTARG")
           ;;
       esac
   done
@@ -22,6 +26,12 @@ guided-setup-base() {
     gpg_opts=(--volume "${pubring}:/app/.gnupg/pubring.kbx:ro" --volume "$(gpgconf --list-dir agent-extra-socket):/app/.gnupg/S.gpg-agent:ro")
   else
     gpg_opts=()
+  fi
+
+  readonly GANDALF_CONFIG="${XDG_CONFIG_HOME:-~/.config}/gandalf"
+  if [[ -f "${GANDALF_CONFIG}/env" ]]
+  then
+    extra_env+=(--env-file "${GANDALF_CONFIG}/env")
   fi
 
   docker_group="$( getent group docker | cut --delimiter ':' --fields 3 )"
@@ -71,6 +81,7 @@ guided-setup-base() {
     "${sshop_volumes[@]}" \
     "${ecr_volume[@]}" \
     "${extra_volume[@]}" \
+    "${extra_env[@]}" \
     "${gpg_opts[@]}" \
     --volume "${PWD}:${PWD}" \
     --workdir "${PWD}" \

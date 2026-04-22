@@ -76,7 +76,7 @@ guided-setup-base() {
     --volume "${HOME}/.ssh/known_hosts:/app/.ssh/known_hosts:ro" \
     --volume "${HOME}/.gitconfig:/app/.gitconfig:ro" \
     --volume "${HOME}/.cache:/app/.cache" \
-    --volume "${HOME}/.gandalf:/app/.gandalf" \
+    --volume "${XDG_CONFIG_HOME:-~/.config}/gandalf:/app/.config/gandalf" \
     --volume "${docker_path}":/var/run/docker.sock \
     "${sshop_volumes[@]}" \
     "${ecr_volume[@]}" \

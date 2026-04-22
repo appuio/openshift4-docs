@@ -253,7 +253,7 @@ sleep 2
 === And Cloudscale API tokens
 
 Create 2 new cloudscale API tokens with read+write permissions and name them
-<cluster_id> and <cluster_id>_floaty on control.cloudscale.ch/service/<your-project>/api-token.
+{{ .commodore_cluster_id }} and {{ .commodore_cluster_id }}_floaty on control.cloudscale.ch/service/<your-project>/api-token.
 
 This step currently does not validate whether the tokens have write permission.
 
@@ -456,15 +456,11 @@ OUTPUT=$(mktemp)
 
 set -euo pipefail
 
-# TODO(aa): this is not generic; it makes assumptions on the location of the script on the host.
-# We will need a solution where gandalf provides the workflow base dir, e.g. in an env var
-# shellcheck disable=1091
-. /workflows/shared/scripts/semver.sh
+. "$GANDALF_SPELLBOOK_DIR"/scripts/semver.sh
 
 MAJOR=0
 MINOR=0
 PATCH=0
-# shellcheck disable=2034
 SPECIAL=""
 semverParseInto "$MATCH_image_name" MAJOR MINOR PATCH SPECIAL
 
@@ -1152,7 +1148,7 @@ commodore catalog compile ${INPUT_commodore_cluster_id} --push \
 [[step-17]]
 === And I configure Terraform for Cloudscale
 
-Review the file ./inventory/classes/${INPUT_commodore_tenant_id}/${INPUT_commodore_cluster_id}.yml.
+Review the file ./inventory/classes/{{ .commodore_tenant_id }}/{{ .commodore_cluster_id }}.yml.
 Override default parameters or add more component configurations as required for your cluster.
 
 Then press enter to commit and compile.

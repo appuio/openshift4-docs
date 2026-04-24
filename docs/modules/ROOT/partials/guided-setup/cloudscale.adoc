@@ -1592,12 +1592,15 @@ terraform init \
   "-backend-config=retry_wait_min=5"
 
 SUBNET_UUID="$(terraform output -raw subnet_uuid)"
-INGRESS_FLOATING_IP="$(terraform output -raw router_vip)"
+INGRESS_FLOATING_IP_V4="$(terraform output -raw router_vip)"
+INGRESS_FLOATING_IP_V6="$(terraform output -raw router_vip_v6)"
 pushd ../../../inventory/classes/${INPUT_commodore_tenant_id}
 
 yq eval -i '.parameters.openshift.cloudscale.subnet_uuid = "'"$SUBNET_UUID"'"' \
   ${INPUT_commodore_cluster_id}.yml
-yq eval -i '.parameters.openshift.cloudscale.ingress_floating_ip_v4 = "'"$INGRESS_FLOATING_IP"'"' \
+yq eval -i '.parameters.openshift.cloudscale.ingress_floating_ip_v4 = "'"$INGRESS_FLOATING_IP_V4"'"' \
+  ${INPUT_commodore_cluster_id}.yml
+yq eval -i '.parameters.openshift.cloudscale.ingress_floating_ip_v6 = "'"$INGRESS_FLOATING_IP_V6"'"' \
   ${INPUT_commodore_cluster_id}.yml
 
 if git diff-index --quiet HEAD

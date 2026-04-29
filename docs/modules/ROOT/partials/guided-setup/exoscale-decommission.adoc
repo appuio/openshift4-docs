@@ -128,6 +128,8 @@ You might use the WebUI at https://control.vshn.net/syn/lieutenantapiendpoints t
 ==== Outputs
 
 * `commodore_tenant_id`
+* `vault_address`
+* `vault_login_method`
 * `csp_region`
 
 ==== Script
@@ -150,6 +152,12 @@ env -i "commodore_tenant_id=$tenant_id" >> "$OUTPUT"
 region=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${INPUT_commodore_cluster_id} | jq -r .facts.region)
 if test -z "$region" && test "$region" != "null" ; then { echo "❌ Failed to retrieve CSP region for cluster ID '$INPUT_commodore_cluster_id'."; exit 1; } ; else { echo "✅ Retrieved CSP region '$region' for cluster ID '$INPUT_commodore_cluster_id'."; } ; fi
 env -i "csp_region=$region" >> "$OUTPUT"
+
+echo "Retrieving Vault address and login method..."
+vault_addr=$(curl -s "${COMMODORE_API_URL}" | jq -r '.vault.addr')
+env -i "vault_address=${vault_addr}" >> "$OUTPUT"
+vault_login_method=$(curl -s "${COMMODORE_API_URL}" | jq -r '.vault.loginMethod')
+env -i "vault_login_method=${vault_login_method}" >> "$OUTPUT"
 
 
 # echo "# Outputs"
@@ -400,6 +408,7 @@ during decommissioning.
 ==== Inputs
 
 * `vault_address`
+* `vault_login_method`
 * `commodore_cluster_id`
 
 ==== Script
@@ -409,11 +418,12 @@ during decommissioning.
 OUTPUT=$(mktemp)
 
 # export INPUT_vault_address=
+# export INPUT_vault_login_method=
 # export INPUT_commodore_cluster_id=
 
 set -euo pipefail
 export VAULT_ADDR=${INPUT_vault_address}
-vault login -method=oidc
+vault login -method=${INPUT_vault_login_method}
 OPSGENIE_KEY=$(vault kv get -format=json \
   clusters/kv/__shared__/__shared__/opsgenie/aldebaran | \
   jq -r '.data.data["heartbeat-password"]')
@@ -808,6 +818,7 @@ This step deletes the cluster's associated backup bucket from Exoscale.
 * `exoscale_key`
 * `exoscale_secret`
 * `vault_address`
+* `vault_login_method`
 * `commodore_cluster_id`
 * `commodore_api_url`
 * `backup_deletion_confirmation`: Really delete the cluster backup?
@@ -828,6 +839,7 @@ OUTPUT=$(mktemp)
 # export INPUT_exoscale_key=
 # export INPUT_exoscale_secret=
 # export INPUT_vault_address=
+# export INPUT_vault_login_method=
 # export INPUT_commodore_cluster_id=
 # export INPUT_commodore_api_url=
 # export INPUT_backup_deletion_confirmation=
@@ -860,7 +872,7 @@ mkdir catalog
 git archive --remote "${REPO_URL}" master | tar -xC catalog
 
 export VAULT_ADDR=${INPUT_vault_address}
-vault login -method=oidc
+vault login -method=${INPUT_vault_login_method}
 
 # extract restic credentials from catalog and vault
 restic_repo=s3:$(yq -o=json 'select(.kind == "Schedule")| .spec.backend.s3 | .endpoint + "/" + .bucket' catalog/manifests/cluster-backup/10_object.yaml | tr -d '"')
@@ -1150,6 +1162,7 @@ This step cleans up all the cluster's Vault secrets.
 * `commodore_cluster_id`
 * `commodore_api_url`
 * `vault_address`
+* `vault_login_method`
 * `backup_deletion_confirmation`
 
 ==== Script
@@ -1161,6 +1174,7 @@ OUTPUT=$(mktemp)
 # export INPUT_commodore_cluster_id=
 # export INPUT_commodore_api_url=
 # export INPUT_vault_address=
+# export INPUT_vault_login_method=
 # export INPUT_backup_deletion_confirmation=
 
 set -euo pipefail
@@ -1182,7 +1196,7 @@ ID_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-ba
 SECRET_KEY="$(yq -o=json 'select(.kind == "Secret" and .metadata.name == "objects-backup-s3-credentials") | .stringData.password' catalog/manifests/cluster-backup/10_object.yaml | cut -d: -f2)"
 
 export VAULT_ADDR=${INPUT_vault_address}
-vault login -method=oidc
+vault login -method=${INPUT_vault_login_method}
 
 for secret in $(find catalog/refs/ -type f \
   | sed -r -e 's#catalog/refs#clusters/kv#' -e 's#(.*)/.*#\1#' \
@@ -1218,6 +1232,7 @@ This step deletes the cluster's OpsGenie heartbeat.
 ==== Inputs
 
 * `vault_address`
+* `vault_login_method`
 * `commodore_cluster_id`
 
 ==== Script
@@ -1227,11 +1242,12 @@ This step deletes the cluster's OpsGenie heartbeat.
 OUTPUT=$(mktemp)
 
 # export INPUT_vault_address=
+# export INPUT_vault_login_method=
 # export INPUT_commodore_cluster_id=
 
 set -euo pipefail
 export VAULT_ADDR=${INPUT_vault_address}
-vault login -method=oidc
+vault login -method=${INPUT_vault_login_method}
 OPSGENIE_KEY=$(vault kv get -format=json \
   clusters/kv/__shared__/__shared__/opsgenie/aldebaran | \
   jq -r '.data.data["heartbeat-password"]')

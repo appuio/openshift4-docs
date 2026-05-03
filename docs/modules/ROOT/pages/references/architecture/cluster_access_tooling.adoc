@@ -217,7 +217,7 @@ Only the last target jump host is specified in the cluster fact, the tooling loo
 The tooling can support an arbitrary number of jump hosts in the chain without needing to specify them in the routing information.
 
 The following SSH options should be supported to specify jump host chains:
-+
+
 [source]
 ----
 Host management4.rma1.bettersmarter.vshnmanaged.net
@@ -335,10 +335,10 @@ This can be used to verify that the routing information is correct and that the 
 The `kubeconfig` sub-command generate a kubeconfig for all known clusters based on the routing information retrieved from the Lieutenant API and writes it to the specified file or standard output if no file is specified.
 
 [NOTE]
-----
+====
 While the primary use case for the tooling is access to OpenShift clusters, we aim to also support Kubernetes clusters using https://github.com/int128/kubelogin[int128/kubelogin] for authentication.
 A JSON serialized https://kubernetes.io/docs/reference/config-api/kubeconfig.v1/#AuthInfo[kubeconfig.v1.AuthInfo] object can be provided as a cluster fact which the tooling then uses to generate the kubeconfig.
-----
+====
 
 ==== `clusters`
 
@@ -357,9 +357,9 @@ See xref:oc4:ROOT:references/architecture/emergency_credentials.adoc[] for imple
 ==== `clusters CLUSTER_NAME shell`
 
 [NOTE]
-----
-We might try auto-login to the cluster using `oc login` before opening the shell.
-----
+====
+We might try auto login to the cluster using `oc login` before opening the shell.
+====
 
 The `clusters CLUSTER_NAME shell` sub-command opens a shell with the kubeconfig set up to access the specified cluster.
 The command sets an environment variable so that shell startup scripts, such as `.bashrc` or `.zshrc`, can detect the command and do their own setup.
@@ -406,11 +406,11 @@ func main() {
 ==== `clusters CLUSTER_NAME kubectl`
 
 [NOTE]
-----
+====
 We might wrap the command instead of embedding it.
 
-We might try auto-login to the cluster using `oc login` before running the command.
-----
+We might try auto login to the cluster using `oc login` before running the command.
+====
 
 The `clusters CLUSTER_NAME kubectl` embeds kubectl and allows the user to run kubectl commands against the specified cluster without needing to set up a kubeconfig file.
 
@@ -419,12 +419,12 @@ The `clusters CLUSTER_NAME kubectl` embeds kubectl and allows the user to run ku
 The `clusters CLUSTER_NAME oc` embeds oc and allows the user to run oc commands against the specified cluster without needing to set up a kubeconfig file.
 
 [NOTE]
-----
+====
 We might wrap the command instead of embedding it.
 
 We're not yet 100% sure if we can embed `oc`.
 It looks embeddable at first glance, but we need to do more testing to be sure.
-----
+====
 
 == Further Links
 

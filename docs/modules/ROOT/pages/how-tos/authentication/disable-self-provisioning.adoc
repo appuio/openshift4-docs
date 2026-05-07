@@ -2,12 +2,8 @@
 
 [abstract]
 This guide describes how to remove permission for users to self-provision projects on OpenShift 4 clusters.
-It's based on https://docs.openshift.com/container-platform/4.13/applications/projects/configuring-project-creation.html#disabling-project-self-provisioning_configuring-project-creation[this OpenShift documentation].
 
-[NOTE]
-====
-The self-provisioners can also be managed by the https://hub.syn.tools/openshift4-authentication/references/parameters.html[openshift4-authentication] component.
-====
+NOTE: This how-to applies configuration that's suitable for the Espejote ManagedResource deployed by https://github.com/appuio/component-openshift4-authentication/blob/master/component/self-provisioning.libsonnet[component-openshift4-authentication].
 
 == Prerequisites
 
@@ -15,75 +11,28 @@ The self-provisioners can also be managed by the https://hub.syn.tools/openshift
 
 == Procedure
 
-To disable self-provisioning, patch the `self-provisioners` CRB with the following `ManagedResource` (for example via adhoc-configurations):
+. Checkout the target cluster's tenant repository
 
+. Update the `openshift4-authentication` configuration to remove `system:authenticated:oauth` from `selfProvisionerGroups`:
++
 [source,yaml]
 ----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: remove-self-provisioning
-  namespace: syn-espejote
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: remove-self-provisioning
-rules:
-  - apiGroups:
-      - ""
-      - project.openshift.io
-    resources:
-      - projectrequests
-    verbs:
-      - create
-  - apiGroups:
-      - rbac.authorization.k8s.io
-    resourceNames:
-      - self-provisioners
-    resources:
-      - clusterrolebindings
-    verbs:
-      - '*'
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: remove-self-provisioning
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: remove-self-provisioning
-subjects:
-  - kind: ServiceAccount
-    name: remove-self-provisioning
-    namespace: syn-espejote
----
-apiVersion: espejote.io/v1alpha1
-kind: ManagedResource
-metadata:
-  name: remove-self-provisioning
-  namespace: syn-espejote
-spec:
-  applyOptions:
-    force: true
-  serviceAccountRef:
-    name: remove-self-provisioning
-  template: |-
-    {
-        "apiVersion": "rbac.authorization.k8s.io/v1",
-        "kind": "ClusterRoleBinding",
-        "metadata": {
-            "name": "self-provisioners"
-        },
-        "subjects": []
-    }
-  triggers:
-    - name: clusterrolebinding
-      watchResource:
-        apiVersion: rbac.authorization.k8s.io/v1
-        kind: ClusterRoleBinding
-        name: self-provisioners
+parameters:
+  openshift4_authentication:
+    selfProvisionerGroups:
+      - ~system:authentication:oauth <1>
 ----
+<1> By prefixing the group name with `~`, the component removes it from the final rendered list of `selfProvisionerGroups`.
++
+TIP: You can add this configuration in the tenant repo's `openshift4.yml` (or similar) if you want to disable project self-provisioning for all clusters of a tenant.
 
-Roll out this patch and verify it applies. This disables self-provisioning for general authenticated users.
+. Commit and push the change to apply it on the clusters
+
+. Once the rollout is complete, you can verify that the change has been applied by checking who can create `projectrequests`.
++
+[source,bash]
+----
+export KUBECONFIG=/path/to/target-cluster.kubeconfig
+oc adm policy who-can create projectcrequest | grep system:authenticated:oauth <1>
+----
+<1> This command should produce no output if the change was applied correctly.

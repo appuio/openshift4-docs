@@ -2,6 +2,35 @@
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 
+== OpenShift 4.21
+
+OpenShift version 4.21 is available since 2025-11-11.
+This version is based on Kubernetes 1.34 and CRI-O 1.34.
+The RHCOS image still uses RHEL 9.6 packages.
+Find the release notes in the upstream documentation at https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html/release_notes/ocp-4-21-release-notes[OpenShift Container Platform 4.21 release notes].
+The https://www.redhat.com/en/blog/achieve-more-red-hat-openshift-421[Achieve more with Red Hat OpenShift 4.21] blog post is also a valuable resource.
+
+OpenShift Autoscaling gains new capabilities::
+OpenShift 4.21 improves autoscaling. 
+The Cluster Resource Override Operator, Cluster Autoscaler, Vertical Pod Autoscaler, and Horizontal Pod Autoscaler now include network policies that restrict Operator and operand pod traffic to explicitly allowed communication only. 
+The Vertical Pod Autoscaler can also use `InPlaceOrRecreate` mode to apply resource recommendations without recreating pods where possible, falling back to pod recreation when needed. 
+In addition, the Cluster Autoscaler can now be configured to cordon nodes before draining and removing them, giving administrators safer control over scale-down operations.
+
+Linux PSI monitoring is now available::
+Linux Pressure Stall Information is a kernel feature that measures how much time tasks spend stalled because they can't get CPU, memory, or I/O when they need it. 
+This will be helpful to detect clusters at risk of overload, especially in shared environments.
+
+The default `openshift` cluster image policy is now generally available::
+The default `openshift` cluster image policy is now GA and enabled by default. 
+Clusters upgrading from OCP 4.20 or earlier that already have a custom `ClusterImagePolicy` named `openshift` will be marked `Upgradeable=False`. 
+Rename or recreate the custom policy under a different name, then remove the old openshift policy before upgrading. https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/nodes/#nodes-sigstore-using[You can find more information here.]
+
+
+End of support for vSphere 7::
+Broadcom has ended general support for VMware vSphere 7 and VMware Cloud Foundation (VCF) 4. 
+If your existing OpenShift Container Platform cluster is running on either of these platforms, you must plan to migrate or upgrade your VMware infrastructure to a supported version.
+
+
 == OpenShift 4.20
 
 OpenShift version 4.20 is available since 2025-11-11.
@@ -59,58 +88,3 @@ The following APIs are no longer available in Kubernetes 1.32 and need to be mig
 * `ValidatingWebhookConfiguration` needs to be migrated from `admissionregistration.k8s.io/v1beta1` to `admissionregistration.k8s.io/v1`.
 +
 For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/release_notes/ocp-4-20-release-notes#ocp-4-20-removed-kube-apis_release-notes[APIs removed from Kubernetes 1.33].
-
-== OpenShift 4.19
-
-OpenShift version 4.19 is available since 2025-06-17.
-This version is based on Kubernetes 1.32 and CRI-O 1.32.
-The RHCOS image uses RHEL 9.6 packages.
-Find the release notes in the upstream documentation at https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/release_notes/ocp-4-19-release-notes[OpenShift Container Platform 4.19 release notes].
-The https://www.redhat.com/en/blog/red-hat-openshift-419-accelerates-virtualization-and-enterprise-ai-innovation[Red Hat unveils OpenShift 4.19] blog post is also a valuable resource.
-
-Routes with externally managed certificates are becoming Generally Available::
-With this release, OpenShift Container Platform routes can be configured with third-party certificate management solutions, utilizing the `.spec.tls.externalCertificate` field in the route API.
-In this way, an externally managed TLS certificate can be referenced through secrets.
-+
-For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/ingress_and_load_balancing/index#nw-ingress-route-secret-load-external-cert_secured-routes[Creating a route with externally managed certificate].
-
-Gateway API support for configuring cluster ingress traffic is becoming Generally Available::
-With this release, ingress cluster traffic can be managed using Gateway API resources.
-Gateway API provides a robust networking solution within the transport layer, L4, and the application layer, L7, for OpenShift Container Platform clusters using a standardized open source ecosystem.
-+
-For further information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/ingress_and_load_balancing/#ingress-gateway-api[Gateway API with OpenShift Container Platform networking].
-
-The Control Plane now supports TLS 1.3 and the Modern TLS security profile::
-For further information see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/security_and_compliance/#tls-profiles-kubernetes-configuring_tls-security-profiles[Configuring the TLS security profile for the control plane].
-
-Customization options for control plane machine names::
-This release enables specifying a prefix for machine names in the control plane machine set by setting `spec.machineNamePrefix` in the `ControlPlaneMachineSet` resource.
-+
-For further information see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html-single/machine_management/#cpmso-config-prefix_cpmso-configuration[Adding a custom prefix to control plane machine names].
-
-New CLI command to show PVC usage::
-
-With 4.19, the `oc` CLI supports a new admin command to see PVC usage: `oc adm top pvc`
-
-Major version upgrade for Prometheus::
-In this release, Prometheus is upgraded from v2 to v3.
-This incurs some breaking changes that may affect user-managed configuration.
-+
-* The `le` and `quantile` labels for classic histograms and summaries are now normalized during ingestion.
-+
-For instance, `le="10"` is ingested as `le="10.0"` - as a result, queries that reference these labels as integers may no longer work as intended.
-* Configurations that send alerts to additional Alertmanager instances through `additionalAlertmanagerConfigs` through the Alertmanager v1 API are no longer supported.
-
-cgroup v1 is removed::
-
-With 4.19, support for the deprecated cgroup v1 mode is dropped entirely.
-
-Removal of deprecated APIs in Kubernetes 1.32::
-
-The following APIs are no longer available in Kubernetes 1.32 and need to be migrated:
-* `FlowSchema` needs to be migrated from `flowcontrol.apiserver.k8s.io/v1beta3` to `flowcontrol.apiserver.k8s.io/v1`
-* `PriorityLevelConfiguration` needs to be migrated from `flowcontrol.apiserver.k8s.io/v1beta3` to `flowcontrol.apiserver.k8s.io/v1`.
-+
-This migration includes one notable change in the `spec.limited.nominalConcurrencyShares` field, which now only defaults to `30` when unspecified - an explicit value of `0` is left unchanged.
-+
-For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/release_notes/ocp-4-19-release-notes#ocp-4-19-removed-kube-1-32-apis_release-notes[APIs removed from Kubernetes 1.32].

@@ -15,7 +15,7 @@ OpenShift 4.21 improves autoscaling. The Cluster Resource Override Operator, Clu
 In addition, the Cluster Autoscaler can now be configured to cordon nodes before draining and removing them, giving administrators safer control over scale-down operations.
 
 Linux PSI monitoring is now available::
-Linux Pressure Stall Information is a kernel feature that measures how much time tasks spend stalled because they cannot get CPU, memory, or I/O when they need it. This will be helpful to detect clusters at risk of overload, especially in shared environments.
+Linux Pressure Stall Information is a kernel feature that measures how much time tasks spend stalled because they can't get CPU, memory, or I/O when they need it. This will be helpful to detect clusters at risk of overload, especially in shared environments.
 
 The default `openshift` cluster image policy is now generally available::
 Default `openshift` cluster image policy is now GA and enabled by default. Clusters upgrading from OCP 4.20 or earlier that already have a custom `ClusterImagePolicy` named `openshift` will be marked `Upgradeable=False`. Rename or recreate the custom policy under a different name, then remove the old openshift policy before upgrading. https://docs.redhat.com/en/documentation/openshift_container_platform/4.21/html-single/nodes/#nodes-sigstore-using[You can find more information here.]
@@ -23,8 +23,6 @@ Default `openshift` cluster image policy is now GA and enabled by default. Clust
 
 End of support for vSphere 7::
 Broadcom has ended general support for VMware vSphere 7 and VMware Cloud Foundation (VCF) 4. If your existing OpenShift Container Platform cluster is running on either of these platforms, you must plan to migrate or upgrade your VMware infrastructure to a supported version.
-
-
 
 
 == OpenShift 4.20

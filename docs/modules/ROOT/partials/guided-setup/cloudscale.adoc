@@ -1,14 +1,14 @@
 == Workflow
 
 * <<step-1,Given I have all prerequisites installed>>
-* &nbsp;&nbsp;<<step-2,And I download the `openshift-install` binary for version "4.20">>
+* &nbsp;&nbsp;<<step-2,And I download the `openshift-install` binary for version "4.21">>
 * &nbsp;&nbsp;<<step-3,And a lieutenant cluster>>
 * &nbsp;&nbsp;<<step-4,And a Keycloak service>>
 * &nbsp;&nbsp;<<step-5,And Cloudscale API tokens>>
 * &nbsp;&nbsp;<<step-6,And a personal VSHN GitLab access token>>
 * &nbsp;&nbsp;<<step-7,And a control.vshn.net Servers API token>>
 * &nbsp;&nbsp;<<step-8,And basic cluster information>>
-* <<step-9,Then I download the OpenShift image for version "4.20.0">>
+* <<step-9,Then I download the OpenShift image for version "4.21.0">>
 * &nbsp;&nbsp;<<step-10,And I set up required S3 buckets>>
 * &nbsp;&nbsp;<<step-11,And I import the image in Cloudscale>>
 * <<step-12,Then I set secrets in Vault>>
@@ -93,7 +93,7 @@ echo "✅ All prerequisites are met."
 ----
 
 [[step-2]]
-=== And I download the `openshift-install` binary for version "4.20"
+=== And I download the `openshift-install` binary for version "4.21"
 
 This step downloads the `openshift-install` binary for the specified OpenShift version.
 
@@ -442,7 +442,7 @@ echo "Pull secret appears legit."
 ----
 
 [[step-9]]
-=== Then I download the OpenShift image for version "4.20.0"
+=== Then I download the OpenShift image for version "4.21.0"
 
 This step downloads the OpenShift image for the version specified by in the step.
 
@@ -1052,7 +1052,7 @@ mc alias set \
 mc cp "${installer_dir}/bootstrap.ign" "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition/"
 
 ignition_bootstrap=$(mc share download \
-  --json --expire=4h \
+  --json --expire=24h \
   "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition/bootstrap.ign" | jq -r '.share')
 
 env -i "ignition_bootstrap=$ignition_bootstrap" >> "$OUTPUT"
@@ -2233,7 +2233,7 @@ echo "If you need to debug things on the cluster, run:"
 echo "export KUBECONFIG=${INPUT_kubeconfig_path}2"
 echo
 export KUBECONFIG="${INPUT_kubeconfig_path}2"
-kubectl wait --for condition=ready certificate/api-server-cluster-certificate-default
+kubectl wait -n openshift-config --for condition=ready certificate/api-server-cluster-certificate-default
 echo "Waiting for all kube-apiserver instances to be updated ..."
 kubectl wait --for condition=progressing=false --timeout=15m co kube-apiserver
 

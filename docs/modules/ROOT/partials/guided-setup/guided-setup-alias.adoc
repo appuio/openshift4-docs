@@ -77,6 +77,7 @@ guided-setup-base() {
     --volume "${HOME}/.gitconfig:/app/.gitconfig:ro" \
     --volume "${HOME}/.cache:/app/.cache" \
     --volume "${XDG_CONFIG_HOME:-~/.config}/gandalf:/app/.config/gandalf" \
+    --volume "${XDG_CONFIG_HOME:-~/.config}/io.vshn.kharon:/app/.config/io.vshn.kharon" \
     --volume "${docker_path}":/var/run/docker.sock \
     "${sshop_volumes[@]}" \
     "${ecr_volume[@]}" \

@@ -27,7 +27,6 @@
 * &nbsp;&nbsp;<<step-25,And I delete the cluster's OpsGenie heartbeat>>
 * &nbsp;&nbsp;<<step-26,And I delete the cluster from Lieutenant>>
 * &nbsp;&nbsp;<<step-27,And I delete the Keycloak service>>
-* &nbsp;&nbsp;<<step-28,And I remove the cluster from openshift4-clusters>>
 
 [[step-1]]
 === Given I have all prerequisites installed
@@ -70,7 +69,7 @@ if which aws >/dev/null 2>&1 ; then { echo "✅ aws (AWS CLI) is installed."; } 
 
 if which restic >/dev/null 2>&1 ; then { echo "✅ restic (Backup CLI) is installed."; } ; else { echo "❌ restic (Backup CLI) is not installed. Please install restic to proceed."; exit 1; } ; fi
 
-if which emergency-credentials-receive >/dev/null 2>&1 ; then { echo "✅ emergency-credentials-receive (Cluster emergency access helper) is installed."; } ; else { echo "❌ emergency-credentials-receive is not installed. Please install it from https://github.com/vshn/emergency-credentials-receive ."; exit 1; } ; fi
+if which kharon >/dev/null 2>&1 ; then { echo "✅ kharon (Cluster access helper) is installed."; } ; else { echo "❌ kharon is not installed. Please install it from https://github.com/vshn/kharon ."; exit 1; } ; fi
 
 if which commodore >/dev/null 2>&1 ; then { echo "✅ commodore (Project Syn) is installed."; } ; else { echo "❌ commodore (Project Syn) is not installed. Please install it with 'uv tool install syn-commodore && commodore tool install --missing' ."; exit 1; } ; fi
 
@@ -314,11 +313,6 @@ This step ensures the emergency credentials for the cluster have been retrieved
 
 ==== Inputs
 
-* `cluster_domain`: Domain of the cluster - the part after `api` or `apps`, respectively.
-
-Usually of the form `<CLUSTER_ID>.<BASE_DOMAIN>`
-
-
 * `passbolt_passphrase`: Your password for Passbolt.
 
 This is required to access the encrypted emergency credentials.
@@ -336,16 +330,15 @@ This is required to access the encrypted emergency credentials.
 ----
 OUTPUT=$(mktemp)
 
-# export INPUT_cluster_domain=
 # export INPUT_passbolt_passphrase=
 # export INPUT_commodore_cluster_id=
 
 set -euo pipefail
-export EMR_KUBERNETES_ENDPOINT=https://api.${INPUT_cluster_domain}:6443
-export EMR_PASSPHRASE="${INPUT_passbolt_passphrase}"
-emergency-credentials-receive "${INPUT_commodore_cluster_id}"
-
+export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
 export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
+kharon update
+kharon emergency-credentials "${INPUT_commodore_cluster_id}"
+
 kubectl get nodes
 
 env -i "kubeconfig_path=$(pwd)/em-${INPUT_commodore_cluster_id}" >> "$OUTPUT"
@@ -1476,59 +1469,6 @@ echo '##########################################################################
 echo
 echo You can go to https://control.vshn.net/vshn/services/${INPUT_commodore_cluster_id}/delete
 sleep 2
-
-
-# echo "# Outputs"
-# cat "$OUTPUT"
-# rm -f "$OUTPUT"
-
-----
-
-[[step-28]]
-=== And I remove the cluster from openshift4-clusters
-
-This step removes the cluster from https://git.vshn.net/vshn/openshift4-clusters
-
-==== Inputs
-
-* `commodore_cluster_id`
-* `gitlab_api_token`
-
-==== Script
-
-[source,bash]
-----
-OUTPUT=$(mktemp)
-
-# export INPUT_commodore_cluster_id=
-# export INPUT_gitlab_api_token=
-
-set -euo pipefail
-if [ -e openshift4-clusters ]
-then
-  rm -rf openshift4-clusters
-fi
-git clone git@git.vshn.net:vshn/openshift4-clusters.git
-pushd openshift4-clusters
-
-git rm -rf "${INPUT_commodore_cluster_id}" || true
-
-if git diff-index --quiet HEAD
-then
-  echo "No changes, skipping commit"
-else
-  git checkout -b "remove-${INPUT_commodore_cluster_id}"
-  git commit -m"Remove ${INPUT_commodore_cluster_id}"
-  git push origin "remove-${INPUT_commodore_cluster_id}"
-
-  auth="PRIVATE-TOKEN: ${INPUT_gitlab_api_token}"
-
-  response=$( curl -s -XPOST -H"$auth" -H"Content-Type: application/json" https://git.vshn.net/api/v4/projects/57660/merge_requests -d'{"source_branch":"'remove-${INPUT_commodore_cluster_id}'","target_branch":"main","title":"Remove cluster '${INPUT_commodore_cluster_id}'"}' )
-  echo
-  echo ">>> Please review and merge the MR at $( echo "$response" | jq -r .web_url )"
-  echo
-fi || true
-popd
 
 
 # echo "# Outputs"

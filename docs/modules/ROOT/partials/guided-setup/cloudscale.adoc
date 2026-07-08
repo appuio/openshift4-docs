@@ -35,8 +35,7 @@
 * &nbsp;&nbsp;<<step-33,And I schedule the first maintenance>>
 * <<step-34,Then I configure apt-dater groups for the LoadBalancers>>
 * &nbsp;&nbsp;<<step-35,And I remove the bootstrap bucket>>
-* &nbsp;&nbsp;<<step-36,And I add the cluster to openshift4-clusters>>
-* &nbsp;&nbsp;<<step-37,And I wait for maintenance to complete>>
+* &nbsp;&nbsp;<<step-36,And I wait for maintenance to complete>>
 
 [[step-1]]
 === Given I have all prerequisites installed
@@ -79,7 +78,7 @@ if which aws >/dev/null 2>&1 ; then { echo "✅ aws (AWS CLI) is installed."; } 
 
 if which restic >/dev/null 2>&1 ; then { echo "✅ restic (Backup CLI) is installed."; } ; else { echo "❌ restic (Backup CLI) is not installed. Please install restic to proceed."; exit 1; } ; fi
 
-if which emergency-credentials-receive >/dev/null 2>&1 ; then { echo "✅ emergency-credentials-receive (Cluster emergency access helper) is installed."; } ; else { echo "❌ emergency-credentials-receive is not installed. Please install it from https://github.com/vshn/emergency-credentials-receive ."; exit 1; } ; fi
+if which kharon >/dev/null 2>&1 ; then { echo "✅ kharon (Cluster access helper) is installed."; } ; else { echo "❌ kharon is not installed. Please install it from https://github.com/vshn/kharon ."; exit 1; } ; fi
 
 if which commodore >/dev/null 2>&1 ; then { echo "✅ commodore (Project Syn) is installed."; } ; else { echo "❌ commodore (Project Syn) is not installed. Please install it with 'uv tool install syn-commodore && commodore tool install --missing' ."; exit 1; } ; fi
 
@@ -2256,7 +2255,6 @@ This step ensures the emergency credentials for the cluster can be retrieved.
 ==== Inputs
 
 * `kubeconfig_path`
-* `cluster_domain`
 * `commodore_cluster_id`
 * `passbolt_passphrase`: Your password for Passbolt.
 
@@ -2275,7 +2273,6 @@ This is required to access the encrypted emergency credentials.
 OUTPUT=$(mktemp)
 
 # export INPUT_kubeconfig_path=
-# export INPUT_cluster_domain=
 # export INPUT_commodore_cluster_id=
 # export INPUT_passbolt_passphrase=
 
@@ -2293,12 +2290,12 @@ do
   echo -n .
 done
 
-export EMR_KUBERNETES_ENDPOINT=https://api.${INPUT_cluster_domain}:6443
-export EMR_PASSPHRASE="${INPUT_passbolt_passphrase}"
-emergency-credentials-receive "${INPUT_commodore_cluster_id}"
+export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
+export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
+kharon update
+kharon emergency-credentials "${INPUT_commodore_cluster_id}"
 
 yq -i e '.clusters[0].cluster.insecure-skip-tls-verify = true' "em-${INPUT_commodore_cluster_id}"
-export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
 kubectl get nodes
 oc whoami | grep system:serviceaccount:appuio-emergency-credentials-controller: || exit 1
 
@@ -2630,108 +2627,6 @@ mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ign
 ----
 
 [[step-36]]
-=== And I add the cluster to openshift4-clusters
-
-This step adds the cluster to https://git.vshn.net/vshn/openshift4-clusters
-
-==== Inputs
-
-* `commodore_cluster_id`
-* `kubeconfig_path`
-* `jumphost_fqdn`: FQDN of the jumphost used to connect to this cluster, if any.
-
-If no jumphost is used, enter "NONE".
-
-
-* `socks5_port`: SOCKS5 port number to use for this cluster, of the form 120XX.
-If the cluster shares a proxy jumphost with another cluster, use the same port.
-If the cluster uses a brand new jumphost, choose a new unique port.
-
-If the cluster does not use a proxy jumphost, enter "NONE".
-
-
-
-==== Script
-
-[source,bash]
-----
-OUTPUT=$(mktemp)
-
-# export INPUT_commodore_cluster_id=
-# export INPUT_kubeconfig_path=
-# export INPUT_jumphost_fqdn=
-# export INPUT_socks5_port=
-
-set -euo pipefail
-if [ -e openshift4-clusters ]
-then
-  rm -rf openshift4-clusters
-fi
-git clone git@git.vshn.net:vshn/openshift4-clusters.git
-pushd openshift4-clusters
-
-if [[ -d "${INPUT_commodore_cluster_id}" ]]
-then
-  echo "Cluster entry already exists - not touching that!"
-  exit 0
-else
-  API_URL=$(yq e '.clusters[0].cluster.server' "${INPUT_kubeconfig_path}")
-
-  mkdir -p "${INPUT_commodore_cluster_id}"
-  pushd "${INPUT_commodore_cluster_id}"
-  ln -s ../base_envrc .envrc
-  cat >.connection_facts <<EOF
-API=${API_URL}
-EOF
-  popd
-
-  port="$( echo "${INPUT_socks5_port}" | tr '[:upper:]' '[:lower:]' )"
-  jumphost="$( echo "${INPUT_jumphost_fqdn}" | tr '[:upper:]' '[:lower:]' )"
-
-  if [[ "$port" != "none" ]] && [[ "$jumphost" != "none" ]]
-  then
-    cat >> "${INPUT_commodore_cluster_id}/.connection_facts" <<EOF
-JUMPHOST=${INPUT_jumphost_fqdn}
-SOCKS5_PORT=${INPUT_socks5_port}
-EOF
-    python foxyproxy_generate.py
-  fi
-
-  git add --force "${INPUT_commodore_cluster_id}"
-  git add .
-
-  if git diff-index --quiet HEAD
-  then
-    echo "No changes, skipping commit"
-  else
-    git commit -am "Add cluster ${INPUT_commodore_cluster_id}"
-  fi || true
-fi
-popd
-
-echo
-echo '#########################################################'
-echo '#                                                       #'
-echo '#  Please test the cluster connection, and if it works  #'
-echo '#  as expected, push the commit to the repository.      #'
-echo '#                                                       #'
-echo '#########################################################'
-echo
-echo "Run the following:"
-echo "cd $(pwd)/openshift4-clusters/${INPUT_commodore_cluster_id}"
-echo "direnv allow ."
-echo "direnv exec . oc whoami"
-echo "git push origin main   # only if everything is OK"
-sleep 2
-
-
-# echo "# Outputs"
-# cat "$OUTPUT"
-# rm -f "$OUTPUT"
-
-----
-
-[[step-37]]
 === And I wait for maintenance to complete
 
 This step waits for the first maintenance to complete, and then removes the

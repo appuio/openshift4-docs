@@ -1,7 +1,7 @@
 == Workflow
 
 * <<step-1,Given I have all prerequisites installed>>
-* &nbsp;&nbsp;<<step-2,And I download the `openshift-install` binary for version "4.20">>
+* &nbsp;&nbsp;<<step-2,And I download the `openshift-install` binary for version "4.21">>
 * &nbsp;&nbsp;<<step-3,And a lieutenant cluster>>
 * &nbsp;&nbsp;<<step-4,And a Keycloak service>>
 * &nbsp;&nbsp;<<step-5,And Exoscale API tokens>>
@@ -11,7 +11,7 @@
 * <<step-9,Then I check the Exoscale resource quotas>>
 * <<step-10,Then I create the necessary Exoscale IAM keys>>
 * &nbsp;&nbsp;<<step-11,And I set up required S3 buckets>>
-* <<step-12,Then I download the OpenShift image for version "4.20.0">>
+* <<step-12,Then I download the OpenShift image for version "4.21.0">>
 * &nbsp;&nbsp;<<step-13,And I patch the OpenShift image>>
 * &nbsp;&nbsp;<<step-14,And I import the image in Exoscale>>
 * <<step-15,Then I set secrets in Vault>>
@@ -104,7 +104,7 @@ echo "✅ All prerequisites are met."
 ----
 
 [[step-2]]
-=== And I download the `openshift-install` binary for version "4.20"
+=== And I download the `openshift-install` binary for version "4.21"
 
 This step downloads the `openshift-install` binary for the specified OpenShift version.
 
@@ -690,7 +690,7 @@ fi
 ----
 
 [[step-12]]
-=== Then I download the OpenShift image for version "4.20.0"
+=== Then I download the OpenShift image for version "4.21.0"
 
 This step downloads the OpenShift image for the version specified by in the step.
 
@@ -851,7 +851,7 @@ exo storage upload "${INPUT_patched_image_path}" "sos://${INPUT_commodore_cluste
 sleep 3
 
 exo compute instance-template register "rhcos-${RHCOS_VERSION}" \
-  "https://${INPUT_exoscale_s3_endpoint}/${INPUT_commodore_cluster_id}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2" \
+  "https://${INPUT_exoscale_s3_endpoint}/${INPUT_commodore_cluster_id}-bootstrap/${INPUT_patched_image_path}" \
   "$(md5sum ${INPUT_patched_image_path} | awk '{ print $1 }')" \
   --zone "${INPUT_csp_region}" \
   --boot-mode uefi \
@@ -859,7 +859,7 @@ exo compute instance-template register "rhcos-${RHCOS_VERSION}" \
   --username core \
   --description "Red Hat Enterprise Linux CoreOS (RHCOS) ${RHCOS_VERSION}"
 
-exo storage delete -f "sos://${CLUSTER_ID}-bootstrap/rhcos-${RHCOS_VERSION}.qcow2"
+exo storage delete -f "sos://${INPUT_commodore_cluster_id}-bootstrap/${INPUT_patched_image_path}"
 
 export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
 
@@ -2451,6 +2451,7 @@ This step ensures the emergency credentials for the cluster can be retrieved.
 
 * `kubeconfig_path`
 * `commodore_cluster_id`
+* `commodore_api_url`
 * `passbolt_passphrase`: Your password for Passbolt.
 
 This is required to access the encrypted emergency credentials.
@@ -2469,6 +2470,7 @@ OUTPUT=$(mktemp)
 
 # export INPUT_kubeconfig_path=
 # export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
 # export INPUT_passbolt_passphrase=
 
 set -euo pipefail
@@ -2487,8 +2489,8 @@ done
 
 export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
 export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
-kharon update
-kharon emergency-credentials "${INPUT_commodore_cluster_id}"
+kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json
+kharon emergency-credentials "${INPUT_commodore_cluster_id}" --inventory-file kharon-inventory.json
 
 yq -i e '.clusters[0].cluster.insecure-skip-tls-verify = true' "em-${INPUT_commodore_cluster_id}"
 kubectl get nodes

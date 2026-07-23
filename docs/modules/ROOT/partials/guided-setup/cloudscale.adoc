@@ -2256,6 +2256,7 @@ This step ensures the emergency credentials for the cluster can be retrieved.
 
 * `kubeconfig_path`
 * `commodore_cluster_id`
+* `commodore_api_url`
 * `passbolt_passphrase`: Your password for Passbolt.
 
 This is required to access the encrypted emergency credentials.
@@ -2274,6 +2275,7 @@ OUTPUT=$(mktemp)
 
 # export INPUT_kubeconfig_path=
 # export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
 # export INPUT_passbolt_passphrase=
 
 set -euo pipefail
@@ -2292,8 +2294,8 @@ done
 
 export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
 export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
-kharon update
-kharon emergency-credentials "${INPUT_commodore_cluster_id}"
+kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json
+kharon emergency-credentials "${INPUT_commodore_cluster_id}" --inventory-file kharon-inventory.json
 
 yq -i e '.clusters[0].cluster.insecure-skip-tls-verify = true' "em-${INPUT_commodore_cluster_id}"
 kubectl get nodes

@@ -319,6 +319,7 @@ This is required to access the encrypted emergency credentials.
 
 
 * `commodore_cluster_id`
+* `commodore_api_url`
 
 ==== Outputs
 
@@ -332,12 +333,13 @@ OUTPUT=$(mktemp)
 
 # export INPUT_passbolt_passphrase=
 # export INPUT_commodore_cluster_id=
+# export INPUT_commodore_api_url=
 
 set -euo pipefail
 export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
 export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
-kharon update
-kharon emergency-credentials "${INPUT_commodore_cluster_id}"
+kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json
+kharon emergency-credentials "${INPUT_commodore_cluster_id}" --inventory-file kharon-inventory.json
 
 kubectl get nodes
 

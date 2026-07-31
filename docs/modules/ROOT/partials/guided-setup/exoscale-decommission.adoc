@@ -11,7 +11,7 @@
 * &nbsp;&nbsp;<<step-9,And I disable Project Syn>>
 * &nbsp;&nbsp;<<step-10,And I delete all Load Balancer services>>
 * &nbsp;&nbsp;<<step-11,And I delete all persistent volumes>>
-* &nbsp;&nbsp;<<step-12,And I prepare the cluster repository>>
+* <<step-12,Then I compile the cluster catalog>>
 * <<step-13,Then I save the loadbalancer metadata>>
 * &nbsp;&nbsp;<<step-14,And I downtime the loadbalancers in icinga>>
 * &nbsp;&nbsp;<<step-15,And I decommission Terraform resources>>
@@ -550,19 +550,14 @@ sleep 2
 ----
 
 [[step-12]]
-=== And I prepare the cluster repository
+=== Then I compile the cluster catalog
 
-This step prepares the local cluster repository by cloning the Commodore hieradata repository
-and setting up the necessary configuration for the specified cluster.
+This step compiles the catalog to ensure you have a local checkout of the cluster repository
+during decommissioning.
 
 ==== Inputs
 
-* `commodore_api_url`
 * `commodore_cluster_id`
-* `commodore_tenant_id`
-* `cluster_domain`
-* `image_major`
-* `image_minor`
 
 ==== Script
 
@@ -570,57 +565,10 @@ and setting up the necessary configuration for the specified cluster.
 ----
 OUTPUT=$(mktemp)
 
-# export INPUT_commodore_api_url=
 # export INPUT_commodore_cluster_id=
-# export INPUT_commodore_tenant_id=
-# export INPUT_cluster_domain=
-# export INPUT_image_major=
-# export INPUT_image_minor=
 
 set -euo pipefail
-
-export COMMODORE_API_URL="${INPUT_commodore_api_url}"
-
-rm -rf inventory/classes/
-mkdir -p inventory/classes/
-git clone "$(curl -sH"Authorization: Bearer $(commodore fetch-token)" "${INPUT_commodore_api_url}/tenants/${INPUT_commodore_tenant_id}" | jq -r '.gitRepo.url')" inventory/classes/${INPUT_commodore_tenant_id}
-
-pushd "inventory/classes/${INPUT_commodore_tenant_id}/"
-
-yq eval -i ".parameters.openshift.baseDomain = \"${INPUT_cluster_domain}\"" \
-  ${INPUT_commodore_cluster_id}.yml
-
-git diff --exit-code --quiet || git commit -a -m "Configure cluster domain for ${INPUT_commodore_cluster_id}"
-
-if ls openshift4.y*ml 1>/dev/null 2>&1; then
-  yq eval -i '.classes += ".openshift4"' ${INPUT_commodore_cluster_id}.yml;
-  git diff --exit-code --quiet || git commit -a -m "Include openshift4 class for ${INPUT_commodore_cluster_id}"
-fi
-
-yq eval -i '.applications += ["exoscale-cloud-controller-manager"]' ${INPUT_commodore_cluster_id}.yml
-yq eval -i '.applications = (.applications | unique)' ${INPUT_commodore_cluster_id}.yml
-git diff --exit-code --quiet || git commit -a -m "Deploy Exoscale cloud-controller-manager on ${INPUT_commodore_cluster_id}"
-
-
-yq eval -i '.applications += ["cilium"]' ${INPUT_commodore_cluster_id}.yml
-yq eval -i '.applications = (.applications | unique)' ${INPUT_commodore_cluster_id}.yml
-
-yq eval -i '.parameters.openshift.infraID = "TO_BE_DEFINED"' ${INPUT_commodore_cluster_id}.yml
-yq eval -i '.parameters.openshift.clusterID = "TO_BE_DEFINED"' ${INPUT_commodore_cluster_id}.yml
-
-yq eval -i '.parameters.cilium.olm.generate_olm_deployment = true' ${INPUT_commodore_cluster_id}.yml
-
-git diff --exit-code --quiet || git commit -a -m "Add Cilium addon to ${INPUT_commodore_cluster_id}"
-
-git push
-
-popd
-
-commodore catalog compile ${INPUT_commodore_cluster_id} --push \
-  --dynamic-fact kubernetesVersion.major=1 \
-  --dynamic-fact kubernetesVersion.minor="$((INPUT_image_minor+13))" \
-  --dynamic-fact openshiftVersion.Major=${INPUT_image_major} \
-  --dynamic-fact openshiftVersion.Minor=${INPUT_image_minor}
+commodore catalog compile ${INPUT_commodore_cluster_id}
 
 
 # echo "# Outputs"
@@ -1036,7 +984,7 @@ then
 fi
 
 # proceed with deleting the backup bucket
-exo storage rb -r -f "${INPUT_commodore_cluster_id}-backup" || true
+exo storage rb -r -f "${INPUT_commodore_cluster_id}-cluster-backup" || true
 
 
 # echo "# Outputs"
@@ -1095,7 +1043,13 @@ In this step you need to remove the LoadBalancer servers from control.vshn.net
 
 * `lb_fqdn_1`
 * `lb_fqdn_2`
-* `control_vshn_api_token`
+* `control_vshn_api_token`: Your personal token for the control.vshn.net Servers API.
+Be extra careful with the IP allowlist.
+
+If you can't be bothered to find/make one, put in a bogus value.
+The spell will then guide you to manually delete the definitions.
+
+
 
 ==== Script
 
@@ -1108,9 +1062,27 @@ OUTPUT=$(mktemp)
 # export INPUT_control_vshn_api_token=
 
 set -euo pipefail
-echo "Deleting server definitions ..."
-curl -XDELETE -H"$AUTH" https://control.vshn.net/api/servers/1/appuio/${INPUT_lb_fqdn_1}
-curl -XDELETE -H"$AUTH" https://control.vshn.net/api/servers/1/appuio/${INPUT_lb_fqdn_2}
+
+AUTH="X-AccessToken: ${INPUT_control_vshn_api_token}"
+
+code="$( curl -H"$AUTH" https://control.vshn.net/api/servers/1/appuio/ -o /dev/null -w"%{http_code}" )"
+if [[ "$code" != 200 ]]
+then
+  echo '###################################################################################'
+  echo '#                                                                                 #'
+  echo "#  Please manually delete the cluster's LoadBalancer servers before proceeding.   #"
+  echo '#                                                                                 #'
+  echo '###################################################################################'
+  echo
+  echo You can go to:
+  echo https://control.vshn.net/servers/definitions/appuio/${INPUT_lb_fqdn_1}/delete
+  echo https://control.vshn.net/servers/definitions/appuio/${INPUT_lb_fqdn_2}/delete
+  sleep 2
+  exit 0
+fi
+
+curl -XDELETE -H"$AUTH" https://control.vshn.net/api/servers/1/_/"${INPUT_lb_fqdn_1}"
+curl -XDELETE -H"$AUTH" https://control.vshn.net/api/servers/1/_/"${INPUT_lb_fqdn_2}"
 echo "Server definitions deleted."
 
 
@@ -1152,9 +1124,9 @@ OUTPUT=$(mktemp)
 set -euo pipefail
 echo "# Clearing encdata caches ... #"
 # shellcheck disable=2029
-ssh nfs1.ch1.puppet.vshn.net "sudo rm /srv/nfs/export/puppetserver-puppetserver-enc-cache-pvc-*/${INPUT_lb_fqdn_1}.yaml" || true
+ssh master8.puppet.vshn.net "sudo rm /etc/puppetlabs/code/enc/${INPUT_lb_fqdn_1}.yaml" || true
 # shellcheck disable=2029
-ssh nfs1.ch1.puppet.vshn.net "sudo rm /srv/nfs/export/puppetserver-puppetserver-enc-cache-pvc-*/${INPUT_lb_fqdn_2}.yaml" || true
+ssh master8.puppet.vshn.net "sudo rm /etc/puppetlabs/code/enc/${INPUT_lb_fqdn_2}.yaml" || true
 echo "# Cleared encdata caches. #"
 echo
 echo "# Cleaning up LBs in icinga ... #"
@@ -1226,13 +1198,13 @@ for lb in "${INPUT_lb_fqdn_1}" "${INPUT_lb_fqdn_2}"
 do
   for backup_server in "${INPUT_lb_backup_1}" "${INPUT_lb_backup_2}"
   do
-    # shellcheck disable=2029
-    ssh "$backup_server" "sudo rm /var/lib/burp/CA/${lb}.crt" || true
-    # shellcheck disable=2029
-    ssh "$backup_server" "sudo rm /var/lib/burp/CA/${lb}.csr" || true
+    # shellcheck disable=2029,2015
+    ssh "$backup_server" "sudo rm /var/lib/burp/CA/${lb}.crt" && echo "Deleted ${lb}.crt from ${backup_server}." || true
+    # shellcheck disable=2029,2015
+    ssh "$backup_server" "sudo rm /var/lib/burp/CA/${lb}.csr" && echo "Deleted ${lb}.csr from ${backup_server}." || true
     backup="/var/lib/burp/${lb}"
-    # shellcheck disable=2029
-    ssh "$backup_server" "sudo rm -rf ${backup}" || true
+    # shellcheck disable=2029,2015
+    ssh "$backup_server" "sudo rm -rf ${backup}" && echo "Deleted backup for ${lb} (if it existed) from ${backup_server}." || true
   done
 done
 echo "# Deleted backups from Burp server. #"

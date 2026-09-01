@@ -557,6 +557,7 @@ during decommissioning.
 
 ==== Inputs
 
+* `commodore_api_url`
 * `commodore_cluster_id`
 
 ==== Script
@@ -565,9 +566,11 @@ during decommissioning.
 ----
 OUTPUT=$(mktemp)
 
+# export INPUT_commodore_api_url=
 # export INPUT_commodore_cluster_id=
 
 set -euo pipefail
+export COMMODORE_API_URL="${INPUT_commodore_api_url}"
 commodore catalog compile ${INPUT_commodore_cluster_id}
 
 

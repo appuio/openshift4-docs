@@ -204,13 +204,15 @@ if echo "$tenant_id" | grep 't-' >/dev/null 2>&1 ; then { echo "✅ Retrieved te
 env -i "commodore_tenant_id=$tenant_id" >> "$OUTPUT"
 
 region=$(curl -sH "Authorization: Bearer $(commodore fetch-token)" ${COMMODORE_API_URL}/clusters/${INPUT_commodore_cluster_id} | jq -r .facts.region)
-if test -z "$region" && test "$region" != "null" ; then { echo "❌ Failed to retrieve CSP region for cluster ID '$INPUT_commodore_cluster_id'."; exit 1; } ; else { echo "✅ Retrieved CSP region '$region' for cluster ID '$INPUT_commodore_cluster_id'."; } ; fi
+if test -z "$region" || test "$region" == "null" ; then { echo "❌ Failed to retrieve CSP region for cluster ID '$INPUT_commodore_cluster_id'."; exit 1; } ; else { echo "✅ Retrieved CSP region '$region' for cluster ID '$INPUT_commodore_cluster_id'."; } ; fi
 env -i "csp_region=$region" >> "$OUTPUT"
 
 echo "Retrieving Vault address and login method..."
 vault_addr=$(curl -s "${COMMODORE_API_URL}" | jq -r '.vault.addr')
+if test -z "$vault_addr" || test "$vault_addr" == "null"; then echo "❌ Failed to retrieve Vault address from Lieutenant at '${COMMODORE_API_URL}'."; exit 1; else echo "✅ Retrieved Vault address '${vault_addr}' for Lieutenant at '${COMMODORE_API_URL}'."; fi
 env -i "vault_address=${vault_addr}" >> "$OUTPUT"
 vault_login_method=$(curl -s "${COMMODORE_API_URL}" | jq -r '.vault.loginMethod')
+if test -z "$vault_login_method" || test "$vault_login_method" == "null"; then echo "❌ Failed to retrieve Vault login method from Lieutenant at '${COMMODORE_API_URL}'."; exit 1; else echo "✅ Retrieved Vault login method '${vault_login_method}' for Lieutenant at '${COMMODORE_API_URL}'."; fi
 env -i "vault_login_method=${vault_login_method}" >> "$OUTPUT"
 
 
@@ -631,19 +633,24 @@ set -euo pipefail
 
 auth_header="Authorization: Bearer ${INPUT_cloudscale_token}"
 image_slug="rhcos-${INPUT_image_major}.${INPUT_image_minor}"
-existing_zone=
 
+target_zones=$(jq -n -r --arg zone "${INPUT_csp_region}1" '[$zone]')
 # NOTE(sg): The value of zones is a space-separated list of zones where
 # the image with the given slug exists or the empty string if the image
 # doesn't exist in any zone.
-zones=$(curl -sH "$auth_header" https://api.cloudscale.ch/v1/custom-images | \
-  jq --arg slug "$image_slug" -r '.[] | select(.slug == $slug) | [.zones[]|.slug]|join(" ")')
+images_resp=$(curl -fsSL -H "$auth_header" https://api.cloudscale.ch/v1/custom-images)
+zones=$(jq -n -r --argjson resp "$images_resp" --arg slug "$image_slug" \
+  '$resp[] | select(.slug == $slug) | [.zones[]|.slug]|join(" ")')
+old_image_href=
 if [ -n "$zones" ] && [[ "$zones" == *"${INPUT_csp_region}1"* ]]; then
-  echo "Image '$image_slug' already exists in Cloudscale ${INPUT_csp_region}, skipping upload."
+  echo "✅ Image '$image_slug' already exists in cloudscale zone ${INPUT_csp_region}, skipping upload."
   exit 0
 elif [ -n "$zones" ]; then
-  echo "Image 'rhcos-${INPUT_image_major}.${INPUT_image_minor}' already exists in Cloudscale ${zones}, configuring multi-zone image upload"
-  existing_zone="-Fzones=${zones}"
+  echo "Image '$image_slug' already exists in cloudscale zone(s) '${zones}', configuring multi-zone image upload"
+  old_image_href=$(jq -n -r --argjson resp "$images_resp" --arg slug "$image_slug" \
+    '$resp[] |select(.slug == $slug) | .href')
+  target_zones=$(jq -n -r --argjson zones "$target_zones" \
+    --arg zone "$INPUT_csp_region}1" '$zones + [$zone]')
 fi
 
 mc alias set \
@@ -659,16 +666,70 @@ mc anonymous set download "${INPUT_commodore_cluster_id}/${INPUT_commodore_clust
 
 echo "Importing image into Cloudscale..."
 
-curl -i -H "$auth_header" \
-  -F url="$(mc share download --json "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition/rhcos-${INPUT_image_major}.${INPUT_image_minor}.qcow2" | jq -r .url)" \
-  -F name="RHCOS ${INPUT_image_major}.${INPUT_image_minor}" \
-  -F zones="${INPUT_csp_region}1" "${existing_zone}" \
-  -F slug="rhcos-${INPUT_image_major}.${INPUT_image_minor}" \
-  -F source_format=qcow2 \
-  -F user_data_handling=pass-through \
-  https://api.cloudscale.ch/v1/custom-images/import
+import_req=$(jq -n -r \
+  --argjson zones "$target_zones" \
+  --argjson image_download "$(mc share download --json "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ignition/rhcos-${INPUT_image_major}.${INPUT_image_minor}.qcow2")" \
+  --arg name "RHCOS ${INPUT_image_major}.${INPUT_image_minor}" \
+  --arg image_slug "$image_slug" \
+  '{
+    "slug": $image_slug,
+    "url": $image_download.url,
+    "name": $name,
+    "zones": $zones,
+    "source_format": "raw",
+    "user_data_handling": "pass-through"
+  }')
 
-echo "Image import initiated. ⚠️ TODO: Poll for completion."
+
+import_resp=$(curl -fsSL -H "$auth_header" \
+  https://api.cloudscale.ch/v1/custom-images/import \
+  --json "$import_req")
+
+echo "Waiting for import to complete..."
+import_id=$(jq -n -r --argjson import "$import_resp" '$import.uuid')
+import_done=false
+status="initializing"
+step_exit=0
+while ! $import_done; do
+  import_status_resp=$(curl -fsSL -H "$auth_header" \
+    "https://api.cloudscale.ch/v1/custom-images/import/${import_id}")
+  status=$(jq -n -r --argjson status "$import_status_resp" '$status.status')
+  case "$status" in
+    "started"|"in_progress")
+      echo -n "."
+      import_done=false
+      import_error=
+      ;;
+    "failed")
+      import_done=true
+      import_error="❌ $(jq -n -r --argjson status "$import_status_resp" '$status.error_message')"
+      step_exit=1
+      break
+      ;;
+    "success")
+      import_done=true
+      import_error=
+      break
+      ;;
+    *)
+      import_done=true
+      import_error="⚠️ Unknown import status '${status}', canceling wait for completion, please verify the import status manually!"
+      step_exit=0
+      break
+      ;;
+  esac
+  sleep 5
+done
+echo ""
+
+echo "Import completed with status ${status}"
+if [ -n "$import_error" ]; then
+  echo -e "\n$import_error"
+  exit "$step_exit"
+else
+  echo -e "\n✅ Successfully imported image"
+fi
+sleep 0.1
 
 
 # echo "# Outputs"
@@ -2133,6 +2194,7 @@ if ! kubectl get deploy -n syn steward > /dev/null; then
       echo '###################################################################################'
       echo
       echo 'See https://kb.vshn.ch/corp-tech/projectsyn/explanation/bootstrap-token.html#_resetting_the_bootstrap_token'
+      sleep 0.1
       exit 1
   fi
 
@@ -2142,8 +2204,14 @@ fi
 
 echo "# Waiting for ArgoCD resource to exist ..."
 kubectl wait --for=create crds/argocds.argoproj.io --timeout=5m
-kubectl api-resources --api-group=argoproj.io # to refresh local K8s API cache
-sleep 1 # to prevent race conditions
+
+echo "# Waiting for ArgoCD resource to become ready ..."
+sleep 1
+kubectl wait --for=condition=NamesAccepted=True crd argocds.argoproj.io --timeout=60s
+kubectl wait --for=condition=Established=True crd argocds.argoproj.io --timeout=60s
+
+echo "# Refreshing local Kubernetes API cache ..."
+kubectl api-resources --api-group=argoproj.io
 
 echo "# Waiting for ArgoCD instance to exist ..."
 kubectl wait --for=create argocd/syn-argocd -nsyn --timeout=90s

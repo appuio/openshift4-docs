@@ -2,6 +2,49 @@
 
 TIP: This page lists notable changes in OpenShift releases which we find important. Reading release notes for you as a service.
 
+== OpenShift 4.22
+
+OpenShift version 4.22 is available since 2026-06-09.
+This version is based on Kubernetes 1.35 and CRI-O 1.35.
+The Red Hat CoreOS (RHCOS) image now uses RHEL 9.8 packages.
+
+Find the full release notes in the upstream documentation at https://docs.redhat.com/en/documentation/openshift_container_platform/4.22/html/release_notes/ocp-4-22-release-notes[OpenShift Container Platform 4.22 release notes].
+
+Mount OCI images into pods::
+With OpenShift 4.22, you can mount OCI images as volumes in pods.
+This enables new application patterns where large volumes of static data are distributed in a separate OCI image.
+
+OpenShift ingress operator allows installing experimental Gateway API resources::
+OpenShift 4.22 removes the restriction that prevented any install attempts of Gateway API resources belonging to the experimental channel.
+This gives users more flexibility in adopting Gateway API.
+
+OpenShift zones support for vSphere host groups::
+With OpenShift 4.22, support for mapping OpenShift failure domains to vSphere host groups is generally available.
+This enables seamless usage of the high availability offered by a vSphere stretched cluster configuration.
+
+Nodes can directly boot into a custom machine config pool::
+In previous OpenShift versions, worker nodes always booted into the generic `worker` machine config pool and then needed to be moved to their target machine config pool, which required an additional reboot.
+With OpenShift 4.22, worker nodes can boot directly into their target machine config pool.
+This removes one reboot during node provisioning.
+
+Boot image management::
+On supported infrastructures, the Machine Config Operator monitors the reported boot image version and will block cluster updates if it detects a boot image that it deems "too old."
+Additionally, boot image management for worker nodes is generally available on vSphere.
+This feature automatically updates the node boot image during cluster updates.
+
+.Further notes for technical readers
+[%collapsible]
+====
+runC container runtime is deprecated::
+OpenShift 4.22 deprecates the `runc` container runtime for CRI-O.
+Since all VSHN Managed OpenShift clusters use CRI-O with the default `crun` container runtime, this deprecation doesn't affect our clusters.
+
+RHCOS 10.2 (Technology Preview)::
+OpenShift 4.22 supports RHCOS 10.2 as technology preview.
+We will start testing RHCOS 10 internally, but won't update any customer clusters until RHCOS 10 becomes generally available for OpenShift Container Platform.
+====
+
+
 == OpenShift 4.21
 
 OpenShift version 4.21 is available since 2025-11-11.
@@ -29,62 +72,3 @@ Rename or recreate the custom policy under a different name, then remove the old
 End of support for vSphere 7::
 Broadcom has ended general support for VMware vSphere 7 and VMware Cloud Foundation (VCF) 4. 
 If your existing OpenShift Container Platform cluster is running on either of these platforms, you must plan to migrate or upgrade your VMware infrastructure to a supported version.
-
-
-== OpenShift 4.20
-
-OpenShift version 4.20 is available since 2025-11-11.
-This version is based on Kubernetes 1.33 and CRI-O 1.33.
-The RHCOS image still uses RHEL 9.6 packages.
-Find the release notes in the upstream documentation at https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/release_notes/ocp-4-20-release-notes[OpenShift Container Platform 4.20 release notes].
-The https://www.redhat.com/en/blog/red-hat-openshift-42-what-you-need-to-know[Red Hat unveils OpenShift 4.20] blog post is also a valuable resource.
-
-Custom Identity Providers are becoming Generally Available::
-OpenShift 4.20 now enables direct integration with external OIDC identity providers for issuing auth tokens.
-This gives more control over the authentication system to the cluster administrators and can simplify user management.
-+
-For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/authentication_and_authorization/index#external-auth[the official documentation].
-
-External Secrets Operator becomes Generally Available::
-The External Secrets Operator is a cluster service that provides lifecycle management for secrets fetched from external secret management systems (such as AWS Secrets Manager, HashiCorp Vault, and Azure Key Vault).
-The operator provisions, fetches and refreshes the secret within the cluster, ensuring a secure and efficient secrets flow without direct application involvement.
-+
-For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/security_and_compliance/external-secrets-operator-for-red-hat-openshift[the official documentation].
-
-OpenShift AI gains new capabilities::
-OpenShift Container Platform 4.20 brings several new capabilities to OpenShift AI that improve the scalability of AI workflows, such as simplified deployments of distributed AI workloads (leveraging the LeaderWorkerSet resource), and improved load balancing for distributed inference with llm-d (leveraging the Kubernetes Gateway API Inference Extensions).
-+
-For more information, see https://gateway-api-inference-extension.sigs.k8s.io/[the official documentation].
-
-Multiple network interface controllers on vSphere clusters becomes Generally Available::
-For clusters on VMware vSphere, it has been possible since OpenShift 4.18 to set up the cluster with multiple network interface controllers for one node.
-This feature is now becoming Generally Available.
-+
-For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/installing_on_vmware_vsphere/index#installation-vsphere-multiple-nics_installing-vsphere-installer-provisioned-customizations[the official documentation].
-
-Linux User Namespace Support becomes Generally Available::
-Support for deploying pods into Linux user namespaces is now generally available and enabled by default.
-This feature improves isolation, mitigating security vulnerabilities that one compromised container can pose to other pods and the node itself.
-+
-This change includes two new security context constraints, `restricted-v3` and `nested-container`, which are designed for use with user namespaces.
-+
-For further information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html-single/nodes/index#nodes-pods-user-namespaces[the official documentation].
-
-Docker v2 registries become Deprecated::
-Support for Docker v2 registries will be removed in a future release.
-At that point, all mirroring operations will require a registry that supports the OCI specification.
-
-Red Hat Marketplace becomes Deprecated::
-The Red Hat Marketplace index for OLM-based cluster operators is being sunset.
-Customers using software from the Marketplace should reach out to the software vendor to find out how to migrate away from the Marketplace Operator.
-+
-For further information, including a list of affected operators, see https://access.redhat.com/articles/7130828[Sunset of the Red Hat Marketplace].
-
-Removal of deprecated APIs in Kubernetes 1.33::
-The following APIs are no longer available in Kubernetes 1.32 and need to be migrated:
-* `MutatingWebhookConfiguration` needs to be migrated from `admissionregistration.k8s.io/v1beta1` to `admissionregistration.k8s.io/v1`.
-* `ValidatingAdmissionPolicy` needs to be migrated from `admissionregistration.k8s.io/v1beta1` to `admissionregistration.k8s.io/v1`.
-* `ValidatingAdmissionPolicyBinding` needs to be migrated from `admissionregistration.k8s.io/v1beta1` to `admissionregistration.k8s.io/v1`.
-* `ValidatingWebhookConfiguration` needs to be migrated from `admissionregistration.k8s.io/v1beta1` to `admissionregistration.k8s.io/v1`.
-+
-For more information, see https://docs.redhat.com/en/documentation/openshift_container_platform/4.20/html/release_notes/ocp-4-20-release-notes#ocp-4-20-removed-kube-apis_release-notes[APIs removed from Kubernetes 1.33].

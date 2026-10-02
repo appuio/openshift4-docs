@@ -1,0 +1,181 @@
+== Workflow
+
+* <<step-1,Given a Cloudplosion organization>>
+* &nbsp;&nbsp;<<step-2,And all necessary access tokens>>
+* &nbsp;&nbsp;<<step-3,And a lieutenant cluster id>>
+* <<step-4,Then I upload the kubernetes "hypernetes-v4.20" image>>
+* &nbsp;&nbsp;<<step-5,And create the bootstrap node>>
+
+[[step-1]]
+=== Given a Cloudplosion organization
+
+
+
+==== Outputs
+
+* `cloudplosion_org_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+
+echo "Please visit this link:"
+echo "https://vshn.chat/channel/aldebaran?reallylonglinkaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaiaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaawhyaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+env -i "cloudplosion_org_id=org-1234567890abcdef" >> "$OUTPUT"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-2]]
+=== And all necessary access tokens
+
+
+
+==== Inputs
+
+* `gitlab_api_token`
+* `gitlab_user_name`
+* `cloudplosion_token`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_gitlab_api_token=
+# export INPUT_gitlab_user_name=
+# export INPUT_cloudplosion_token=
+
+for i in $(seq 1 2)
+do
+echo -n ...
+sleep 1
+done
+echo
+echo "All access tokens are correct!"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-3]]
+=== And a lieutenant cluster id
+
+
+
+==== Outputs
+
+* `cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+
+env -i "cluster_id=c-smouldering-fire-2345" >> "$OUTPUT"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-4]]
+=== Then I upload the kubernetes "hypernetes-v4.20" image
+
+This step uploads the kubernetes image to Cloudplosion organization {{ .cloudplosion_org_id }}.
+
+==== Inputs
+
+* `cloudplosion_org_id`
+
+==== Outputs
+
+* `image_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudplosion_org_id=
+
+echo Uploading image "$MATCH_image_name" to "$INPUT_cloudplosion_org_id" ...
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+sleep 0.7
+printf .
+echo
+echo Uploaded image with ID "img-1234567890abcdef"
+env -i "image_id=img-1234567890abcdef" >> "$OUTPUT"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-5]]
+=== And create the bootstrap node
+
+
+
+==== Inputs
+
+* `cloudplosion_org_id`
+* `cluster_id`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_cloudplosion_org_id=
+# export INPUT_cluster_id=
+
+echo Waiting for bootstrap node to become ready
+# shellcheck disable=2034
+for i in {1..50}
+do
+  sleep 0.1
+  printf .
+done
+echo "Bootstrap node $INPUT_cluster_id ready on $INPUT_cloudplosion_org_id"
+echo "Ready!"
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+

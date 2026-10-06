@@ -36,10 +36,11 @@
 * &nbsp;&nbsp;<<step-34,And I verify emergency access>>
 * &nbsp;&nbsp;<<step-35,And I configure the cluster alerts>>
 * &nbsp;&nbsp;<<step-36,And I enable Opsgenie alerting>>
-* &nbsp;&nbsp;<<step-37,And I schedule the first maintenance>>
-* <<step-38,Then I configure apt-dater groups for the LoadBalancers>>
-* &nbsp;&nbsp;<<step-39,And I remove the bootstrap bucket>>
-* &nbsp;&nbsp;<<step-40,And I wait for maintenance to complete>>
+* &nbsp;&nbsp;<<step-37,And I wait until all ArgoCD apps are synced and healthy>>
+* &nbsp;&nbsp;<<step-38,And I schedule the first maintenance>>
+* <<step-39,Then I configure apt-dater groups for the LoadBalancers>>
+* &nbsp;&nbsp;<<step-40,And I remove the bootstrap bucket>>
+* &nbsp;&nbsp;<<step-41,And I wait for maintenance to complete>>
 
 [[step-1]]
 === Given I have all prerequisites installed
@@ -140,9 +141,62 @@ then
 fi
 
 rm -f openshift-install-linux.tar.gz
-echo "Downloading openshift-install for version ${MATCH_ocp_version} ..."
-curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${MATCH_ocp_version}/openshift-install-linux.tar.gz
+echo -n "Determining latest patch version for ${MATCH_ocp_version} ... "
+# NOTE(sg): The OpenShift channel graph API returns a JSON object with the
+# following shape:
+#
+# {
+#   nodes: [
+#     {
+#       version: "MAJOR.MINOR.PATCH",
+#       ...
+#     },
+#     ...
+#   ],
+#   edges: [
+#     [from_index, to_index],
+#     ...
+#   ],
+#   ...
+# }
+#
+# where from_index and to_index for each edges entry are indices into the
+# `nodes` list. Each entry of `edges` represents a possible upgrade path.
+ocp_graph=$(curl -fsSL "https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-${MATCH_ocp_version}&arch=amd64")
+# This jq query filters the nodes list by our target minor version, splits
+# the version field (so it will be sorted numerically for `max`) and joins
+# the result of max with dots to return the latest patch version that's
+# available on the stable channel.
+latest_version=$(jq -n -r --argjson g "$ocp_graph" --arg minor "${MATCH_ocp_version}" \
+  '[ $g.nodes[] | select(.version | test($minor)) | .version ]
+   | map(split(".") | map(tonumber))
+   | max | join(".")')
+echo "${latest_version}"
+
+echo -n "Determining latest patch version which can be upgraded to ${latest_version} ... "
+# This jq query takes the latest patch version that's available on the
+# stable channel and finds the index of that patch version's entry in the
+# nodes list. Afterwards the query finds all edges which point to the
+# latest patch version, extracts the version of edge's origin, and returns
+# the highest patch version that has an upgrade edge to the latest patch
+# version.
+prev_version=$(jq -n -r --argjson g "$ocp_graph" --arg latest "$latest_version" \
+  '$g.nodes
+   | to_entries[]
+   | select(.value.version==$latest)
+   | .key as $curr_index
+   | [
+     $g.edges[]
+     | select(.[1]==$curr_index)
+     | $g.nodes[.[0]].version
+     | split(".") | map(tonumber)
+   ] | max | join(".")')
+echo "${prev_version}"
+
+echo "Downloading openshift-install for version ${prev_version} ..."
+curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${prev_version}/openshift-install-linux.tar.gz"
 tar -xf openshift-install-linux.tar.gz openshift-install
+./openshift-install version
 
 env -i "openshift_install_bin=$( pwd )/openshift-install" >> "$OUTPUT"
 
@@ -2498,7 +2552,7 @@ done
 
 export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
 export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
-kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json
+kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json --mapping-file kharon-mapping.json
 kharon emergency-credentials "${INPUT_commodore_cluster_id}" --inventory-file kharon-inventory.json
 
 yq -i e '.clusters[0].cluster.insecure-skip-tls-verify = true' "em-${INPUT_commodore_cluster_id}"
@@ -2598,6 +2652,53 @@ popd
 ----
 
 [[step-37]]
+=== And I wait until all ArgoCD apps are synced and healthy
+
+Wait until all ArgoCD applications are synced and healthy.
+
+==== Inputs
+
+* `kubeconfig_path`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_kubeconfig_path=
+
+set -euo pipefail
+
+export KUBECONFIG="${INPUT_kubeconfig_path}"
+
+sync_timeout=600s
+healthy_timeout=300s
+
+echo "Wait until all ArgoCD apps are synced... (timeout=${sync_timeout})"
+if ! kubectl -n syn wait --for jsonpath='{.status.sync.status}="Synced"' \
+  applications.argoproj.io --all --timeout="${sync_timeout}"; then
+  echo "❌ Wait for ArgoCD app sync timed out, check status manually!"
+else
+  echo "✅ All ArgoCD apps synced"
+fi
+
+echo "Wait until all ArgoCD apps are healthy... (timeout=${healthy_timeout})"
+if ! kubectl -n syn wait --for jsonpath='{.status.health.status}="Healthy"' \
+  applications.argoproj.io --all --timeout="${healthy_timeout}"; then
+  echo "❌ Wait for ArgoCD app health timed out, check status manually!"
+else
+  echo "✅ Cluster synthesis complete. All ArgoCD apps healthy."
+fi
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-38]]
 === And I schedule the first maintenance
 
 This step verifies that the UpgradeConfig object is present on the cluster,
@@ -2651,7 +2752,7 @@ kubectl -n appuio-openshift-upgrade-controller get upgradeconfig "$uc" -oyaml | 
 
 ----
 
-[[step-38]]
+[[step-39]]
 === Then I configure apt-dater groups for the LoadBalancers
 
 This step configures the apt-dater groups for the LoadBalancers via puppet.
@@ -2732,7 +2833,7 @@ popd
 
 ----
 
-[[step-39]]
+[[step-40]]
 === And I remove the bootstrap bucket
 
 This step deletes the S3 bucket with the bootstrap ignition config.
@@ -2766,7 +2867,7 @@ exo storage rb -r -f "sos://${INPUT_commodore_cluster_id}-bootstrap"
 
 ----
 
-[[step-40]]
+[[step-41]]
 === And I wait for maintenance to complete
 
 This step waits for the first maintenance to complete, and then removes the
@@ -2792,6 +2893,7 @@ oc get clusterversion
 until kubectl wait --for=condition=Succeeded upgradejob -l "upgradeconfig/name=first" -n appuio-openshift-upgrade-controller 2>/dev/null
 do
   oc get clusterversion | grep -v NAME
+  sleep 30
 done
 
 echo "#  Deleting initial UpgradeConfig ..."

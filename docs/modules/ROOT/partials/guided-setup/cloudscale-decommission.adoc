@@ -60,7 +60,7 @@ if which docker >/dev/null 2>&1 ; then { echo "✅ docker is installed."; } ; el
 
 if which glab >/dev/null 2>&1 ; then { echo "✅ glab (GitLab CLI) is installed."; } ; else { echo "❌ glab (GitLab CLI) is not installed. Please install glab to proceed."; exit 1; } ; fi
 
-if which host >/dev/null 2>&1 ; then { echo "✅ host (DNS lookup utility) is installed."; } ; else { echo "❌ host (DNS lookup utility) is not installed. Please install host to proceed."; exit 1; } ; fi
+if which dig >/dev/null 2>&1 ; then { echo "✅ dig (DNS lookup utility) is installed."; } ; else { echo "❌ dig (DNS lookup utility) is not installed. Please install dig to proceed."; exit 1; } ; fi
 
 if which mc >/dev/null 2>&1 ; then { echo "✅ mc (MinIO Client) is installed."; } ; else { echo "❌ mc (MinIO Client) is not installed. Please install mc >= RELEASE.2024-01-18T07-03-39Z to proceed."; exit 1; } ; fi
 mc_version=$(mc --version | grep -Eo 'RELEASE[^ ]+')
@@ -341,7 +341,7 @@ OUTPUT=$(mktemp)
 set -euo pipefail
 export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
 export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
-kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json
+kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json --mapping-file kharon-mapping.json
 kharon emergency-credentials "${INPUT_commodore_cluster_id}" --inventory-file kharon-inventory.json
 
 kubectl get nodes

@@ -32,10 +32,11 @@
 * &nbsp;&nbsp;<<step-30,And I configure the cluster alerts>>
 * &nbsp;&nbsp;<<step-31,And I enable Opsgenie alerting>>
 * &nbsp;&nbsp;<<step-32,And I verify the image registry config>>
-* &nbsp;&nbsp;<<step-33,And I schedule the first maintenance>>
-* <<step-34,Then I configure apt-dater groups for the LoadBalancers>>
-* &nbsp;&nbsp;<<step-35,And I remove the bootstrap bucket>>
-* &nbsp;&nbsp;<<step-36,And I wait for maintenance to complete>>
+* &nbsp;&nbsp;<<step-33,And I wait until all ArgoCD apps are synced and healthy>>
+* &nbsp;&nbsp;<<step-34,And I schedule the first maintenance>>
+* <<step-35,Then I configure apt-dater groups for the LoadBalancers>>
+* &nbsp;&nbsp;<<step-36,And I remove the bootstrap bucket>>
+* &nbsp;&nbsp;<<step-37,And I wait for maintenance to complete>>
 
 [[step-1]]
 === Given I have all prerequisites installed
@@ -68,7 +69,7 @@ if which docker >/dev/null 2>&1 ; then { echo "✅ docker is installed."; } ; el
 
 if which glab >/dev/null 2>&1 ; then { echo "✅ glab (GitLab CLI) is installed."; } ; else { echo "❌ glab (GitLab CLI) is not installed. Please install glab to proceed."; exit 1; } ; fi
 
-if which host >/dev/null 2>&1 ; then { echo "✅ host (DNS lookup utility) is installed."; } ; else { echo "❌ host (DNS lookup utility) is not installed. Please install host to proceed."; exit 1; } ; fi
+if which dig >/dev/null 2>&1 ; then { echo "✅ dig (DNS lookup utility) is installed."; } ; else { echo "❌ dig (DNS lookup utility) is not installed. Please install dig to proceed."; exit 1; } ; fi
 
 if which mc >/dev/null 2>&1 ; then { echo "✅ mc (MinIO Client) is installed."; } ; else { echo "❌ mc (MinIO Client) is not installed. Please install mc >= RELEASE.2024-01-18T07-03-39Z to proceed."; exit 1; } ; fi
 mc_version=$(mc --version | grep -Eo 'RELEASE[^ ]+')
@@ -128,9 +129,62 @@ then
 fi
 
 rm -f openshift-install-linux.tar.gz
-echo "Downloading openshift-install for version ${MATCH_ocp_version} ..."
-curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${MATCH_ocp_version}/openshift-install-linux.tar.gz
+echo -n "Determining latest patch version for ${MATCH_ocp_version} ... "
+# NOTE(sg): The OpenShift channel graph API returns a JSON object with the
+# following shape:
+#
+# {
+#   nodes: [
+#     {
+#       version: "MAJOR.MINOR.PATCH",
+#       ...
+#     },
+#     ...
+#   ],
+#   edges: [
+#     [from_index, to_index],
+#     ...
+#   ],
+#   ...
+# }
+#
+# where from_index and to_index for each edges entry are indices into the
+# `nodes` list. Each entry of `edges` represents a possible upgrade path.
+ocp_graph=$(curl -fsSL "https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-${MATCH_ocp_version}&arch=amd64")
+# This jq query filters the nodes list by our target minor version, splits
+# the version field (so it will be sorted numerically for `max`) and joins
+# the result of max with dots to return the latest patch version that's
+# available on the stable channel.
+latest_version=$(jq -n -r --argjson g "$ocp_graph" --arg minor "${MATCH_ocp_version}" \
+  '[ $g.nodes[] | select(.version | test($minor)) | .version ]
+   | map(split(".") | map(tonumber))
+   | max | join(".")')
+echo "${latest_version}"
+
+echo -n "Determining latest patch version which can be upgraded to ${latest_version} ... "
+# This jq query takes the latest patch version that's available on the
+# stable channel and finds the index of that patch version's entry in the
+# nodes list. Afterwards the query finds all edges which point to the
+# latest patch version, extracts the version of edge's origin, and returns
+# the highest patch version that has an upgrade edge to the latest patch
+# version.
+prev_version=$(jq -n -r --argjson g "$ocp_graph" --arg latest "$latest_version" \
+  '$g.nodes
+   | to_entries[]
+   | select(.value.version==$latest)
+   | .key as $curr_index
+   | [
+     $g.edges[]
+     | select(.[1]==$curr_index)
+     | $g.nodes[.[0]].version
+     | split(".") | map(tonumber)
+   ] | max | join(".")')
+echo "${prev_version}"
+
+echo "Downloading openshift-install for version ${prev_version} ..."
+curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${prev_version}/openshift-install-linux.tar.gz"
 tar -xf openshift-install-linux.tar.gz openshift-install
+./openshift-install version
 
 env -i "openshift_install_bin=$( pwd )/openshift-install" >> "$OUTPUT"
 
@@ -1259,9 +1313,12 @@ yq eval -i ".parameters.openshift4_terraform.terraform_variables.allocate_router
 yq eval -i ".parameters.openshift4_terraform.terraform_variables.ssh_keys = [\"$(cat ${INPUT_ssh_public_key_path})\"]" \
   ${INPUT_commodore_cluster_id}.yml
 
-echo "Commit changes"
-git commit -a -m "Set cloudscale specific values in cluster ${CLUSTER_ID}"
-git push
+echo "Committing changes ..."
+if git commit -a -m "Set cloudscale specific values in cluster ${CLUSTER_ID}"; then
+  git push
+else
+  echo "No changes."
+fi
 
 popd
 
@@ -1405,10 +1462,18 @@ echo "@                                                                         
 echo "@  Waiting for record to propagate...                                                   @"
 echo "@                                                                                       @"
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-while ! (host "api.${INPUT_cluster_domain}")
+# NOTE(sg): We first query the SOA record for the cluster zone name. This
+# shouldn't significantly pollute our cache, since that record should
+# exist and is unlikely to change. Afterwards, we directly query the
+# authoritative nameserver for the api record, which doesn't pollute any
+# recursive DNS servers' caches.
+auth_ns=$(dig +noall +authority SOA "${INPUT_cluster_domain}" | tr "\t" " " | tr -s " " | cut -d " " -f5)
+while [ "$(dig +short A "@${auth_ns}" "api.${INPUT_cluster_domain}")" == "" ]
 do
+  echo -n "."
   sleep 15
 done
+echo "✅ API record present"
 rm ../../../dns.txt
 
 lb1=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[0]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
@@ -1803,16 +1868,25 @@ echo "@                                                                         
 echo "@  Waiting for record to propagate...                                                   @"
 echo "@                                                                                       @"
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-while ! (host "etcd-0.${INPUT_cluster_domain}")
+# NOTE(sg): We first query the SOA record for the cluster zone name. This
+# shouldn't significantly pollute our cache, since that record should
+# exist and is unlikely to change. Afterwards, we directly query the
+# authoritative nameserver for the etcd-0 record, which doesn't pollute
+# any recursive DNS servers' caches.
+auth_ns=$(dig +noall +authority SOA "${INPUT_cluster_domain}" | tr "\t" " " | tr -s " " | cut -d " " -f5)
+while [ "$(dig +short A "@${auth_ns}" "etcd-0.${INPUT_cluster_domain}")" == "" ]
 do
+  echo -n "."
   sleep 15
 done
+echo "✅ etcd-0 record present"
 rm ../../../dns.txt
 
 export KUBECONFIG="${INPUT_kubeconfig_path}"
 
-echo "Waiting for masters to become ready ..."
+echo "Waiting for masters to be created ..."
 kubectl wait --for create --timeout=600s node -l node-role.kubernetes.io/master
+echo "Waiting for masters to become ready ..."
 kubectl wait --for condition=ready --timeout=600s node -l node-role.kubernetes.io/master
 popd
 
@@ -1863,6 +1937,9 @@ kubectl apply -Rf catalog/manifests/cert-manager/10_cert_manager
 kubectl -n syn-cert-manager patch --type=merge \
   $(kubectl -n syn-cert-manager get deploy -oname) \
   -p '{"spec":{"template":{"spec":{"tolerations":[{"operator":"Exists"}]}}}}'
+echo '# Waiting for cert-manager to become available ... #'
+kubectl -n syn-cert-manager wait --for=condition=available --timeout=300s \
+  deploy/cert-manager deploy/cert-manager-webhook
 echo '# Applied cert-manager. #'
 echo
 echo '# Applying machine-api-provider ... #'
@@ -1885,12 +1962,16 @@ kubectl apply -f catalog/manifests/cloudscale-loadbalancer-controller/00_namespa
 kapitan refs --reveal --refs-path catalog/refs -f catalog/manifests/cloudscale-loadbalancer-controller/10_secrets.yaml | kubectl apply -f -
 
 # TODO(aa): This fails on the first attempt because likely some of the previous resources need time to come online; figure out what to wait for
+# TODO(sg): This still fails sometimes, even when waiting for cert-manager
+# to become available. From the errors I've observed, there's some case
+# where deploying the cert-manager resources runs into a timeout related
+# to the validatingwebhookconfig for cert-manager.
 until kubectl apply -Rf catalog/manifests/cloudscale-loadbalancer-controller/10_kustomize
 do
   echo "Manifests didn't apply, waiting a moment to try again ..."
   sleep 20
 done
-echo "Waiting for load balancer to become available ..."
+echo "Waiting for load balancer controller to become available ..."
 # NOTE(sg): We need to wait for at least one app node to become ready
 # before the cloudscale LB controller can be scheduled. This can take 5+
 # minutes, depending on how quickly the worker nodes are becoming ready.
@@ -2236,6 +2317,7 @@ This step ensures CNAME records exist for ACME challenges once cert-manager is p
 ==== Inputs
 
 * `kubeconfig_path`
+* `cluster_domain`
 
 ==== Script
 
@@ -2244,6 +2326,7 @@ This step ensures CNAME records exist for ACME challenges once cert-manager is p
 OUTPUT=$(mktemp)
 
 # export INPUT_kubeconfig_path=
+# export INPUT_cluster_domain=
 
 set -euo pipefail
 export KUBECONFIG="${INPUT_kubeconfig_path}"
@@ -2286,25 +2369,35 @@ echo "The following entry must be created in the same origin as the apps record:
 echo "_acme-challenge.apps  IN CNAME $fulldomain."
 echo
 
-# back up kubeconfig, just in case
-cp "${INPUT_kubeconfig_path}" "${INPUT_kubeconfig_path}.bak"
-yq -i e 'del(.clusters[0].cluster.certificate-authority-data)' "${INPUT_kubeconfig_path}"
-cp "${INPUT_kubeconfig_path}" "${INPUT_kubeconfig_path}2"
+# back up kubeconfig, just in case.
+# NOTE(sg): Don't overwrite backed up kubeconfig when the step is retried.
+if [ ! -f "${INPUT_kubeconfig_path}.bak" ]; then
+  cp "${INPUT_kubeconfig_path}" "${INPUT_kubeconfig_path}.bak"
+fi
 
-# Set insecure-skip-tls-verify=true in kubeconfig2 so we can use it to
-# wait for the kube-apiserver CO
-yq -i e '.clusters[0].cluster.ignore-skip-tls-verify = true' "${INPUT_kubeconfig_path}2"
+# remove cluster CA cert and disable certificate verification in kubeconfig
+echo "Removing cluster CA and temporarily disabling TLS verification in admin kubeconfig ..."
+yq -i e 'del(.clusters[0].cluster.certificate-authority-data)' "${INPUT_kubeconfig_path}"
+# Set insecure-skip-tls-verify=true in kubeconfig so we can use it to wait
+# for the kube-apiserver CO
+yq -i e '.clusters[0].cluster.insecure-skip-tls-verify = true' "${INPUT_kubeconfig_path}"
 
 echo "Waiting for cluster certificate to be issued ..."
-echo "If you need to debug things on the cluster, run:"
-echo "export KUBECONFIG=${INPUT_kubeconfig_path}2"
-echo
-export KUBECONFIG="${INPUT_kubeconfig_path}2"
-kubectl wait -n openshift-config --for condition=ready certificate/api-server-cluster-certificate-default
+# NOTE(sg): We query the cluster zone's SOA record and extract the
+# negative TTL from it. We then configure the wait for the cert-manager
+# certificate  to become ready to 2*negative TTL. This should be
+# sufficient to ensure that any possibly cached NXDOMAIN responses for the
+# acme-challenge records have expired.
+zone_nx_ttl_secs=$(dig +noall +authority SOA "${INPUT_cluster_domain}" \
+  | tr "\t" " " | tr -s " " | cut -d " " -f11)
+kubectl wait -n openshift-config --for condition=ready \
+  --timeout="$(( zone_nx_ttl_secs * 2 ))s" \
+  certificate/api-server-cluster-certificate-default
 echo "Waiting for all kube-apiserver instances to be updated ..."
 kubectl wait --for condition=progressing=false --timeout=15m co kube-apiserver
 
-export KUBECONFIG="${INPUT_kubeconfig_path}"
+echo "Enabling TLS verification in admin kubeconfig again ..."
+yq -i e 'del(.clusters[0].cluster.insecure-skip-tls-verify)' "${INPUT_kubeconfig_path}"
 kubectl get nodes
 rm dns.txt
 
@@ -2362,7 +2455,7 @@ done
 
 export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
 export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
-kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json
+kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json --mapping-file kharon-mapping.json
 kharon emergency-credentials "${INPUT_commodore_cluster_id}" --inventory-file kharon-inventory.json
 
 yq -i e '.clusters[0].cluster.insecure-skip-tls-verify = true' "em-${INPUT_commodore_cluster_id}"
@@ -2524,6 +2617,53 @@ fi
 ----
 
 [[step-33]]
+=== And I wait until all ArgoCD apps are synced and healthy
+
+Wait until all ArgoCD applications are synced and healthy.
+
+==== Inputs
+
+* `kubeconfig_path`
+
+==== Script
+
+[source,bash]
+----
+OUTPUT=$(mktemp)
+
+# export INPUT_kubeconfig_path=
+
+set -euo pipefail
+
+export KUBECONFIG="${INPUT_kubeconfig_path}"
+
+sync_timeout=600s
+healthy_timeout=300s
+
+echo "Wait until all ArgoCD apps are synced... (timeout=${sync_timeout})"
+if ! kubectl -n syn wait --for jsonpath='{.status.sync.status}="Synced"' \
+  applications.argoproj.io --all --timeout="${sync_timeout}"; then
+  echo "❌ Wait for ArgoCD app sync timed out, check status manually!"
+else
+  echo "✅ All ArgoCD apps synced"
+fi
+
+echo "Wait until all ArgoCD apps are healthy... (timeout=${healthy_timeout})"
+if ! kubectl -n syn wait --for jsonpath='{.status.health.status}="Healthy"' \
+  applications.argoproj.io --all --timeout="${healthy_timeout}"; then
+  echo "❌ Wait for ArgoCD app health timed out, check status manually!"
+else
+  echo "✅ Cluster synthesis complete. All ArgoCD apps healthy."
+fi
+
+
+# echo "# Outputs"
+# cat "$OUTPUT"
+# rm -f "$OUTPUT"
+
+----
+
+[[step-34]]
 === And I schedule the first maintenance
 
 This step verifies that the UpgradeConfig object is present on the cluster,
@@ -2577,7 +2717,7 @@ kubectl -n appuio-openshift-upgrade-controller get upgradeconfig "$uc" -oyaml | 
 
 ----
 
-[[step-34]]
+[[step-35]]
 === Then I configure apt-dater groups for the LoadBalancers
 
 This step configures the apt-dater groups for the LoadBalancers via puppet.
@@ -2658,7 +2798,7 @@ popd
 
 ----
 
-[[step-35]]
+[[step-36]]
 === And I remove the bootstrap bucket
 
 This step deletes the S3 bucket with the bootstrap ignition config.
@@ -2696,7 +2836,7 @@ mc rb "${INPUT_commodore_cluster_id}/${INPUT_commodore_cluster_id}-bootstrap-ign
 
 ----
 
-[[step-36]]
+[[step-37]]
 === And I wait for maintenance to complete
 
 This step waits for the first maintenance to complete, and then removes the
@@ -2722,6 +2862,7 @@ oc get clusterversion
 until kubectl wait --for=condition=Succeeded upgradejob -l "upgradeconfig/name=first" -n appuio-openshift-upgrade-controller 2>/dev/null
 do
   oc get clusterversion | grep -v NAME
+  sleep 30
 done
 
 echo "#  Deleting initial UpgradeConfig ..."

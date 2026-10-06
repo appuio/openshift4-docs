@@ -2,8 +2,7 @@
 :ocp-minor-version: 4.21
 :k8s-minor-version: 1.34
 :ocp-patch-version: {ocp-minor-version}.0
-:provider: exoscale
-:kubectl_extra_args:
+:workflow: exoscale
 
 [abstract]
 --

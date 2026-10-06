@@ -1,6 +1,6 @@
 = Uninstallation on Exoscale
 
-:provider: exoscale
+:workflow: exoscale-decommission
 
 [abstract]
 --

@@ -1,6 +1,6 @@
 = Uninstallation on cloudscale
 
-:provider: cloudscale
+:workflow: cloudscale-decommission
 
 [abstract]
 --

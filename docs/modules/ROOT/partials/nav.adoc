@@ -38,6 +38,7 @@
 *** xref:oc4:ROOT:references/cloudscale/architecture.adoc[Architecture]
 *** xref:oc4:ROOT:references/cloudscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Install]
+*** xref:oc4:ROOT:how-tos/cloudscale/install-puppet-lbs.adoc[Install with Puppet LBs]
 // Node management
 *** xref:oc4:ROOT:how-tos/cloudscale/add_node.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/update_compute_flavors.adoc[Update compute flavors]
@@ -51,6 +52,7 @@
 *** xref:oc4:ROOT:how-tos/cloudscale/recover-etcd.adoc[Restore etcd]
 *** xref:oc4:ROOT:how-tos/cloudscale/restore-pv-pvc-from-object-backup.adoc[]
 *** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[Decommissioning]
+*** xref:oc4:ROOT:how-tos/cloudscale/decommission-puppet-lbs.adoc[Decommissioning with Puppet LBs]
 *** xref:oc4:ROOT:how-tos/cloudscale/rotate-api-tokens.adoc[Rotate API Tokens]
 
 ** Exoscale
@@ -104,6 +106,7 @@
 ** cloudscale.ch
 *** xref:oc4:ROOT:references/cloudscale/config.adoc[Configuration]
 *** xref:oc4:ROOT:how-tos/cloudscale/install.adoc[Install]
+*** xref:oc4:ROOT:how-tos/cloudscale/install-puppet-lbs.adoc[Install with Puppet LBs]
 
 ** Exoscale
 *** xref:oc4:ROOT:references/exoscale/config.adoc[Configuration]
@@ -266,6 +269,7 @@
 
 * Decommissioning
 ** xref:oc4:ROOT:how-tos/cloudscale/decommission.adoc[cloudscale.ch]
+** xref:oc4:ROOT:how-tos/cloudscale/decommission-puppet-lbs.adoc[cloudscale.ch with Puppet LBs]
 ** xref:oc4:ROOT:how-tos/exoscale/decommission.adoc[Exoscale]
 ** xref:oc4:ROOT:how-tos/destroy/gcp.adoc[Google Compute Cloud]
 

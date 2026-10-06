@@ -1,0 +1,28 @@
+= Uninstallation with Puppet LBs on cloudscale
+
+:workflow: cloudscale-decommission-puppet-lbs
+
+[abstract]
+--
+Steps to remove an OpenShift 4 cluster with Puppet LBs from https://cloudscale[cloudscale.ch].
+--
+
+[NOTE]
+--
+The commands are idempotent and can be retried if any of the steps fail.
+--
+
+[IMPORTANT]
+--
+Always follow the https://wiki.vshn.net/display/VINT/4-eye+data+deletion[4-eye data deletion] (Internal link) principle when decommissioning productive clusters.
+--
+
+include::partial$guided-setup-explanation.adoc[]
+
+== Prerequisites
+
+include::partial$cloudscale/prerequisites.adoc[]
+* `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
+* `mc` >= `RELEASE.2024-01-18T07-03-39Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
+
+include::partial$guided-setup/cloudscale-decommission-puppet-lbs.adoc[]

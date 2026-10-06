@@ -1,12 +1,12 @@
-= Install OpenShift 4 on cloudscale.ch
+= Install OpenShift 4 with Puppet-managed LBs on cloudscale.ch
 :ocp-minor-version: 4.21
 :k8s-minor-version: 1.34
 :ocp-patch-version: {ocp-minor-version}.0
-:workflow: cloudscale
+:workflow: cloudscale-puppet-lbs
 
 [abstract]
 --
-Steps to install an OpenShift 4 cluster without Puppet-managed LBs on https://cloudscale.ch[cloudscale.ch].
+Steps to install an OpenShift 4 cluster with Puppet-managed LBs. on https://cloudscale.ch[cloudscale.ch].
 
 These steps follow the https://docs.openshift.com/container-platform/latest/installing/installing_bare_metal/installing-bare-metal.html[Installing a cluster on bare metal] docs to set up a user provisioned installation (UPI).
 https://www.terraform.io[Terraform] is used to provision the cloud infrastructure.
@@ -22,9 +22,9 @@ So make sure you complete these steps within 24h.
 
 [NOTE]
 ====
-If you're setting up a cluster that has more demanding routing requirements, consider setting up a cluster with Puppet LBs.
+If you're setting up a cluster that doesn't have special networking requirements, consider setting up a cluster without Puppet LBs.
 
-See "xref:how-tos/cloudscale/install-puppet-lbs.adoc[]" for details.
+See "xref:how-tos/cloudscale/install.adoc[]" for details.
 ====
 
 == Starting situation
@@ -46,4 +46,4 @@ include::partial$install/prerequisites.adoc[]
 * `aws` CLI https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html[Official install instructions].
 You can also install the Python package with your favorite package manager (we recommend https://docs.astral.sh/uv/[`uv`]: `uv tool install awscli`).
 
-include::partial$guided-setup/cloudscale.adoc[]
+include::partial$guided-setup/cloudscale-puppet-lbs.adoc[]

@@ -15,7 +15,7 @@ To run the workflows detailed below, simply source the above aliases and run:
 
 [source,bash,subs="attributes"]
 ----
-guided-setup run {provider}
+guided-setup run {workflow}
 ----
 
 [NOTE]

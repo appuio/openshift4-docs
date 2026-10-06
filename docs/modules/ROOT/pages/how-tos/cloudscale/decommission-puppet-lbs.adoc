@@ -1,10 +1,10 @@
-= Uninstallation on cloudscale
+= Uninstallation with Puppet LBs on cloudscale
 
-:workflow: cloudscale-decommission
+:workflow: cloudscale-decommission-puppet-lbs
 
 [abstract]
 --
-Steps to remove an OpenShift 4 cluster from https://cloudscale[cloudscale.ch].
+Steps to remove an OpenShift 4 cluster with Puppet LBs from https://cloudscale[cloudscale.ch].
 --
 
 [NOTE]
@@ -25,4 +25,4 @@ include::partial$cloudscale/prerequisites.adoc[]
 * `emergency-credentials-receive` https://github.com/vshn/emergency-credentials-receive?tab=readme-ov-file#install-from-binary[Install instructions]
 * `mc` >= `RELEASE.2024-01-18T07-03-39Z` https://docs.min.io/docs/minio-client-quickstart-guide.html[Minio client] (aliased to `mc` if necessary)
 
-include::partial$guided-setup/cloudscale-decommission.adoc[]
+include::partial$guided-setup/cloudscale-decommission-puppet-lbs.adoc[]

@@ -128,7 +128,12 @@ then
   fi
 fi
 
-rm -f openshift-install-linux.tar.gz
+case "$(uname -s)" in
+  Darwin) installer_os=mac ;;
+  *) installer_os=linux ;;
+esac
+
+rm -f "openshift-install-${installer_os}.tar.gz"
 echo -n "Determining latest patch version for ${MATCH_ocp_version} ... "
 # NOTE(sg): The OpenShift channel graph API returns a JSON object with the
 # following shape:
@@ -182,8 +187,8 @@ prev_version=$(jq -n -r --argjson g "$ocp_graph" --arg latest "$latest_version" 
 echo "${prev_version}"
 
 echo "Downloading openshift-install for version ${prev_version} ..."
-curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${prev_version}/openshift-install-linux.tar.gz"
-tar -xf openshift-install-linux.tar.gz openshift-install
+curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${prev_version}/openshift-install-${installer_os}.tar.gz"
+tar -xf "openshift-install-${installer_os}.tar.gz" openshift-install
 ./openshift-install version
 
 env -i "openshift_install_bin=$( pwd )/openshift-install" >> "$OUTPUT"
@@ -730,7 +735,7 @@ import_req=$(jq -n -r \
     "url": $image_download.url,
     "name": $name,
     "zones": $zones,
-    "source_format": "raw",
+    "source_format": "qcow2",
     "user_data_handling": "pass-through"
   }')
 

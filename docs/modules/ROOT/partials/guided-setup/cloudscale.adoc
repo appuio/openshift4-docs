@@ -1,13 +1,13 @@
 == Workflow
 
 * <<step-1,Given I have all prerequisites installed>>
-* &nbsp;&nbsp;<<step-2,And I download the `openshift-install` binary for version "4.21">>
+* &nbsp;&nbsp;<<step-2,And I download the `openshift-install` binary for version "4.22">>
 * &nbsp;&nbsp;<<step-3,And a lieutenant cluster>>
 * &nbsp;&nbsp;<<step-4,And a Keycloak service>>
 * &nbsp;&nbsp;<<step-5,And a cloudscale API token>>
 * &nbsp;&nbsp;<<step-6,And a personal VSHN GitLab access token>>
 * &nbsp;&nbsp;<<step-7,And basic cluster information>>
-* <<step-8,Then I download the OpenShift image for version "4.21.0">>
+* <<step-8,Then I download the OpenShift image for version "4.22.0">>
 * &nbsp;&nbsp;<<step-9,And I set up required S3 buckets>>
 * &nbsp;&nbsp;<<step-10,And I import the image in Cloudscale>>
 * <<step-11,Then I set secrets in Vault>>
@@ -90,7 +90,7 @@ echo "✅ All prerequisites are met."
 ----
 
 [[step-2]]
-=== And I download the `openshift-install` binary for version "4.21"
+=== And I download the `openshift-install` binary for version "4.22"
 
 This step downloads the `openshift-install` binary for the specified OpenShift version.
 
@@ -125,7 +125,12 @@ then
   fi
 fi
 
-rm -f openshift-install-linux.tar.gz
+case "$(uname -s)" in
+  Darwin) installer_os=mac ;;
+  *) installer_os=linux ;;
+esac
+
+rm -f "openshift-install-${installer_os}.tar.gz"
 echo -n "Determining latest patch version for ${MATCH_ocp_version} ... "
 # NOTE(sg): The OpenShift channel graph API returns a JSON object with the
 # following shape:
@@ -179,8 +184,8 @@ prev_version=$(jq -n -r --argjson g "$ocp_graph" --arg latest "$latest_version" 
 echo "${prev_version}"
 
 echo "Downloading openshift-install for version ${prev_version} ..."
-curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${prev_version}/openshift-install-linux.tar.gz"
-tar -xf openshift-install-linux.tar.gz openshift-install
+curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${prev_version}/openshift-install-${installer_os}.tar.gz"
+tar -xf "openshift-install-${installer_os}.tar.gz" openshift-install
 ./openshift-install version
 
 env -i "openshift_install_bin=$( pwd )/openshift-install" >> "$OUTPUT"
@@ -448,7 +453,7 @@ echo "Pull secret appears legit."
 ----
 
 [[step-8]]
-=== Then I download the OpenShift image for version "4.21.0"
+=== Then I download the OpenShift image for version "4.22.0"
 
 This step downloads the OpenShift image for the version specified by in the step.
 
@@ -681,7 +686,7 @@ import_req=$(jq -n -r \
     "url": $image_download.url,
     "name": $name,
     "zones": $zones,
-    "source_format": "raw",
+    "source_format": "qcow2",
     "user_data_handling": "pass-through"
   }')
 

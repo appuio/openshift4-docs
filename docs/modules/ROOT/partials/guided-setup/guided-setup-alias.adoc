@@ -98,7 +98,7 @@ guided-setup() {
   while getopts 'h?w:' opt; do
       case "$opt" in
       h|\?)
-          echo "usage: $0 [-y] [-w LOCAL_WORKFLOW_DIR]"
+          echo "usage: $0 [-w LOCAL_WORKFLOW_DIR]"
           ;;
       w)
           workflow_dir="$OPTARG"
@@ -109,7 +109,7 @@ guided-setup() {
 
   if [[ -z $workflow_dir ]]
   then
-    guided-setup-base "${1}" "/workflows/${2}.workflow" "/workflows/${2}/*.yml" "/workflows/shared/*.yml" "${@:3}"
+    guided-setup-base "${1}" "/workflows/${2}.workflow" "/workflows/${2%%-*}/*.yml" "/workflows/shared/*.yml" "${@:3}"
   else
     guided-setup-base -v "$workflow_dir":/workflows "${1}" "/workflows/${2}.workflow" "/workflows/${2%%-*}/*.yml" "/workflows/shared/*.yml" "${@:3}"
   fi

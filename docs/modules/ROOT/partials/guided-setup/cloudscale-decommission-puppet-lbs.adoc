@@ -740,8 +740,8 @@ module "cluster" {
 }
 EOF
 
-lb1=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[0]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
-lb2=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[1]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
+lb1=$(terraform state show "module.cluster.module.lb[0].cloudscale_server.lb[0]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
+lb2=$(terraform state show "module.cluster.module.lb[0].cloudscale_server.lb[1]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
 
 backup1=$(ssh "$lb1" "sudo grep 'server =' /etc/burp/burp.conf  | awk '{ print \$3 }'" )
 backup2=$(ssh "$lb2" "sudo grep 'server =' /etc/burp/burp.conf  | awk '{ print \$3 }'" )
@@ -879,7 +879,7 @@ terraform init \
 
 if terraform state list | grep "gitfile_checkout.appuio_hieradata" > /dev/null
 then
-  terraform state rm "module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata"
+  terraform state rm "module.cluster.module.lb[0].module.hiera[0].gitfile_checkout.appuio_hieradata"
 fi
 
 # Suppress errors on the first run; it is expected to fail

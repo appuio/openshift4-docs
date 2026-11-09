@@ -698,7 +698,7 @@ terraform init \
 
 if terraform state list | grep "gitfile_checkout.appuio_hieradata" > /dev/null
 then
-  terraform state rm "module.cluster.module.lb.module.hiera[0].gitfile_checkout.appuio_hieradata"
+  terraform state rm "module.cluster.module.lb[0].module.hiera[0].gitfile_checkout.appuio_hieradata"
 fi
 
 # Suppress errors on the first run; it is expected to fail

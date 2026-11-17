@@ -1319,7 +1319,7 @@ echo "✅ OpenShift installer configured successfully."
 [[step-19]]
 === And I configure Terraform for team "aldebaran"
 
-This step configures Terraform the Commodore rendered terraform configuration.
+This step configures the Commodore rendered terraform configuration.
 
 ==== Inputs
 

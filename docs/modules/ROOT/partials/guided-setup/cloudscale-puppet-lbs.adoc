@@ -1190,7 +1190,7 @@ echo "✅ OpenShift installer configured successfully."
 [[step-16]]
 === And I configure Terraform for team "aldebaran"
 
-This step configures Terraform the Commodore rendered terraform configuration.
+This step configures the Commodore rendered terraform configuration.
 
 ==== Inputs
 
@@ -1358,7 +1358,7 @@ echo "✅ Changes committed and cluster catalog compiled successfully."
 [[step-18]]
 === Then I provision the loadbalancers
 
-This step provisions the load balancers for the Cloudscale OpenShift cluster using Terraform.
+This step provisions the puppet load balancers for the Cloudscale OpenShift cluster using Terraform.
 
 ==== Inputs
 
@@ -1448,7 +1448,7 @@ module "cluster" {
   additional_worker_groups = {}
 }
 EOF
-terraform apply -auto-approve -target "module.cluster.module.lb.module.hiera"
+terraform apply -auto-approve -target "module.cluster.module.lb[0].module.hiera"
 
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@                                                                                       @"
@@ -1493,8 +1493,8 @@ done
 echo "✅ API record present"
 rm ../../../dns.txt
 
-lb1=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[0]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
-lb2=$(terraform state show "module.cluster.module.lb.cloudscale_server.lb[1]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
+lb1=$(terraform state show "module.cluster.module.lb[0].cloudscale_server.lb[0]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
+lb2=$(terraform state show "module.cluster.module.lb[0].cloudscale_server.lb[1]" | grep fqdn | awk '{print $2}' | tr -d ' "\r\n')
 
 echo "Loadbalancer FQDNs: $lb1 , $lb2"
 

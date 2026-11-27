@@ -167,15 +167,16 @@ echo -n "Determining latest patch version for ${MATCH_ocp_version} ... "
 #
 # where from_index and to_index for each edges entry are indices into the
 # `nodes` list. Each entry of `edges` represents a possible upgrade path.
-ocp_graph=$(curl -fsSL "https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-${MATCH_ocp_version}&arch=amd64")
+graph_json_file="ocp-update-graph.json"
+curl -fsSL -o "${graph_json_file}" "https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-${MATCH_ocp_version}&arch=amd64"
 # This jq query filters the nodes list by our target minor version, splits
 # the version field (so it will be sorted numerically for `max`) and joins
 # the result of max with dots to return the latest patch version that's
 # available on the stable channel.
-latest_version=$(jq -n -r --argjson g "$ocp_graph" --arg minor "${MATCH_ocp_version}" \
-  '[ $g.nodes[] | select(.version | test($minor)) | .version ]
+latest_version=$(jq -r --arg minor "${MATCH_ocp_version}" \
+  '[ .nodes[] | select(.version | test($minor)) | .version ]
    | map(split(".") | map(tonumber))
-   | max | join(".")')
+   | max | join(".")' "${graph_json_file}")
 echo "${latest_version}"
 
 echo -n "Determining latest patch version which can be upgraded to ${latest_version} ... "
@@ -185,8 +186,9 @@ echo -n "Determining latest patch version which can be upgraded to ${latest_vers
 # latest patch version, extracts the version of edge's origin, and returns
 # the highest patch version that has an upgrade edge to the latest patch
 # version.
-prev_version=$(jq -n -r --argjson g "$ocp_graph" --arg latest "$latest_version" \
-  '$g.nodes
+prev_version=$(jq -r --arg latest "$latest_version" \
+  '. as $g |
+   $g.nodes
    | to_entries[]
    | select(.value.version==$latest)
    | .key as $curr_index
@@ -195,7 +197,8 @@ prev_version=$(jq -n -r --argjson g "$ocp_graph" --arg latest "$latest_version" 
      | select(.[1]==$curr_index)
      | $g.nodes[.[0]].version
      | split(".") | map(tonumber)
-   ] | max | join(".")')
+   ] | max | join(".")' "${graph_json_file}")
+rm "${graph_json_file}"
 echo "${prev_version}"
 
 echo "Downloading openshift-install for version ${prev_version} ..."

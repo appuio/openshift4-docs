@@ -2477,6 +2477,9 @@ do
   echo -n .
 done
 
+echo '# Waiting for Steward dynamic facts configmap ...'
+kubectl wait --timeout=600s --for=create configmap/additional-facts -n syn
+
 export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
 export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
 kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json --mapping-file kharon-mapping.json

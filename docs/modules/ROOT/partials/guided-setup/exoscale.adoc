@@ -23,24 +23,23 @@
 * <<step-21,Then I provision the loadbalancers>>
 * &nbsp;&nbsp;<<step-22,And I provision the bootstrap node>>
 * &nbsp;&nbsp;<<step-23,And I provision the control plane>>
-* <<step-24,Then I deploy initial manifests>>
-* &nbsp;&nbsp;<<step-25,And I wait for bootstrap to complete>>
-* <<step-26,Then I provision the remaining nodes>>
-* &nbsp;&nbsp;<<step-27,And I approve and label the new nodes>>
-* &nbsp;&nbsp;<<step-28,And I configure initial deployments>>
-* &nbsp;&nbsp;<<step-29,And I wait for installation to complete>>
-* <<step-30,Then I create the registry S3 secret>>
-* &nbsp;&nbsp;<<step-31,And I enable default instance pool annotation injector for LB services>>
-* <<step-32,Then I synthesize the cluster>>
-* <<step-33,Then I set acme-dns CNAME records>>
-* &nbsp;&nbsp;<<step-34,And I verify emergency access>>
-* &nbsp;&nbsp;<<step-35,And I configure the cluster alerts>>
-* &nbsp;&nbsp;<<step-36,And I enable Opsgenie alerting>>
-* &nbsp;&nbsp;<<step-37,And I wait until all ArgoCD apps are synced and healthy>>
-* &nbsp;&nbsp;<<step-38,And I schedule the first maintenance>>
-* <<step-39,Then I configure apt-dater groups for the LoadBalancers>>
-* &nbsp;&nbsp;<<step-40,And I remove the bootstrap bucket>>
-* &nbsp;&nbsp;<<step-41,And I wait for maintenance to complete>>
+* &nbsp;&nbsp;<<step-24,And I wait for bootstrap to complete>>
+* <<step-25,Then I provision the remaining nodes>>
+* &nbsp;&nbsp;<<step-26,And I approve and label the new nodes>>
+* &nbsp;&nbsp;<<step-27,And I configure initial deployments>>
+* &nbsp;&nbsp;<<step-28,And I wait for installation to complete>>
+* <<step-29,Then I create the registry S3 secret>>
+* &nbsp;&nbsp;<<step-30,And I enable default instance pool annotation injector for LB services>>
+* <<step-31,Then I synthesize the cluster>>
+* <<step-32,Then I set acme-dns CNAME records>>
+* &nbsp;&nbsp;<<step-33,And I verify emergency access>>
+* &nbsp;&nbsp;<<step-34,And I configure the cluster alerts>>
+* &nbsp;&nbsp;<<step-35,And I enable Opsgenie alerting>>
+* &nbsp;&nbsp;<<step-36,And I wait until all ArgoCD apps are synced and healthy>>
+* &nbsp;&nbsp;<<step-37,And I schedule the first maintenance>>
+* <<step-38,Then I configure apt-dater groups for the LoadBalancers>>
+* &nbsp;&nbsp;<<step-39,And I remove the bootstrap bucket>>
+* &nbsp;&nbsp;<<step-40,And I wait for maintenance to complete>>
 
 [[step-1]]
 === Given I have all prerequisites installed
@@ -834,9 +833,14 @@ OUTPUT=$(mktemp)
 set -euo pipefail
 
 patched_path="${INPUT_image_path%.*}-patched.qcow2"
-cp "${INPUT_image_path}" "${patched_path}"
-env -i "patched_image_path=$patched_path" >> "$OUTPUT"
+if [ ! -f "${patched_path}" ]; then
+  cp "${INPUT_image_path}" "${patched_path}"
+  env -i "patched_image_path=$patched_path" >> "$OUTPUT"
+fi
 
+# diff exit code is 0 when images are identical -> we want to tell the
+# user to patch the image in that case.
+if diff "${INPUT_image_path}" "${patched_path}"; then
 echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
 echo "@                                                                                       @"
 echo "@  Please run the following command manually. (This step is not yet automated)          @"
@@ -847,6 +851,9 @@ echo "sudo virt-edit -a ${patched_path} -m /dev/sda3:/ /loader/entries/ostree-1.
 echo
 echo '(If you have some time, feel free to implement automation for this step)'
 sleep 3
+else
+echo "downloaded and patched image differ, assuming patch has been applied manually..."
+fi
 
 
 # echo "# Outputs"
@@ -925,11 +932,11 @@ exo compute instance-template register "rhcos-${RHCOS_VERSION}" \
 
 exo storage delete -f "sos://${INPUT_commodore_cluster_id}-bootstrap/${INPUT_patched_image_path}"
 
+exo compute instance-template list -v private -z "${INPUT_csp_region}"
+
 export RHCOS_TEMPLATE="rhcos-${RHCOS_VERSION}"
 
 env -i "rhcos_template=$RHCOS_TEMPLATE" >> "$OUTPUT"
-
-echo "Image import initiated. ⚠️ TODO: Poll for completion."
 
 
 # echo "# Outputs"
@@ -1582,6 +1589,19 @@ EOF
 fi
 
 terraform apply -auto-approve
+terraform output -raw cluster_dns > ../../../dns.txt
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+echo "@                                                                                       @"
+echo "@  Please add the DNS records shown in the Terraform output to your DNS provider.       @"
+echo "@  Most probably in https://git.vshn.net/vshn/vshn_zonefiles                            @"
+echo "@                                                                                       @"
+echo "@  If terminal selection does not work the entries can also be copied from              @"
+echo "@    dns.txt                                                                            @"
+echo "@                                                                                       @"
+echo "@  Sleeping 120 seconds before proceeding                                               @"
+echo "@                                                                                       @"
+echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+sleep 120
 
 cat > override.tf <<EOF
 module "cluster" {
@@ -1614,19 +1634,10 @@ do
 done
 
 terraform apply -auto-approve
-terraform output -raw cluster_dns > ../../../dns.txt
-echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-echo "@                                                                                       @"
-echo "@  Please add the DNS records shown in the Terraform output to your DNS provider.       @"
-echo "@  Most probably in https://git.vshn.net/vshn/vshn_zonefiles                            @"
-echo "@                                                                                       @"
-echo "@  If terminal selection does not work the entries can also be copied from              @"
-echo "@    dns.txt                                                                            @"
-echo "@                                                                                       @"
-echo "@  Waiting for record to propagate...                                                   @"
-echo "@                                                                                       @"
-echo "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-while ! (host "api.${INPUT_cluster_domain}")
+# NOTE(sg): At this point the DNS changes applied two `terraform apply`s
+# prior should have propagated.
+echo "Checking for the cluster API DNS record"
+while [ "$(dig +short A "api.${INPUT_cluster_domain}")" == "" ]
 do
   sleep 15
 done
@@ -1788,6 +1799,9 @@ do
   sleep 10
 done
 
+echo "Waiting a couple seconds before running Puppet"
+sleep 5
+
 ssh "${INPUT_lb_fqdn_1}" sudo puppetctl run
 ssh "${INPUT_lb_fqdn_2}" sudo puppetctl run
 
@@ -1915,57 +1929,6 @@ popd
 ----
 
 [[step-24]]
-=== Then I deploy initial manifests
-
-This step deploys some manifests required during bootstrap, including
-cert-manager,  machine-api-provider, machinesets, loadbalancer controller,
-and ingress loadbalancer.
-
-==== Inputs
-
-* `commodore_api_url`
-* `vault_address`
-* `vault_login_method`
-* `kubeconfig_path`
-
-==== Script
-
-[source,bash]
-----
-OUTPUT=$(mktemp)
-
-# export INPUT_commodore_api_url=
-# export INPUT_vault_address=
-# export INPUT_vault_login_method=
-# export INPUT_kubeconfig_path=
-
-set -euo pipefail
-
-export COMMODORE_API_URL="${INPUT_commodore_api_url}"
-export KUBECONFIG="${INPUT_kubeconfig_path}"
-
-export VAULT_ADDR=${INPUT_vault_address}
-vault login -method=${INPUT_vault_login_method}
-
-echo '# Applying cert-manager ... #'
-kubectl apply -f catalog/manifests/cert-manager/00_namespace.yaml
-kubectl apply -Rf catalog/manifests/cert-manager/10_cert_manager
-# shellcheck disable=2046
-# we need word splitting here
-kubectl -n syn-cert-manager patch --type=merge \
-  $(kubectl -n syn-cert-manager get deploy -oname) \
-  -p '{"spec":{"template":{"spec":{"tolerations":[{"operator":"Exists"}]}}}}'
-echo '# Applied cert-manager. #'
-echo
-
-
-# echo "# Outputs"
-# cat "$OUTPUT"
-# rm -f "$OUTPUT"
-
-----
-
-[[step-25]]
 === And I wait for bootstrap to complete
 
 This step waits for OpenShift bootstrap to complete successfully.
@@ -1997,7 +1960,7 @@ openshift-install --dir "${installer_dir}" \
 
 ----
 
-[[step-26]]
+[[step-25]]
 === Then I provision the remaining nodes
 
 After successful bootstrapping, this step removes the bootstrap node again.
@@ -2098,6 +2061,9 @@ do
   sleep 10
 done
 
+echo "Waiting a couple seconds before running Puppet"
+sleep 5
+
 ssh "${INPUT_lb_fqdn_1}" sudo puppetctl run
 ssh "${INPUT_lb_fqdn_2}" sudo puppetctl run
 
@@ -2110,7 +2076,7 @@ popd
 
 ----
 
-[[step-27]]
+[[step-26]]
 === And I approve and label the new nodes
 
 This step approves the new nodes that joined the cluster after provisioning and adds the "ready" label to them.
@@ -2167,13 +2133,12 @@ echo "✅ All new nodes approved and labeled successfully."
 
 ----
 
-[[step-28]]
+[[step-27]]
 === And I configure initial deployments
 
 This step configures some deployments that require manual changes after
-cluster bootstrap, such as reverting the Cilium patch from earlier, enabling
-proxy protocol on the Ingress controller, and scheduling the ingress
-controller on the infrastructure nodes.
+cluster bootstrap, such as enabling proxy protocol on the Ingress controller,
+and scheduling the ingress controller on the infrastructure nodes.
 
 ==== Inputs
 
@@ -2220,14 +2185,6 @@ then
   echo
 fi
 
-echo '# Removing temporary cert-manager tolerations ... #'
-# shellcheck disable=2046
-# we need word splitting here
-kubectl -n syn-cert-manager patch --type=json \
-  $(kubectl -n syn-cert-manager get deploy -oname) \
-  -p '[{"op":"remove","path":"/spec/template/spec/tolerations"}]'
-echo '# Removed temporary cert-manager tolerations. #'
-
 echo "✅ Initial deployments configured successfully."
 
 
@@ -2237,7 +2194,7 @@ echo "✅ Initial deployments configured successfully."
 
 ----
 
-[[step-29]]
+[[step-28]]
 === And I wait for installation to complete
 
 This step waits for OpenShift installation to complete successfully.
@@ -2269,7 +2226,7 @@ openshift-install --dir "${installer_dir}" \
 
 ----
 
-[[step-30]]
+[[step-29]]
 === Then I create the registry S3 secret
 
 This step creates a secret with the S3 credentials for the internal registry.
@@ -2313,7 +2270,7 @@ echo "✅ Registry S3 secret created successfully."
 
 ----
 
-[[step-31]]
+[[step-30]]
 === And I enable default instance pool annotation injector for LB services
 
 This step enables default instance pool annotation injector for LoadBalancer services.
@@ -2368,7 +2325,7 @@ popd
 
 ----
 
-[[step-32]]
+[[step-31]]
 === Then I synthesize the cluster
 
 This step enables Project Syn on the cluster.
@@ -2442,7 +2399,7 @@ echo "Done."
 
 ----
 
-[[step-33]]
+[[step-32]]
 === Then I set acme-dns CNAME records
 
 This step ensures CNAME records exist for ACME challenges once cert-manager is properly deployed.
@@ -2513,7 +2470,7 @@ echo "✅ ACME DNS records created successfully."
 
 ----
 
-[[step-34]]
+[[step-33]]
 === And I verify emergency access
 
 This step ensures the emergency credentials for the cluster can be retrieved.
@@ -2558,6 +2515,9 @@ do
   echo -n .
 done
 
+echo '# Waiting for Steward dynamic facts configmap ...'
+kubectl wait --timeout=600s --for=create configmap/additional-facts -n syn
+
 export KHARON_PASSBOLT_PASSPHRASE="${INPUT_passbolt_passphrase}"
 export KUBECONFIG="em-${INPUT_commodore_cluster_id}"
 kharon update --lieutenant-url "${INPUT_commodore_api_url}" --inventory-file kharon-inventory.json --mapping-file kharon-mapping.json
@@ -2579,7 +2539,7 @@ kubectl -n openshift-config patch cm admin-kubeconfig-client-ca --type=merge -p 
 
 ----
 
-[[step-35]]
+[[step-34]]
 === And I configure the cluster alerts
 
 This step configures monitoring alerts on the cluster.
@@ -2626,7 +2586,7 @@ sleep 2
 
 ----
 
-[[step-36]]
+[[step-35]]
 === And I enable Opsgenie alerting
 
 This step enables Opsgenie alerting for the cluster via Project Syn.
@@ -2659,7 +2619,7 @@ popd
 
 ----
 
-[[step-37]]
+[[step-36]]
 === And I wait until all ArgoCD apps are synced and healthy
 
 Wait until all ArgoCD applications are synced and healthy.
@@ -2706,7 +2666,7 @@ fi
 
 ----
 
-[[step-38]]
+[[step-37]]
 === And I schedule the first maintenance
 
 This step verifies that the UpgradeConfig object is present on the cluster,
@@ -2760,7 +2720,7 @@ kubectl -n appuio-openshift-upgrade-controller get upgradeconfig "$uc" -oyaml | 
 
 ----
 
-[[step-39]]
+[[step-38]]
 === Then I configure apt-dater groups for the LoadBalancers
 
 This step configures the apt-dater groups for the LoadBalancers via puppet.
@@ -2841,7 +2801,7 @@ popd
 
 ----
 
-[[step-40]]
+[[step-39]]
 === And I remove the bootstrap bucket
 
 This step deletes the S3 bucket with the bootstrap ignition config.
@@ -2875,7 +2835,7 @@ exo storage rb -r -f "sos://${INPUT_commodore_cluster_id}-bootstrap"
 
 ----
 
-[[step-41]]
+[[step-40]]
 === And I wait for maintenance to complete
 
 This step waits for the first maintenance to complete, and then removes the
